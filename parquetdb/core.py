@@ -277,12 +277,15 @@ class ParquetDB:
         Raises:
             ValueError: If new fields are found in the update data that do not exist in the schema.
         """
+        if field_type_dict is None:
+            field_type_dict={}
+
         self._check_table_name(table_name)
 
         # Data processing and validation.
         data_list = self._validate_data(data)
 
-        main_id_column=self._load_data(table_name='main', columns=['id'], output_format='table')['id'].to_pylist()
+        main_id_column=self._load_data(table_name=table_name, columns=['id'], output_format='table')['id'].to_pylist()
 
         update_dict={}
         incoming_field_names = set()
@@ -407,7 +410,7 @@ class ParquetDB:
         self._check_table_name(table_name)
         logger.info(f"Deleting data from {table_name}")
 
-        main_id_column=self._load_data(table_name='main', columns=['id'], output_format='table')
+        main_id_column=self._load_data(table_name=table_name, columns=['id'], output_format='table')
         id_filter = pc.field('id').isin(ids)
         filtered_table = main_id_column.filter(id_filter)
 
@@ -417,26 +420,28 @@ class ParquetDB:
         
         # Iterate over the original files
         dataset_dir=os.path.join(self.datasets_dir,table_name)
+
         logger.info(f"Dataset directory: {dataset_dir}")
         original_files=glob(os.path.join(dataset_dir,f'{table_name}_*.parquet'))
+
         self._write_tmp_files(table_name)
         for i_file, original_file in enumerate(original_files):
             filename=os.path.basename(original_file)
-
             original_table=pq.read_table(original_file)
+            
             shape_before=original_table.shape
 
             # Get the original ids
             original_ids_list=original_table['id'].to_pylist()
-            
+
             # Get the ids that are in the current table
             ids_in_table=[]
             for id in ids:
                 if id in original_ids_list:
                     ids_in_table.append(id)
-
+        
             # Applying the negative id filter
-            neg_id_filter = ~pc.field('id').isin(ids)
+            neg_id_filter = ~pc.field('id').isin(ids_in_table)
             new_table = original_table.filter(neg_id_filter)
 
             shape_after=new_table.shape
@@ -445,7 +450,7 @@ class ParquetDB:
             # Write the updated table to the original file
             logger.info(f"Writing updated table to {filename}")
 
-
+            
             # Saving the updated table
             try:
                 pq.write_table(new_table, original_file)
@@ -454,7 +459,7 @@ class ParquetDB:
                 logger.error(f"Error processing {original_file}: {e}")
                 # If something goes wrong, restore the original file
                 self._restore_tmp_files(table_name)
-                break
+                raise e
             
             logger.info(f"Deleted {n_rows_deleted} Indices from {filename}. The shape is now {new_table.shape}")
 
@@ -470,7 +475,7 @@ class ParquetDB:
             original_table=pq.read_table(original_file)
             
             original_schema=original_table.schema
-            original_field_names=original_table.names
+            original_field_names=original_table.column_names
 
             if field_dict:
                 new_schema=original_schema
@@ -616,4 +621,3 @@ class ParquetDB:
             raise TypeError("Data must be a dictionary or a list of dictionaries.")
         return data_list
     
-
