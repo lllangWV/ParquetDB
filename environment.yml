@@ -9,5 +9,6 @@ dependencies:
 - pip:
   - pandas
   - pyarrow
+  - matplotlib
   - -e .
 
