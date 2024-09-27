@@ -1,3 +1,4 @@
+import logging
 import random
 import os
 import time
@@ -11,6 +12,14 @@ import json
 import pyarrow as pa
 
 from parquetdb import ParquetDB
+
+logger=logging.getLogger('parquetdb')
+logger.setLevel(logging.DEBUG)
+ch = logging.StreamHandler()
+ch.setLevel(logging.DEBUG)
+formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
+ch.setFormatter(formatter)
+logger.addHandler(ch)
 
 
 materials_dir = "C:/Users/lllang/Desktop/Current_Projects/ParquetDB/data/raw/materials_data"
@@ -70,9 +79,21 @@ print(df.columns)
 print(df.head())
 print(df.tail())
 print(df.shape)
-
 print(df['composition'].iloc[-1])
+print(df['structure'].iloc[-1])
 
+
+db.update([{'id':299, 'nsites': 100, 'composition': {'Ca':1.0}, 'structure': {'lattice': {'matrix': [[1, 0, 0], [0, 1, 0], [0, 0, 1]]}}}], table_name='main_test')
+table=db.read(table_name='main_test')
+df=table.to_pandas()
+print(df.columns)
+print(df.head())
+print(df.tail())
+print(df.shape)
+
+print(df['structure'].iloc[-1])
+print(df['composition'].iloc[-1])
+print(df['nsites'].iloc[-1])
 # print(df['field1'])
 # print(df['field2'])
 # print(df.shape)
