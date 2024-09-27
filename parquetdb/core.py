@@ -4,6 +4,7 @@ import shutil
 from functools import partial
 from glob import glob
 from multiprocessing import Pool
+import traceback
 from typing import List, Union
 
 import pandas as pd
@@ -13,12 +14,14 @@ import pyarrow.dataset as ds
 import pyarrow.parquet as pq
 
 from parquetdb.utils import timeit, is_directory_empty
+from parquetdb.pyarrow_utils import combine_tables, merge_schemas, align_table
 
 # Logger setup
 logger = logging.getLogger(__name__)
 
 # TODO: There will be a schema issue if a column is a dictionary type and a
-#  user tries to add another row with a different keys
+# user tries to add another row with a different keys
+# TODO:  If a dictionary is empty there will be an error
 
 def get_field_names(filepath, columns=None, include_cols=True):
     """
@@ -169,7 +172,23 @@ class ParquetDB:
 
         # Align the incoming and original schemas
         try:
-            incoming_table = self._align_schemas(incoming_table, dataset_dir)
+            # Merge schemas
+            incoming_schema = incoming_table.schema
+            current_schema = self.get_schema(table_name=table_name)
+            merged_schema=merge_schemas(current_schema, incoming_schema)
+        
+            # Align file schemas with merged schema
+            current_files = glob(os.path.join(dataset_dir, f'{table_name}_*.parquet'))
+            for current_file in current_files:
+                current_table = pq.read_table(current_file)
+
+                # Align current schema to match incoming
+                updated_table=align_table(current_table, merged_schema)
+                pq.write_table(updated_table, current_file)
+
+            # Align incoming tbale to match merged schema
+            incoming_table=align_table(incoming_table, merged_schema)
+
         except Exception as e:
             logger.error(f"Error aligning schemas: {e}")
             logger.info("Restoring original files")
@@ -706,49 +725,6 @@ class ParquetDB:
             return os.path.join(dataset_dir, f'{table_name}_0.parquet')
         return os.path.join(dataset_dir, f'{table_name}_{n_files}.parquet')
     
-    def _align_schemas(self, incoming_table:pa.Table, dataset_dir:str):
-        """
-        Align the schemas of the original and incoming tables.
-        
-        This function aligns the schemas of the original and incoming tables 
-        by adding null columns for any fields that are missing in either the original or incoming table.
-        It then orders the columns in the incoming table to match the order of the original table.
-
-        Args:
-            incoming_table (pa.Table): The table to be added to the original table.
-            dataset_dir (str): The directory where the original table is located.
-        """
-
-        table_name = os.path.basename(dataset_dir)
-        current_files = glob(os.path.join(dataset_dir, f'{table_name}_*.parquet'))
-
-        first_table = pq.read_table(os.path.join(dataset_dir, f'{table_name}_0.parquet'))
-        
-        incoming_schema = incoming_table.schema
-        original_schema = first_table.schema
-
-        field_names_original_is_missing = list(set(incoming_schema.names) - set(original_schema.names))
-        field_names_incoming_is_missing = list(set(original_schema.names) - set(incoming_schema.names))
-
-        logger.info(f"Field names original is missing: {field_names_original_is_missing}")
-        logger.info(f"Field names incoming is missing: {field_names_incoming_is_missing}")
-
-        # Align original schema to match incoming
-        if field_names_original_is_missing:
-            for current_file in current_files:
-                current_table = pq.read_table(current_file)
-
-                updated_table = self.add_null_columns_for_missing_fields(current_table, incoming_schema)
-                pq.write_table(updated_table, current_file)
-
-        # Align incoming schema to match original
-        incoming_table = self.add_null_columns_for_missing_fields(incoming_table, original_schema)
- 
-        original_column_names = original_schema.names + field_names_original_is_missing
-        incoming_table = incoming_table.select(original_column_names)
-
-        return incoming_table
-
     def add_null_columns_for_missing_fields(self, table, new_schema):
         """
         This function adds null columns for any fields that are missing in the new schema.
@@ -781,18 +757,23 @@ class ParquetDB:
         output_format='table'
         if batch_size:
             output_format='batch_generator'
+        else:
             schema=None
 
-        final_table = self._load_data(table_name, batch_size=batch_size, output_format=output_format)
+        self._write_tmp_files(table_name)
+        final_table = self._load_data('tmp', batch_size=batch_size, output_format=output_format)
 
         try:
             basename_template = f'{table_name}_{{i}}.parquet'
             logger.info(f"Writing final table to {dataset_dir}")
+            shutil.rmtree(dataset_dir)
+            
             ds.write_dataset(final_table, dataset_dir, basename_template=basename_template, schema=schema,
                             format="parquet", max_partitions=kwargs.get('max_partitions', 1024),
                             max_open_files=kwargs.get('max_open_files', 1024), max_rows_per_file=max_rows_per_file, 
                             min_rows_per_group=min_rows_per_group, max_rows_per_group=max_rows_per_group,
                             existing_data_behavior='overwrite_or_ignore')
+            
         except Exception as e:
             logger.error(f"Error writing final table to {dataset_dir}: {e}")
             logger.info("Restoring original files")
@@ -943,7 +924,9 @@ class ParquetDB:
 
         return new_table
 
-    def _write_tmp_files(self, table_name):
+    def _write_tmp_files(self, table_name, tmp_dir=None):
+        if tmp_dir is None:
+            tmp_dir=self.tmp_dir
         shutil.rmtree(self.tmp_dir)
         os.makedirs(self.tmp_dir, exist_ok=True)
         dataset_dir=os.path.join(self.datasets_dir,table_name)
@@ -954,7 +937,9 @@ class ParquetDB:
             tmp_filepath = os.path.join(self.tmp_dir, basename)
             shutil.copyfile(current_filepath, tmp_filepath)
 
-    def _restore_tmp_files(self, table_name):
+    def _restore_tmp_files(self, table_name, tmp_dir=None):
+        if tmp_dir is None:
+            tmp_dir=self.tmp_dir
         dataset_dir=os.path.join(self.datasets_dir,table_name)
         tmp_filepaths=glob(os.path.join(self.tmp_dir,f'{table_name}_*.parquet'))
         for i_file, tmp_filepath in enumerate(tmp_filepaths):
