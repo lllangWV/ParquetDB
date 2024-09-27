@@ -27,6 +27,11 @@ ParquetDB is a lightweight database-like system built on top of Apache Parquet f
 - **Scalable**: Designed to handle large datasets efficiently.
 - **Schema Evolution**: Supports adding new fields and updating schemas seamlessly.
 
+## Roadmap
+
+- Support foriegn keys use
+- Multiprocessing for reading and writing
+
 ## Why ParquetDB?
 
 ### The Challenge of Serialization and Deserialization
