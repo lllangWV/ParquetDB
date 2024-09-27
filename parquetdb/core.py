@@ -14,7 +14,7 @@ import pyarrow.dataset as ds
 import pyarrow.parquet as pq
 
 from parquetdb.utils import timeit, is_directory_empty
-from parquetdb.pyarrow_utils import combine_tables, merge_schemas, align_table
+from parquetdb.pyarrow_utils import combine_tables, merge_schemas, align_table,replace_none_with_nulls
 
 # Logger setup
 logger = logging.getLogger(__name__)
@@ -288,7 +288,8 @@ class ParquetDB:
             try:
                 updated_table = self._update_table(current_table, id_data_dict_map, update_schema)
             except Exception as e:
-                logger.error(f"Error updating {current_file}: {e}")
+                logger.error(f"Error updating {current_file}: {e}\n{traceback.format_exc()}")
+                # logger.error(f"Error updating {current_file}: {e}")
                 # If something goes wrong, restore the original file
                 self._restore_tmp_files(table_name)
                 break
@@ -814,10 +815,8 @@ class ParquetDB:
         # Resolve data infered types with current schema
         infered_types=self._resolve_infered_field_types(current_schema, infered_types)
 
-        
-        # Get the expected schema for the new fields
-        new_field_names=list(incoming_field_names - current_names)
-        update_schema = pa.schema([(field_name, infered_types[field_name]) for field_name in new_field_names])
+        merged_names=list(incoming_field_names.union(current_names) - set(['id']))
+        update_schema = pa.schema([(field_name, infered_types[field_name]) for field_name in merged_names])
 
         return id_data_dict_map, update_schema
 
@@ -837,13 +836,9 @@ class ParquetDB:
     
     def _resolve_infered_field_types(self, schema: pa.Schema, infered_types: dict):
         logger.info(f"Checking infered field types vs original field types")
-        for key, value in infered_types.items():
-            if key in schema.names:
-                type=schema.field(key).type
-                if type!=value:
-                    logger.info(f"The infered type for {key} is {type} but the original type is {value}")
-                    infered_types[key]=type
-                    logger.info(f"Replacing infered type for {key} with {type}")
+        for field_name in schema.names:
+            type=schema.field(field_name).type
+            infered_types[field_name]=type
 
         logger.info(f"Validating field types: {infered_types}")
         return infered_types
@@ -854,12 +849,13 @@ class ParquetDB:
         """Update a single Parquet file with new data."""
 
         # Add new columns to the current table
-        updated_table = self.add_null_columns_for_missing_fields( current_table, update_schema)
-
+        # updated_table = self.add_null_columns_for_missing_fields( current_table, update_schema)
+        logger.debug(f"Aligning table with update schema")
+        updated_table = align_table(current_table, update_schema)
+        logger.debug(f"Aligned table with update schema")
         # Update existing records in the current table
         current_ids_list = current_table['id'].to_pylist()
         id_to_index = {id: index for index, id in enumerate(current_ids_list)}
-
         # Iterate over the columns in the table
         for column_idx, column in enumerate(updated_table.itercolumns()):
             column_name = column._name
@@ -875,17 +871,31 @@ class ParquetDB:
                 # If the id is in the the current table 
                 # and the field_nmae is in the update dict, update the column
                 if id in id_to_index and column_name in data_dict:
+                    
                     update_value = data_dict[column_name]
 
                     # If the update value is None for a column, skip it. 
                     # This can happen when a field is added to another 
                     # file but not the current one
+
                     if update_value is not None:  # Only update non-None values
-                        column_array[id_to_index[id]] = update_value
+                        # if isinstance(update_value, dict):
+                        #     column_array[id_to_index[id]].update(update_value)
+                        # else:
+                        #     column_array[id_to_index[id]] = update_value
+
+                        index = id_to_index[id]
+                        current_value = column_array[index]
+
+                        # Perform a deep update if it's a nested structure
+                        column_array[index] = deep_update(current_value, update_value)
 
             # Update the column in the table
             field = updated_table.schema.field(column_name)
-            updated_table = updated_table.set_column(column_idx, field, [column_array])
+
+            # Ensure the column array is of the correct type
+            column_array=pa.array(column_array, type=field.type)
+            updated_table = updated_table.set_column(column_idx, field, column_array)
 
         return updated_table
 
@@ -969,3 +979,38 @@ class ParquetDB:
             raise TypeError("Data must be a dictionary or a list of dictionaries.")
         return data_list
     
+
+
+def deep_update(original_value, update_value):
+    """
+    Recursively updates original_value with the corresponding values in update_value.
+    If update_value contains nested dictionaries or lists, it updates them recursively.
+    
+    Args:
+        original_value: The original value to be updated (could be a dict, list, or primitive).
+        update_value: The update value (could be a dict, list, or primitive).
+    
+    Returns:
+        Updated original_value with changes from update_value.
+    """
+    # If both are dictionaries, update recursively
+    if isinstance(original_value, dict) and isinstance(update_value, dict):
+        for key, value in update_value.items():
+            if key in original_value:
+                original_value[key] = deep_update(original_value[key], value)
+            else:
+                original_value[key] = value
+        return original_value
+    
+    # # If both are lists, update recursively by index
+    # elif isinstance(original_value, list) and isinstance(update_value, list):
+    #     # Extend the original list if update_value has more items
+    #     for i in range(len(update_value)):
+    #         if i < len(original_value):
+    #             original_value[i] = deep_update(original_value[i], update_value[i])
+    #         else:
+    #             original_value.append(update_value[i])
+    #     return original_value
+    
+    # Otherwise, just return the update value (for primitive types or if the types differ)
+    return update_value

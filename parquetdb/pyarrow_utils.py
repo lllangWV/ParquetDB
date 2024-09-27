@@ -191,3 +191,39 @@ def combine_tables(current_table: pa.Table, incoming_table: pa.Table, merged_sch
     combined_table = pa.concat_tables([current_table, incoming_table])
     
     return combined_table
+
+def replace_none_with_nulls(data, schema_field):
+    """
+    Replaces None values in the data list with null values according to the schema.
+
+    Args:
+        data (list): A list of elements to check.
+        schema_field (pa.Field or pa.DataType): The field or type that defines the schema.
+
+    Returns:
+        list: The updated list with None values replaced with nulls.
+    """
+    # Check if the schema_field is a pa.Field or pa.DataType
+    schema_type = schema_field.type if isinstance(schema_field, pa.Field) else schema_field
+
+    updated_data = []
+
+    for element in data:
+        if element is None:
+            # Replace None with the equivalent null value
+            null_value = pa.scalar(None, type=schema_type)
+            updated_data.append(null_value.as_py())
+        elif pa.types.is_struct(schema_type):
+            # If the field is a struct, recursively check its fields
+            updated_data.append(
+                {key: replace_none_with_nulls([val], schema_type.field(key))[0] 
+                 if val is None else val for key, val in element.items()}
+            )
+        elif pa.types.is_list(schema_type):
+            # If the field is a list, recursively check the elements of the list
+            updated_data.append(replace_none_with_nulls(element, schema_type.value_type))
+        else:
+            # Otherwise, keep the element as is
+            updated_data.append(element)
+
+    return updated_data
