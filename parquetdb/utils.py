@@ -5,6 +5,7 @@ import time
 
 logger = logging.getLogger(__name__)
 
+import pyarrow as pa
 
 def timeit(func):
     """
@@ -58,21 +59,3 @@ def is_contained(list1, list2):
 
 
 
-def find_difference_between_pyarrow_schemas(schema1, schema2):
-    """
-    Finds the difference between two PyArrow schemas.
-
-    Args:
-        schema1 (pyarrow.Schema): The first schema.
-        schema2 (pyarrow.Schema): The second schema.
-
-    Returns:
-        set: A set of field names that are in schema1 but not in schema2.
-    """
-    # Create a set of field names from the first schema
-    field_names1 = set(schema1)
-    # Create a set of field names from the second schema
-    field_names2 = set(schema2)
-    # Find the difference between the two sets
-    difference = field_names1.difference(field_names2)
-    return difference
