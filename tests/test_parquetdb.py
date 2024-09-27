@@ -355,7 +355,6 @@ class TestParquetDB(unittest.TestCase):
         with self.assertRaises(ValueError):
             self.db.export_table('test_table', export_path, format='xlsx')
 
-
     def test_merge_tables(self):
         self.db.create(data=self.test_data, table_name='test_table')
         # Create another table
