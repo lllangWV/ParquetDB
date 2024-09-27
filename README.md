@@ -31,6 +31,7 @@ ParquetDB is a lightweight database-like system built on top of Apache Parquet f
 
 - Support foriegn keys use
 - Multiprocessing for reading and writing
+- Increase support for nested structures
 
 ## Why ParquetDB?
 

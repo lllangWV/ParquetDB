@@ -2,7 +2,7 @@ from setuptools import setup, find_packages
 
 setup(
     name="parquetdb",  
-    version="0.3.0",  
+    version="0.4.0",  
     author="Logan Lang", 
     author_email="lllang@mix.wvu.edu", 
     description="ParquetDB is a lightweight database-like system built on top of Apache Parquet files using PyArrow.",  
