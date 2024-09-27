@@ -10,13 +10,13 @@ import pyarrow as pa
 import pyarrow.compute as pc
 import pandas as pd
 
-# logger=logging.getLogger('parquetdb')
-# logger.setLevel(logging.DEBUG)
-# ch = logging.StreamHandler()
-# ch.setLevel(logging.DEBUG)
-# formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
-# ch.setFormatter(formatter)
-# logger.addHandler(ch)
+logger=logging.getLogger('parquetdb')
+logger.setLevel(logging.DEBUG)
+ch = logging.StreamHandler()
+ch.setLevel(logging.DEBUG)
+formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
+ch.setFormatter(formatter)
+logger.addHandler(ch)
 
 
 class TestParquetDB(unittest.TestCase):
@@ -26,9 +26,18 @@ class TestParquetDB(unittest.TestCase):
         self.db = ParquetDB(db_path=self.temp_dir)
         self.table_name = 'test_table'
 
+        # Create some test data
+        self.test_data = [
+            {'name': 'Alice', 'age': 30},
+            {'name': 'Bob', 'age': 25},
+            {'name': 'Charlie', 'age': 35}
+        ]
+        self.test_df = pd.DataFrame(self.test_data)
+
     def tearDown(self):
         # Remove the temporary directory after the test
-        shutil.rmtree(self.temp_dir)
+        if os.path.exists(self.temp_dir):
+            shutil.rmtree(self.temp_dir)
 
     def test_create_and_read(self):
         # Test creating data and reading it back
@@ -260,6 +269,106 @@ class TestParquetDB(unittest.TestCase):
         ]
         with self.assertRaises(ValueError):
             self.db.update(update_data, table_name=self.table_name)
+
+    def test_get_tables(self):
+        # Should return a list containing 'test_table'
+        self.db.create(data=self.test_data, table_name='test_table')
+
+        tables = self.db.get_tables()
+        self.assertIn('test_table', tables)
+        self.assertIsInstance(tables, list)
+
+    def test_get_metadata(self):
+        self.db.create(data=self.test_data, 
+                       table_name='test_table',
+                       metadata={'key1':'value1', 'key2':'value2'})
+        # Should return metadata dictionary (can be empty)
+        metadata = self.db.get_metadata('test_table')
+        self.assertIsInstance(metadata, dict)
+
+        # Test for a non-existent table
+        with self.assertRaises(ValueError):
+            self.db.get_metadata('non_existent_table')
+
+    def test_table_exists(self):
+        self.db.create(data=self.test_data, table_name='test_table')
+        # Should return True for existing table
+        self.assertTrue(self.db.table_exists('test_table'))
+
+        # Should return False for non-existent table
+        self.assertFalse(self.db.table_exists('non_existent_table'))
+
+    def test_drop_table(self):
+        self.db.create(data=self.test_data, table_name='test_table')
+        # Drop the table and check if it no longer exists
+        self.db.drop_table('test_table')
+        self.assertFalse(self.db.table_exists('test_table'))
+
+    def test_rename_table(self):
+        self.db.create(data=self.test_data, table_name='test_table')
+        # Rename the table and check if the new name exists
+        self.db.rename_table('test_table', 'renamed_table')
+        self.assertTrue(self.db.table_exists('renamed_table'))
+        self.assertFalse(self.db.table_exists('test_table'))
+
+        # Attempt to rename to a reserved name
+        with self.assertRaises(ValueError):
+            self.db.rename_table('renamed_table', 'tmp')
+
+        # Attempt to rename a non-existent table
+        with self.assertRaises(ValueError):
+            self.db.rename_table('non_existent_table', 'new_table')
+
+    def test_copy_table(self):
+        self.db.create(data=self.test_data, table_name='test_table')
+        # Copy the table and check if both exist
+        self.db.copy_table('test_table', 'copied_table')
+        self.assertTrue(self.db.table_exists('test_table'))
+        self.assertTrue(self.db.table_exists('copied_table'))
+
+        # Verify data in copied table
+        original_data = self.db.read(table_name='test_table').to_pandas()
+        copied_data = self.db.read(table_name='copied_table').to_pandas()
+        pd.testing.assert_frame_equal(original_data, copied_data)
+
+        # Attempt to copy to an existing table without overwrite
+        with self.assertRaises(ValueError):
+            self.db.copy_table('test_table', 'copied_table')
+
+        # Copy with overwrite
+        self.db.copy_table('test_table', 'copied_table', overwrite=True)
+        self.assertTrue(self.db.table_exists('copied_table'))
+
+    def test_export_table(self):
+        self.db.create(data=self.test_data, table_name='test_table')
+        # Export the table to CSV
+        export_path = os.path.join(self.temp_dir, 'exported_table.csv')
+        self.db.export_table('test_table', export_path, format='csv')
+        self.assertTrue(os.path.exists(export_path))
+
+        # Verify the exported data
+        exported_df = pd.read_csv(export_path)
+        original_df = self.db.read(table_name='test_table').to_pandas()
+        pd.testing.assert_frame_equal(original_df, exported_df)
+
+        # Export to an unsupported format
+        with self.assertRaises(ValueError):
+            self.db.export_table('test_table', export_path, format='xlsx')
+
+
+    def test_merge_tables(self):
+        self.db.create(data=self.test_data, table_name='test_table')
+        # Create another table
+        additional_data = [
+            {'id': 4, 'name': 'Dave', 'age': 40},
+            {'id': 5, 'name': 'Eve', 'age': 45}
+        ]
+        self.db.create(data=additional_data, table_name='additional_table')
+
+        # Attempt to merge tables (method not implemented)
+        with self.assertRaises(NotImplementedError):
+            self.db.merge_tables(['test_table', 'additional_table'], 'merged_table')
+
 
 if __name__ == '__main__':
     unittest.main()
