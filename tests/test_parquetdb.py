@@ -18,6 +18,8 @@ formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(messag
 ch.setFormatter(formatter)
 logger.addHandler(ch)
 
+# TODO: Create tests for nested structure updates
+# TODO: Create tests for 
 
 class TestParquetDB(unittest.TestCase):
     def setUp(self):
@@ -228,6 +230,7 @@ class TestParquetDB(unittest.TestCase):
         df = result.to_pandas()
 
         # Assertions
+        # print(df.head())
         self.assertEqual(df.iloc[0]['state'], 'NY')
         self.assertEqual(df.iloc[1]['state'], None)
         self.assertEqual(df.iloc[0]['age'], 60)
@@ -368,6 +371,12 @@ class TestParquetDB(unittest.TestCase):
         with self.assertRaises(NotImplementedError):
             self.db.merge_tables(['test_table', 'additional_table'], 'merged_table')
 
+    # def test_deep_update(self):
+    #     original_value = {'a': 1, 'b': {'c': 2, 'd': 3}}
+    #     update_value = {'a': 10, 'b': {'c': 20, 'e': 30}}
+    #     expected_value = {'a': 10, 'b': {'c': 20, 'd': 3, 'e': 30}}
+    #     result = deep_update(original_value, update_value)
+    #     self.assertEqual(result, expected_value)
 
 if __name__ == '__main__':
     unittest.main()
