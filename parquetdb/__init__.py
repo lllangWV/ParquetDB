@@ -1,1 +1,2 @@
-from parquetdb.core import ParquetDB
+from parquetdb.parquetdb import ParquetDB
+from parquetdb.parquet_datasetdb import ParquetDatasetDB

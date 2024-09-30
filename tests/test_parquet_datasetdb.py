@@ -5,7 +5,7 @@ import os
 import tempfile
 
 import numpy as np
-from parquetdb.parquetdb import ParquetDB
+from parquetdb import ParquetDatasetDB
 import pyarrow as pa
 import pyarrow.compute as pc
 import pandas as pd
@@ -21,12 +21,12 @@ logger.addHandler(ch)
 # TODO: Create tests for nested structure updates
 # TODO: Create tests for 
 
-class TestParquetDB(unittest.TestCase):
+class TestParquetDatasetDB(unittest.TestCase):
     def setUp(self):
         # Create a temporary directory for the database
         self.temp_dir = tempfile.mkdtemp()
-        self.db = ParquetDB(datasets_dir=self.temp_dir)
-        self.dataset_name = 'test_dataset'
+        self.dataset_name='test_dataset'
+        self.db = ParquetDatasetDB(dataset_name=self.dataset_name, dir=self.temp_dir, n_cores=1)
 
         # Create some test data
         self.test_data = [
@@ -47,10 +47,10 @@ class TestParquetDB(unittest.TestCase):
             {'name': 'Alice', 'age': 30},
             {'name': 'Bob', 'age': 25}
         ]
-        self.db.create(data, dataset_name=self.dataset_name)
+        self.db.create(data)
 
         # Read the data back
-        result = self.db.read(dataset_name=self.dataset_name)
+        result = self.db.read()
         df = result.to_pandas()
 
         # Assertions
@@ -67,16 +67,16 @@ class TestParquetDB(unittest.TestCase):
             {'name': 'Charlie', 'age': 28},
             {'name': 'Diana', 'age': 32}
         ]
-        self.db.create(data, dataset_name=self.dataset_name)
+        self.db.create(data)
 
         # Update the age of 'Charlie'
         update_data = [
             {'id': 0, 'age': 29}
         ]
-        self.db.update(update_data, dataset_name=self.dataset_name)
+        self.db.update(update_data)
 
         # Read the data back
-        result = self.db.read(dataset_name=self.dataset_name)
+        result = self.db.read()
         df = result.to_pandas()
 
         # Assertions
@@ -89,13 +89,13 @@ class TestParquetDB(unittest.TestCase):
             {'name': 'Eve', 'age': 35},
             {'name': 'Frank', 'age': 40}
         ]
-        self.db.create(data, dataset_name=self.dataset_name)
+        self.db.create(data, )
 
         # Delete 'Eve'
-        self.db.delete(ids=[0], dataset_name=self.dataset_name)
+        self.db.delete(ids=[0], )
 
         # Read the data back
-        result = self.db.read(dataset_name=self.dataset_name)
+        result = self.db.read()
         df = result.to_pandas()
 
         # Assertions
@@ -109,11 +109,11 @@ class TestParquetDB(unittest.TestCase):
             {'name': 'Heidi', 'age': 27},
             {'name': 'Ivan', 'age': 35}
         ]
-        self.db.create(data, dataset_name=self.dataset_name)
+        self.db.create(data, )
 
         # Apply filter to get people older than 25
         age_filter = pc.field('age') > 25
-        result = self.db.read(dataset_name=self.dataset_name, filters=[age_filter])
+        result = self.db.read(filters=[age_filter])
         df = result.to_pandas()
 
         # Assertions
@@ -127,16 +127,16 @@ class TestParquetDB(unittest.TestCase):
         data = [
             {'name': 'Judy', 'age': 29}
         ]
-        self.db.create(data, dataset_name=self.dataset_name)
+        self.db.create(data, )
 
         # Add new data with an additional field
         new_data = [
             {'name': 'Karl', 'occupation': 'Engineer'}
         ]
-        self.db.create(new_data, dataset_name=self.dataset_name)
+        self.db.create(new_data, )
 
         # Read back the data
-        result = self.db.read(dataset_name=self.dataset_name)
+        result = self.db.read()
         df = result.to_pandas()
 
         # Assertions
@@ -150,8 +150,8 @@ class TestParquetDB(unittest.TestCase):
         data = [
             {'name': 'Liam', 'age': 45}
         ]
-        self.db.create(data, dataset_name=self.dataset_name)
-        schema = self.db.get_schema(dataset_name=self.dataset_name)
+        self.db.create(data, )
+        schema = self.db.get_schema()
 
         # Assertions
         self.assertIn('name', schema.names)
@@ -164,10 +164,10 @@ class TestParquetDB(unittest.TestCase):
             {'name': 'Mia', 'age': 30, 'city': 'New York'},
             {'name': 'Noah', 'age': 35, 'city': 'San Francisco'}
         ]
-        self.db.create(data, dataset_name=self.dataset_name)
+        self.db.create(data, )
 
         # Read only the 'name' column
-        result = self.db.read(dataset_name=self.dataset_name, columns=['name'])
+        result = self.db.read(columns=['name'])
         df = result.to_pandas()
 
         # Assertions
@@ -179,10 +179,10 @@ class TestParquetDB(unittest.TestCase):
     def test_batch_reading(self):
         # Test reading data in batches
         data = [{'name': f'Person {i}', 'age': i} for i in range(100)]
-        self.db.create(data, dataset_name=self.dataset_name)
+        self.db.create(data, )
 
         # Read data in batches of 20
-        batches = self.db.read(dataset_name=self.dataset_name, batch_size=20, output_format='batch_generator')
+        batches = self.db.read(batch_size=20, output_format='batch_generator')
 
         # Assertions
         batch_count = 0
@@ -195,38 +195,38 @@ class TestParquetDB(unittest.TestCase):
         self.assertEqual(total_rows, 100)
 
     def test_update_schema(self):
-        # Test updating the schema of the dataset
+        # Test updating the schema of the table
         data = [
             {'name': 'Olivia', 'age': 29}
         ]
-        self.db.create(data, dataset_name=self.dataset_name)
+        self.db.create(data, )
 
         # Update the 'age' field to be a float instead of int
         new_field = pa.field('age', pa.float64())
         field_dict = {'age': new_field}
-        self.db.update_schema(dataset_name=self.dataset_name, field_dict=field_dict)
+        self.db.update_schema(field_dict=field_dict)
 
         # Read back the data
-        result = self.db.read(dataset_name=self.dataset_name)
+        result = self.db.read()
         df = result.to_pandas()
 
         # Assertions
         self.assertEqual(df['age'].dtype, 'float64')
 
     def test_update_with_new_field_included(self):
-        # Test updating the schema of the dataset
+        # Test updating the schema of the table
         data = [
             {'name': 'Mia', 'age': 30, 'city': 'New York'},
             {'name': 'Noah', 'age': 35, 'city': 'San Francisco'}
         ]
-        self.db.create(data, dataset_name=self.dataset_name)
+        self.db.create(data, )
 
         # Update the 'Mia' record to include a new field and change age to 60
         data = {'id':0, 'age': 60, 'state':'NY'}
-        self.db.update(data,dataset_name=self.dataset_name)
+        self.db.update(data,)
 
         # Read back the data
-        result = self.db.read(dataset_name=self.dataset_name)
+        result = self.db.read()
         df = result.to_pandas()
 
         # Assertions
@@ -237,7 +237,7 @@ class TestParquetDB(unittest.TestCase):
         self.assertEqual(df.iloc[1]['age'], 35)
 
     def test_invalid_dataset_name(self):
-        # Test using a reserved dataset name
+        # Test using a reserved table name
         with self.assertRaises(ValueError):
             self.db.create(data=[], dataset_name='tmp')
 
@@ -246,13 +246,13 @@ class TestParquetDB(unittest.TestCase):
         data = [
             {'name': 'Peter', 'age': 50}
         ]
-        self.db.create(data, dataset_name=self.dataset_name)
+        self.db.create(data, )
 
         # Attempt to delete a non-existent ID
-        self.db.delete(ids=[999], dataset_name=self.dataset_name)
+        self.db.delete(ids=[999], )
 
         # Read back the data
-        result = self.db.read(dataset_name=self.dataset_name)
+        result = self.db.read()
         df = result.to_pandas()
 
         # Assertions
@@ -264,112 +264,66 @@ class TestParquetDB(unittest.TestCase):
         data = [
             {'name': 'Quinn', 'age': 40}
         ]
-        self.db.create(data, dataset_name=self.dataset_name)
+        self.db.create(data, )
 
         # Attempt to update a non-existent ID
         update_data = [
             {'id': 999, 'age': 41}
         ]
         with self.assertRaises(ValueError):
-            self.db.update(update_data, dataset_name=self.dataset_name)
-
-    def test_get_datasets(self):
-        # Should return a list containing 'test_dataset'
-        self.db.create(data=self.test_data, dataset_name='test_dataset')
-
-        datasets = self.db.get_datasets()
-        self.assertIn('test_dataset', datasets)
-        self.assertIsInstance(datasets, list)
+            self.db.update(update_data, )
 
     def test_get_metadata(self):
-        self.db.create(data=self.test_data, 
-                       dataset_name='test_dataset',
+        self.db.create(data=self.test_data,
                        metadata={'key1':'value1', 'key2':'value2'})
         # Should return metadata dictionary (can be empty)
-        metadata = self.db.get_metadata(dataset_name='test_dataset')
+        metadata = self.db.get_metadata()
         self.assertIsInstance(metadata, dict)
 
-        # Test for a non-existent dataset
-        with self.assertRaises(ValueError):
-            self.db.get_metadata(dataset_name='non_existent_dataset')
-
-    def test_dataset_exists(self):
-        self.db.create(data=self.test_data, dataset_name='test_dataset')
-        # Should return True for existing dataset
-        self.assertTrue(self.db.dataset_exists('test_dataset'))
-
-        # Should return False for non-existent dataset
-        self.assertFalse(self.db.dataset_exists('non_existent_dataset'))
 
     def test_drop_dataset(self):
-        self.db.create(data=self.test_data, dataset_name='test_dataset')
-        # Drop the dataset and check if it no longer exists
-        self.db.drop_dataset('test_dataset')
-        self.assertFalse(self.db.dataset_exists('test_dataset'))
+        self.db.create(data=self.test_data)
+        # Drop the table and check if it no longer exists
+        self.db.drop_dataset()
+
 
     def test_rename_dataset(self):
-        self.db.create(data=self.test_data, dataset_name='test_dataset')
-        # Rename the dataset and check if the new name exists
-        self.db.rename_dataset(dataset_name='test_dataset', new_name='renamed_dataset')
-        self.assertTrue(self.db.dataset_exists('renamed_dataset'))
-        self.assertFalse(self.db.dataset_exists('test_dataset'))
+        self.db.create(data=self.test_data)
+        # Rename the table and check if the new name exists
+        self.db.rename_dataset('renamed_table')
 
         # Attempt to rename to a reserved name
         with self.assertRaises(ValueError):
-            self.db.rename_dataset(dataset_name='renamed_dataset', new_name='tmp')
-
-        # Attempt to rename a non-existent dataset
-        with self.assertRaises(ValueError):
-            self.db.rename_dataset(dataset_name='non_existent_dataset', new_name='new_dataset')
-
-    def test_copy_dataset(self):
-        self.db.create(data=self.test_data, dataset_name='test_dataset')
-        # Copy the dataset and check if both exist
-        self.db.copy_dataset(dataset_name='test_dataset', dest_name='copied_dataset')
-        self.assertTrue(self.db.dataset_exists('test_dataset'))
-        self.assertTrue(self.db.dataset_exists('copied_dataset'))
-
-        # Verify data in copied dataset
-        original_data = self.db.read(dataset_name='test_dataset').to_pandas()
-        copied_data = self.db.read(dataset_name='copied_dataset').to_pandas()
-        pd.testing.assert_frame_equal(original_data, copied_data)
-
-        # Attempt to copy to an existing dataset without overwrite
-        with self.assertRaises(ValueError):
-            self.db.copy_dataset(dataset_name='test_dataset', dest_name='copied_dataset')
-
-        # Copy with overwrite
-        self.db.copy_dataset(dataset_name='test_dataset', dest_name='copied_dataset', overwrite=True)
-        self.assertTrue(self.db.dataset_exists('copied_dataset'))
+            self.db.rename_dataset('tmp')
 
     def test_export_dataset(self):
-        self.db.create(data=self.test_data, dataset_name='test_dataset')
-        # Export the dataset to CSV
-        export_path = os.path.join(self.temp_dir, 'exported_dataset.csv')
-        self.db.export_dataset('test_dataset', export_path, format='csv')
+        self.db.create(data=self.test_data)
+        # Export the table to CSV
+        export_path = os.path.join(self.temp_dir, 'exported_table.csv')
+        self.db.export_dataset(export_path, format='csv')
         self.assertTrue(os.path.exists(export_path))
 
         # Verify the exported data
         exported_df = pd.read_csv(export_path)
-        original_df = self.db.read(dataset_name='test_dataset').to_pandas()
+        original_df = self.db.read().to_pandas()
         pd.testing.assert_frame_equal(original_df, exported_df)
 
         # Export to an unsupported format
         with self.assertRaises(ValueError):
-            self.db.export_dataset('test_dataset', export_path, format='xlsx')
+            self.db.export_dataset(export_path, format='xlsx')
 
     def test_merge_datasets(self):
-        self.db.create(data=self.test_data, dataset_name='test_dataset')
-        # Create another dataset
+        self.db.create(data=self.test_data)
+        # Create another table
         additional_data = [
             {'id': 4, 'name': 'Dave', 'age': 40},
             {'id': 5, 'name': 'Eve', 'age': 45}
         ]
-        self.db.create(data=additional_data, dataset_name='additional_dataset')
+        self.db.create(data=additional_data, dataset_name='additional_table')
 
-        # Attempt to merge datasets (method not implemented)
+        # Attempt to merge tables (method not implemented)
         with self.assertRaises(NotImplementedError):
-            self.db.merge_datasets(['test_dataset', 'additional_dataset'], 'merged_dataset')
+            self.db.merge_datasets(['test_table', 'additional_table'], 'merged_table')
 
     # def test_deep_update(self):
     #     original_value = {'a': 1, 'b': {'c': 2, 'd': 3}}
