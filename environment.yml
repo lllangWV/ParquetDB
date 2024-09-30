@@ -1,4 +1,4 @@
-name: parqeutdb
+name: parquetdb
 channels:
 - defaults
 dependencies:
