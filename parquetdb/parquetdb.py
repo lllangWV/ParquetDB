@@ -75,16 +75,9 @@ class ParquetDB:
             metadata (dict): Metadata to be added to the table.
             **kwargs: Additional keyword arguments to pass to the create function.
         """
-        dataset_db=ParquetDatasetDB(dataset_name=dataset_name, dir=self.datasets_dir, n_cores=self.n_cores)
-        create_args=dict(data=data, 
-                         batch_size=batch_size,
-                         max_rows_per_file=max_rows_per_file,
-                         min_rows_per_group=min_rows_per_group,
-                         max_rows_per_group=max_rows_per_group,
-                         schema=schema,
-                         metadata=metadata,
-                         **kwargs)
-        dataset_db.create(**create_args)
+        all_args = {k: v for k, v in locals().items() if k != 'self'}
+        dataset_db=ParquetDatasetDB(dataset_name=all_args.pop('dataset_name'), dir=self.datasets_dir, n_cores=self.n_cores)
+        dataset_db.create(**all_args)
 
     @timeit
     def read(
@@ -115,14 +108,9 @@ class ParquetDB:
             returns a list of dictionaries with their 'id's. Otherwise, returns the DataFrame with serialized data.
         """
 
-        dataset_db=ParquetDatasetDB(dataset_name=dataset_name, dir=self.datasets_dir, n_cores=self.n_cores)
-        function_args=dict(ids=ids,
-                        columns=columns,
-                       include_cols=include_cols,
-                       filters=filters,
-                       batch_size=batch_size,
-                       output_format=output_format)
-        return dataset_db.read(**function_args)
+        all_args = {k: v for k, v in locals().items() if k != 'self'}
+        dataset_db=ParquetDatasetDB(dataset_name=all_args.pop('dataset_name'), dir=self.datasets_dir, n_cores=self.n_cores)
+        return dataset_db.read(**all_args)
     
     @timeit
     def update(self, data: Union[List[dict], dict, pd.DataFrame], dataset_name:str='main', field_type_dict=None):
@@ -141,10 +129,9 @@ class ParquetDB:
             ValueError: If new fields are found in the update data that do not exist in the schema.
         """
 
-        dataset_db=ParquetDatasetDB(dataset_name=dataset_name, dir=self.datasets_dir, n_cores=self.n_cores)
-        function_args=dict(data=data,
-                          field_type_dict=field_type_dict)
-        dataset_db.update(**function_args)
+        all_args = {k: v for k, v in locals().items() if k != 'self'}
+        dataset_db=ParquetDatasetDB(dataset_name=all_args.pop('dataset_name'), dir=self.datasets_dir, n_cores=self.n_cores)
+        dataset_db.update(**all_args)
 
     @timeit
     def delete(self, ids:List[int], dataset_name:str='main'):
@@ -158,9 +145,9 @@ class ParquetDB:
         Returns:
             None
         """
-        dataset_db=ParquetDatasetDB(dataset_name=dataset_name, dir=self.datasets_dir, n_cores=self.n_cores)
-        function_args=dict(ids=ids)
-        dataset_db.delete(**function_args)
+        all_args = {k: v for k, v in locals().items() if k != 'self'}
+        dataset_db=ParquetDatasetDB(dataset_name=all_args.pop('dataset_name'), dir=self.datasets_dir, n_cores=self.n_cores)
+        dataset_db.delete(**all_args)
 
     @timeit
     def update_schema(self, dataset_name:str='main', field_dict:dict=None, schema:pa.Schema=None):
@@ -173,10 +160,9 @@ class ParquetDB:
             schema (pyarrow.Schema): The new schema for the table.
 
         """
-        dataset_db=ParquetDatasetDB(dataset_name=dataset_name, dir=self.datasets_dir, n_cores=self.n_cores)
-        function_args=dict(field_dict=field_dict,
-                           schema=schema)
-        dataset_db.update_schema(**function_args)
+        all_args = {k: v for k, v in locals().items() if k != 'self'}
+        dataset_db=ParquetDatasetDB(dataset_name=all_args.pop('dataset_name'), dir=self.datasets_dir, n_cores=self.n_cores)
+        dataset_db.update_schema(**all_args)
 
     def get_datasets(self):
         """Get a list of all tables in the database."""
@@ -191,7 +177,8 @@ class ParquetDB:
         Returns:
             bool: True if the table exists, False otherwise.
         """
-        dataset_db=ParquetDatasetDB(dataset_name=dataset_name, dir=self.datasets_dir, n_cores=self.n_cores)
+        all_args = {k: v for k, v in locals().items() if k != 'self'}
+        dataset_db=ParquetDatasetDB(dataset_name=all_args.pop('dataset_name'), dir=self.datasets_dir, n_cores=self.n_cores)
         return dataset_db.dataset_exists()
     
     def get_schema(self, dataset_name:str='main'):
@@ -203,7 +190,8 @@ class ParquetDB:
         Returns:
             pyarrow.Schema: The schema of the table.
         """
-        dataset_db=ParquetDatasetDB(dataset_name=dataset_name, dir=self.datasets_dir, n_cores=self.n_cores)
+        all_args = {k: v for k, v in locals().items() if k != 'self'}
+        dataset_db=ParquetDatasetDB(dataset_name=all_args.pop('dataset_name'), dir=self.datasets_dir, n_cores=self.n_cores)
         return dataset_db.get_schema()
     
     def get_metadata(self, dataset_name:str='main'):
@@ -215,7 +203,8 @@ class ParquetDB:
         Returns:
             dict: The metadata of the table.
         """
-        dataset_db=ParquetDatasetDB(dataset_name=dataset_name, dir=self.datasets_dir, n_cores=self.n_cores)
+        all_args = {k: v for k, v in locals().items() if k != 'self'}
+        dataset_db=ParquetDatasetDB(dataset_name=all_args.pop('dataset_name'), dir=self.datasets_dir, n_cores=self.n_cores)
         return dataset_db.get_metadata()
     
     def set_metadata(self, dataset_name:str='main', metadata:dict=None):
@@ -225,9 +214,9 @@ class ParquetDB:
             dataset_name (str): The name of the table.
             metadata (dict): The metadata to set.
         """
-        dataset_db=ParquetDatasetDB(dataset_name=dataset_name, dir=self.datasets_dir, n_cores=self.n_cores)
-        function_args=dict(metadata=metadata)
-        dataset_db.set_metadata(**function_args)
+        all_args = {k: v for k, v in locals().items() if k != 'self'}
+        dataset_db=ParquetDatasetDB(dataset_name=all_args.pop('dataset_name'), dir=self.datasets_dir, n_cores=self.n_cores)
+        dataset_db.set_metadata(**all_args)
 
     def drop_dataset(self, dataset_name:str='main'):
         """
@@ -236,7 +225,8 @@ class ParquetDB:
         Args:
             dataset_name (str): The name of the table to drop.
         """
-        dataset_db=ParquetDatasetDB(dataset_name=dataset_name, dir=self.datasets_dir, n_cores=self.n_cores)
+        all_args = {k: v for k, v in locals().items() if k != 'self'}
+        dataset_db=ParquetDatasetDB(dataset_name=all_args.pop('dataset_name'), dir=self.datasets_dir, n_cores=self.n_cores)
         dataset_db.drop_dataset()
     
     def rename_dataset(self, dataset_name:str='main', new_name:str=None):
@@ -247,9 +237,9 @@ class ParquetDB:
             old_name (str): The current name of the table.
             new_name (str): The new name of the table.
         """
-        dataset_db=ParquetDatasetDB(dataset_name=dataset_name, dir=self.datasets_dir, n_cores=self.n_cores)
-        function_args=dict(new_name=new_name)
-        dataset_db.rename_dataset(**function_args)
+        all_args = {k: v for k, v in locals().items() if k != 'self'}
+        dataset_db=ParquetDatasetDB(dataset_name=all_args.pop('dataset_name'), dir=self.datasets_dir, n_cores=self.n_cores)
+        dataset_db.rename_dataset(**all_args)
 
     def copy_dataset(self, dataset_name:str='main', dest_name:str=None, overwrite:bool=False):
         """
@@ -259,10 +249,9 @@ class ParquetDB:
             dataset_name (str): The name of the source table.
             dest_name (str): The name of the destination table.
         """
-
-        dataset_db=ParquetDatasetDB(dataset_name=dataset_name, dir=self.datasets_dir, n_cores=self.n_cores)
-        function_args=dict(dest_name=dest_name, overwrite=overwrite)
-        dataset_db.copy_dataset(**function_args)
+        all_args = {k: v for k, v in locals().items() if k != 'self'}
+        dataset_db=ParquetDatasetDB(dataset_name=all_args.pop('dataset_name'), dir=self.datasets_dir, n_cores=self.n_cores)
+        dataset_db.copy_dataset(**all_args)
 
     def optimize_dataset(self, 
                          dataset_name:str='main',
@@ -282,14 +271,9 @@ class ParquetDB:
             batch_size (int): The batch size.
             **kwargs: Additional keyword arguments to pass to the pq.write_to_dataset function.
         """
-
-        dataset_db=ParquetDatasetDB(dataset_name=dataset_name, dir=self.datasets_dir, n_cores=self.n_cores)
-        function_args=dict(max_rows_per_file=max_rows_per_file,
-                           min_rows_per_group=min_rows_per_group,
-                           max_rows_per_group=max_rows_per_group,
-                           batch_size=batch_size,
-                           **kwargs)
-        dataset_db.optimize_dataset(**function_args)
+        all_args = {k: v for k, v in locals().items() if k != 'self'}
+        dataset_db=ParquetDatasetDB(dataset_name=all_args.pop('dataset_name'), dir=self.datasets_dir, n_cores=self.n_cores)
+        dataset_db.optimize_dataset(**all_args)
 
     def export_dataset(self, dataset_name:str='main', file_path: str=None, format: str = 'csv'):
         """
@@ -300,10 +284,9 @@ class ParquetDB:
             file_path (str): The file path to export the data to.
             format (str): The format to export ('csv', 'json').
         """
-        dataset_db=ParquetDatasetDB(dataset_name=dataset_name, dir=self.datasets_dir, n_cores=self.n_cores)
-        function_args=dict(file_path=file_path,
-                           format=format)
-        dataset_db.export_dataset(**function_args)
+        all_args = {k: v for k, v in locals().items() if k != 'self'}
+        dataset_db=ParquetDatasetDB(dataset_name=all_args.pop('dataset_name'), dir=self.datasets_dir, n_cores=self.n_cores)
+        dataset_db.export_dataset(**all_args)
         
     def export_partitioned_dataset(self,
                                    export_dir: str,
@@ -324,14 +307,9 @@ class ParquetDB:
             **kwargs: Additional keyword arguments to pass to the pq.write_to_dataset function.
 
         """
-
-        dataset_db=ParquetDatasetDB(dataset_name=dataset_name, dir=self.datasets_dir, n_cores=self.n_cores)
-        function_args=dict(export_dir=export_dir,
-                           partitioning=partitioning,
-                           partitioning_flavor=partitioning_flavor,
-                           batch_size=batch_size,
-                           **kwargs)
-        dataset_db.export_partitioned_dataset(**function_args)
+        all_args = {k: v for k, v in locals().items() if k != 'self'}
+        dataset_db=ParquetDatasetDB(dataset_name=all_args.pop('dataset_name'), dir=self.datasets_dir, n_cores=self.n_cores)
+        dataset_db.export_partitioned_dataset(**all_args)
 
     def import_dataset(self, dataset_name:str='main', file_path: str=None, format: str = 'csv', **kwargs):
         """
@@ -344,11 +322,9 @@ class ParquetDB:
             format (str): The format to import ('csv', 'json').
             **kwargs: Additional keyword arguments to pass to the create function.
         """
-        dataset_db=ParquetDatasetDB(dataset_name=dataset_name, dir=self.datasets_dir, n_cores=self.n_cores)
-        function_args=dict(file_path=file_path,
-                           format=format,
-                           **kwargs)
-        dataset_db.import_dataset(**function_args)
+        all_args = {k: v for k, v in locals().items() if k != 'self'}
+        dataset_db=ParquetDatasetDB(dataset_name=all_args.pop('dataset_name'), dir=self.datasets_dir, n_cores=self.n_cores)
+        dataset_db.import_dataset(**all_args)
 
     def merge_datasets(self, source_tables: List[str], dest_table: str):
         raise NotImplementedError
@@ -360,9 +336,9 @@ class ParquetDB:
         Args:
             backup_path (str): The path where the backup will be stored.
         """
-        dataset_db=ParquetDatasetDB(dataset_name=dataset_name, dir=self.datasets_dir, n_cores=self.n_cores)
-        function_args=dict(backup_path=backup_path)
-        dataset_db.backup_database(**function_args)
+        all_args = {k: v for k, v in locals().items() if k != 'self'}
+        dataset_db=ParquetDatasetDB(dataset_name=all_args.pop('dataset_name'), dir=self.datasets_dir, n_cores=self.n_cores)
+        dataset_db.backup_database(**all_args)
 
     def restore_database(self, dataset_name:str='main', backup_path: str=None):
         """
@@ -371,6 +347,6 @@ class ParquetDB:
         Args:
             backup_path (str): The path to the backup to restore from.
         """
-        dataset_db=ParquetDatasetDB(dataset_name=dataset_name, dir=self.datasets_dir, n_cores=self.n_cores)
-        function_args=dict(backup_path=backup_path)
-        dataset_db.restore_database(**function_args)
+        all_args = {k: v for k, v in locals().items() if k != 'self'}
+        dataset_db=ParquetDatasetDB(dataset_name=all_args.pop('dataset_name'), dir=self.datasets_dir, n_cores=self.n_cores)
+        dataset_db.restore_database(**all_args)
