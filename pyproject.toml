@@ -1,0 +1,52 @@
+[build-system]
+requires = ["setuptools>=64", "setuptools-scm>=8"]
+build-backend = "setuptools.build_meta"
+
+
+[tool.setuptools_scm]
+local_scheme="no-local-version"
+version_file = "parquetdb/_version.py"
+
+
+[project]
+name = "parquetdb"
+authors = [
+    {name = "Logan Lang", email = "lllang@mix.wvu.edu"}
+]
+description = "ParquetDB is a lightweight database-like system built on top of Apache Parquet files using PyArrow."
+readme = {file = "README.md", content-type = "text/markdown"}  # Ensure this matches the file used
+requires-python = ">=3.8"
+keywords = ["materials", "science", "database", "python"]
+license = {file = "LICENSE"}
+classifiers = [
+    "Programming Language :: Python :: 3",
+]
+
+dynamic = ["version"]
+
+dependencies = [
+    "python-dotenv",
+    "pyarrow",
+    "pandas",
+    "matplotlib"
+]
+
+[project.optional-dependencies]
+
+
+dev = ["sphinx", 
+"sphinx_rtd_theme"]
+
+
+[project.urls]
+Repository = "https://github.com/romerogroup/ParquetDB"
+Issues = "https://github.com/romerogroup/ParquetDB/issues"
+Changelog = "https://github.com/romerogroup/ParquetDB/CHANGELOG.md"
+
+
+
+[tool.setuptools.packages.find]
+where = ["."]
+include = ["parquetdb*"]
+exclude = ["parquetdb.tests*"]
+
