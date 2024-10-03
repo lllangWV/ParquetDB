@@ -27,6 +27,12 @@ jobs:
         python -m pip install --upgrade pip
         pip install build openai python-dotenv requests
 
+    - name: Exho release id
+      run: |
+      
+        echo "RELEASE_ID=${{ github.event.release.id }}"
+        echo "REPO_NAME=${{ github.repository}}"
+
     - name: Build package and get version
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
