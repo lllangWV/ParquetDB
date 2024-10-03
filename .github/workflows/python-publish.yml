@@ -69,7 +69,8 @@ jobs:
     - name: Commiting new version of the changelog and the version file
       if: success() 
       run: |
-        git add parquetdb/_version.py
+        PACKAGE_NAME=$(basename $(dirname $(find . -name '_version.py' | head -n 1)))
+        git add $PACKAGE_NAME/_version.py
         git add CHANGELOG.md
         git commit -m "Update _version.py and CHANGELOG.md due to new release"
 
