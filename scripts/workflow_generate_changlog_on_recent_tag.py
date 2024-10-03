@@ -5,35 +5,13 @@ import subprocess
 import openai
 from dotenv import load_dotenv
 from datetime import datetime
-
+from utils import get_releases_data, run_git_command, bash_command
 load_dotenv()
 
 api_key = os.getenv("OPENAI_API_KEY")
 TAG = os.getenv('TAG')
-
-def run_git_command(command):
-    try:
-        result = subprocess.run(['git'] + command.split(), 
-                                check=True, 
-                                capture_output=True, 
-                                text=True)
-        return result.stdout
-    except subprocess.CalledProcessError as e:
-        print(f"An error occurred: {e}")
-        return e.stderr
-    
-def bash_command(command):
-    try:
-        result = subprocess.run(command.split(), 
-                                check=True, 
-                                capture_output=True, 
-                                text=True)
-        return result.stdout
-    except subprocess.CalledProcessError as e:
-        print(f"An error occurred: {e}")
-        return e.stderr
-
-
+REPO_NAME = os.getenv('REPO_NAME')
+GITHUB_TOKEN = os.getenv('GITHUB_TOKEN')
 
 summarize_commit_message_template = """
 I have the following commit messages:
@@ -101,13 +79,14 @@ def summarize_commit_messages(commit_messages):
     return changes_summary
 
 def generate_changelog_message():
-    # Example usage:
-    # bash_command('git fetch --all --tags')
-    # current_version = bash_command('git tag -l --sort=v:refname').strip()
-    # print(f"Current Version: {current_version}")
-    # print(f'git log --pretty=format:"%h-%s" {current_version}..')
 
-    commit_logs_str=bash_command(f'git log --pretty=format:"%h-%s" {TAG}..')
+    release_data=get_releases_data(repo_name=REPO_NAME, github_token=GITHUB_TOKEN, verbose=False)
+    if len(release_data)<=1:
+        previous_tag=TAG
+    else:
+        previous_tag=release_data[1]['tag_name']
+
+    commit_logs_str=bash_command(f'git log --pretty=format:"%h-%s" {previous_tag}..')
     commit_logs=commit_logs_str.split('\n')
     commit_messages=[commit_log.split('-')[-1] for commit_log in commit_logs]
     # print(commit_messages)

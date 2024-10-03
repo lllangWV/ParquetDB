@@ -17,22 +17,6 @@ headers = {
     "Accept": "application/vnd.github.v3+json",
 }
 
-def get_release_ids():
-    
-
-    api_url = f"https://api.github.com/repos/{REPO_NAME}/releases/{RELEASE_ID}"
-
-    response = requests.get(api_url, headers=headers)
-
-    # Check if the request was successful
-    if response.status_code == 200:
-        release_data = response.json()
-        print("Release Data:")
-        for release in release_data:
-            print(f"Release ID: {release['id']}, Tag Name: {release['tag_name']}")
-    else:
-        print(f"Failed to fetch release data: {response.status_code}")
-        print(response.json())
 
 def get_release_details(release_id):
     api_url = f"https://api.github.com/repos/{REPO_NAME}/releases/{release_id}"
@@ -79,7 +63,7 @@ def update_release_body(input_string):
     response = requests.patch(api_url, headers=headers, json=json_data)
 
     # Check if the request was successful
-    # Check if the request was successful
+
     if response.status_code == 200:
         print("Release updated successfully!")
         print(response.json())  # Optional: Print the updated release details

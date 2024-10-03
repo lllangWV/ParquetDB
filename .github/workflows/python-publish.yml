@@ -27,25 +27,16 @@ jobs:
         python -m pip install --upgrade pip
         pip install build openai python-dotenv requests
 
-    - name: Exho release id
+    - name: Echo release id
       run: |
       
         echo "RELEASE_ID=${{ github.event.release.id }}"
         echo "REPO_NAME=${{ github.repository}}"
-
-    - name: Build package and get version
-      env:
-        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        RELEASE_ID: ${{ github.event.release.id }}
-        REPO_NAME: ${{ github.repository }}
-      run: |
-
-        TAG=$(python scripts/workflow_get_release_tag.py)
-        echo "TAG=$TAG" >> $GITHUB_ENV
+        echo "TAG=${{ github.event.release.tag_name }}"
 
     - name: Build package
       env:
-        SETUPTOOLS_SCM_PRETEND_VERSION: ${{ env.TAG }} 
+        SETUPTOOLS_SCM_PRETEND_VERSION: ${{ github.event.release.tag_name }} 
       run: python -m build
 
     - name: Publish package
@@ -59,7 +50,7 @@ jobs:
       if: success() 
       env:
         OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}  # Pass the secret as an environment variable
-        TAG: ${{ env.TAG }}
+        TAG: ${{ github.event.release.tag_name }} 
       run: |
 
         CHANGELOG=$(python scripts/workflow_generate_changlog_on_recent_tag.py)
@@ -105,6 +96,7 @@ jobs:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         RELEASE_ID: ${{ github.event.release.id }}
         REPO_NAME: ${{ github.repository }}
+        TAG: ${{ github.event.release.tag_name }}
       run: |
 
         python scripts/workflow_delete_release.py
