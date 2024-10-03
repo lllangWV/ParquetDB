@@ -81,7 +81,7 @@ def summarize_commit_messages(commit_messages):
 def generate_changelog_message():
 
     release_data=get_releases_data(repo_name=REPO_NAME, github_token=GITHUB_TOKEN, verbose=False)
-    print(release_data)
+    # print(release_data)
     if len(release_data)<=1:
         previous_tag=TAG
     else:
@@ -124,5 +124,5 @@ if __name__ == "__main__":
     changelog_message=generate_changelog_message()
 
 
-    # modify_changelog(changelog_message)
+    modify_changelog(changelog_message)
     
