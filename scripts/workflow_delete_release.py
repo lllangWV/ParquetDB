@@ -18,7 +18,7 @@ headers = {
 
 # Step 1: Get the release ID associated with the tag
 def get_release_details(release_id):
-    api_url = f"https://api.github.com/repos/lllangWV/{REPO_NAME}/releases/{release_id}"
+    api_url = f"https://api.github.com/repos/{REPO_NAME}/releases/{release_id}"
 
     response = requests.get(api_url, headers=headers)
 

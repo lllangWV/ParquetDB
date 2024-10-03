@@ -19,7 +19,7 @@ headers = {
 
 
 def get_release_details(release_id):
-    api_url = f"https://api.github.com/repos/lllangWV/{REPO_NAME}/releases/{release_id}"
+    api_url = f"https://api.github.com/repos/{REPO_NAME}/releases/{release_id}"
     response = requests.get(api_url, headers=headers)
 
     # Check if the request was successful

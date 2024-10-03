@@ -35,7 +35,7 @@ def get_release_ids():
         print(response.json())
 
 def get_release_details(release_id):
-    api_url = f"https://api.github.com/repos/lllangWV/{REPO_NAME}/releases/{release_id}"
+    api_url = f"https://api.github.com/repos/{REPO_NAME}/releases/{release_id}"
 
     response = requests.get(api_url, headers=headers)
 
@@ -65,7 +65,7 @@ def update_release_body(input_string):
     
     print(new_release_body)
 
-    api_url = f"https://api.github.com/repos/lllangWV/{REPO_NAME}/releases/{RELEASE_ID}"
+    api_url = f"https://api.github.com/repos/{REPO_NAME}/releases/{RELEASE_ID}"
     headers = {
         "Authorization": f"token {GITHUB_TOKEN}",
         "Accept": "application/vnd.github.v3+json",
