@@ -8,7 +8,7 @@ load_dotenv()
 
 # Get environment variables
 GITHUB_TOKEN = os.getenv('GITHUB_TOKEN')
-REPO_NAME = os.getenv('GITHUB_REPOSITORY')
+REPO_NAME = os.getenv('REPO_NAME')
 RELEASE_ID = os.getenv('RELEASE_ID')  # Pass the release ID from the GitHub Action context
 
 headers = {
@@ -20,7 +20,6 @@ headers = {
 
 def get_release_details(release_id):
     api_url = f"https://api.github.com/repos/lllangWV/{REPO_NAME}/releases/{release_id}"
-
     response = requests.get(api_url, headers=headers)
 
     # Check if the request was successful
