@@ -81,23 +81,24 @@ def summarize_commit_messages(commit_messages):
 def generate_changelog_message():
 
     release_data=get_releases_data(repo_name=REPO_NAME, github_token=GITHUB_TOKEN, verbose=False)
-    if len(release_data)<=1:
-        previous_tag=TAG
-    else:
-        previous_tag=release_data[1]['tag_name']
+    print(release_data)
+    # if len(release_data)<=1:
+    #     previous_tag=TAG
+    # else:
+    #     previous_tag=release_data[1]['tag_name']
 
-    commit_logs_str=bash_command(f'git log --pretty=format:"%h-%s" {previous_tag}..')
-    commit_logs=commit_logs_str.split('\n')
-    commit_messages=[commit_log.split('-')[-1] for commit_log in commit_logs]
-    # print(commit_messages)
+    # commit_logs_str=bash_command(f'git log --pretty=format:"%h-%s" {previous_tag}..')
+    # commit_logs=commit_logs_str.split('\n')
+    # commit_messages=[commit_log.split('-')[-1] for commit_log in commit_logs]
+    # # print(commit_messages)
 
-    changes_summary=summarize_commit_messages(commit_messages)
-    current_date = datetime.now().strftime("%m-%d-%Y")
-    changelog_message=changelog_template.format(version=TAG, 
-                                                changes_summary=changes_summary,
-                                                current_date=current_date)
-    # print('-'*200)
-    print(changelog_message)
+    # changes_summary=summarize_commit_messages(commit_messages)
+    # current_date = datetime.now().strftime("%m-%d-%Y")
+    # changelog_message=changelog_template.format(version=TAG, 
+    #                                             changes_summary=changes_summary,
+    #                                             current_date=current_date)
+    # # print('-'*200)
+    # print(changelog_message)
     return changelog_message
 
 def modify_changelog(changelog_message):
@@ -123,5 +124,5 @@ if __name__ == "__main__":
     changelog_message=generate_changelog_message()
 
 
-    modify_changelog(changelog_message)
+    # modify_changelog(changelog_message)
     

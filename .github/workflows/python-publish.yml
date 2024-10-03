@@ -51,6 +51,8 @@ jobs:
       env:
         OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}  # Pass the secret as an environment variable
         TAG: ${{ github.event.release.tag_name }} 
+        REPO_NAME: ${{ github.repository }}
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       run: |
 
         CHANGELOG=$(python scripts/workflow_generate_changlog_on_recent_tag.py)

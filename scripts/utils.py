@@ -37,7 +37,7 @@ def run_git_command(command):
                                 text=True)
         return result.stdout
     except subprocess.CalledProcessError as e:
-        print(f"An error occurred: {e}")
+        # print(f"An error occurred: {e}")
         return e.stderr
     
 def bash_command(command):
@@ -48,5 +48,5 @@ def bash_command(command):
                                 text=True)
         return result.stdout
     except subprocess.CalledProcessError as e:
-        print(f"An error occurred: {e}")
+        # print(f"An error occurred: {e}")
         return e.stderr
