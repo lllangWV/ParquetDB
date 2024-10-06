@@ -129,7 +129,7 @@ data = [
     {'name': 'Diana', 'age': 32, 'occupation': 'Product Manager'}
 ]
 
-db.create(data, table_name='employees')
+db.create(data, dataset_name='employees')
 ```
 
 ### Reading Data
@@ -138,16 +138,16 @@ Read data from the database using the `read` method. You can filter data by IDs,
 
 ```python
 # Read all data
-all_employees = db.read(table_name='employees')
+all_employees = db.read(dataset_name='employees')
 
 # Read specific columns
-names = db.read(table_name='employees', columns=['name'])
+names = db.read(dataset_name='employees', columns=['name'])
 
 # Read data with filters
 from pyarrow import compute as pc
 
 age_filter = pc.field('age') > 30
-older_employees = db.read(table_name='employees', filters=[age_filter])
+older_employees = db.read(dataset_name='employees', filters=[age_filter])
 ```
 
 ### Updating Data
@@ -160,7 +160,7 @@ update_data = [
     {'id': 3, 'age': 29}
 ]
 
-db.update(update_data, table_name='employees')
+db.update(update_data, dataset_name='employees')
 ```
 
 ### Deleting Data
@@ -168,7 +168,7 @@ db.update(update_data, table_name='employees')
 Delete records from the database by specifying their IDs.
 
 ```python
-db.delete(ids=[2, 4], table_name='employees')
+db.delete(ids=[2, 4], dataset_name='employees')
 ```
 
 
