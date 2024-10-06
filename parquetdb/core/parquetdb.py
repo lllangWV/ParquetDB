@@ -15,9 +15,10 @@ import pyarrow.compute as pc
 import pyarrow.dataset as ds
 import pyarrow.parquet as pq
 
-from parquetdb.utils import timeit, is_directory_empty
-from parquetdb.pyarrow_utils import combine_tables, merge_schemas, align_table,replace_none_with_nulls
-from parquetdb.parquet_datasetdb import ParquetDatasetDB
+from parquetdb.core.parquet_datasetdb import ParquetDatasetDB
+from parquetdb.utils.general_utils import timeit, is_directory_empty
+from parquetdb.utils.pyarrow_utils import combine_tables, merge_schemas, align_table,replace_none_with_nulls
+
 
 # Logger setup
 logger = logging.getLogger(__name__)

@@ -1,4 +1,22 @@
 import pyarrow as pa
+import logging
+
+logger = logging.getLogger(__name__)
+
+# https://arrow.apache.org/docs/python/api/datatypes.html
+t_string=pa.string()
+t_int32=pa.int32()
+t_int64=pa.int64()
+t_float32=pa.float32()
+t_float64=pa.float64()
+t_bool=pa.bool_()
+
+# Create variable-length or fixed size binary type.
+t_binary = pa.binary()
+
+#one of ‘s’ [second], ‘ms’ [millisecond], ‘us’ [microsecond], or ‘ns’ [nanosecond]
+t_timestamp=pa.timestamp('ms')
+
 
 def find_difference_between_pyarrow_schemas(schema1, schema2):
     """
@@ -106,19 +124,25 @@ def add_null_columns_for_missing_fields(table: pa.Table, new_schema: pa.Schema) 
     
     return table
 
-def align_struct_fields(original_array: pa.ChunkedArray, new_type: pa.StructType) -> pa.ChunkedArray:
+def align_struct_fields(original_array: pa.Array, new_type: pa.DataType) -> pa.Array:
     """
-    Aligns the struct fields of an array to match the new schema, filling missing fields with null values.
+    Aligns the fields of an array to match the new type, filling missing fields with null values.
+    Handles nested struct types recursively and replaces empty structs with a dummy struct.
 
     Args:
-        original_array (pa.ChunkedArray): The original struct array.
-        new_type (pa.StructType): The target struct type to align to.
+        original_array (pa.Array): The original array (can be a struct or any other type).
+        new_type (pa.DataType): The target type to align to.
 
     Returns:
-        pa.ChunkedArray: The aligned struct array.
+        pa.Array: The aligned array.
     """
     # Combine chunks if necessary
-    original_array = pa.concat_arrays(original_array.chunks) if isinstance(original_array, pa.ChunkedArray) else original_array
+    if isinstance(original_array, pa.ChunkedArray):
+        original_array = pa.concat_arrays(original_array.chunks)
+    
+    # If the new type is not a struct, just cast and return
+    if not isinstance(new_type, pa.StructType):
+        return original_array.cast(new_type)
     
     original_type = original_array.type
     original_fields_dict = {field.name: i for i, field in enumerate(original_type)}
@@ -127,15 +151,28 @@ def align_struct_fields(original_array: pa.ChunkedArray, new_type: pa.StructType
     new_arrays = []
     for field in new_type:
         if field.name in original_fields_dict:
-            # If the field exists, keep the original field
-            new_arrays.append(original_array.field(original_fields_dict[field.name]))
+            # If the field exists, align it recursively
+            original_field = original_array.field(original_fields_dict[field.name])
+            aligned_field = align_struct_fields(original_field, field.type)
+            
+            # Check if the aligned field is an empty struct
+            if isinstance(field.type, pa.StructType) and len(field.type) == 0:
+                # Replace empty struct with dummy struct
+                dummy_array = pa.array([{'dummy_field': None}] * len(original_array), type=dummy_struct_type)
+                new_arrays.append(dummy_array)
+            else:
+                new_arrays.append(aligned_field)
         else:
-            # Otherwise, fill with nulls
-            null_array = pa.nulls(len(original_array), field.type)
-            new_arrays.append(null_array)
+            # If the field doesn't exist, fill with nulls
+            if isinstance(field.type, pa.StructType) and len(field.type) == 0:
+                # For empty struct fields, use the dummy struct
+                dummy_array = pa.array([{'dummy_field': None}] * len(original_array), type=dummy_struct_type)
+                new_arrays.append(dummy_array)
+            else:
+                null_array = pa.nulls(len(original_array), field.type)
+                new_arrays.append(null_array)
     
     return pa.StructArray.from_arrays(new_arrays, fields=new_type)
-
 
 def align_table(table: pa.Table, new_schema: pa.Schema) -> pa.Table:
     """
@@ -150,6 +187,7 @@ def align_table(table: pa.Table, new_schema: pa.Schema) -> pa.Table:
     """
     # Add missing top-level columns
     table = add_null_columns_for_missing_fields(table, new_schema)
+    logger.info(table.to_pandas())
 
     # Align any struct fields
     for field in new_schema:

@@ -5,7 +5,7 @@ import os
 import tempfile
 
 import numpy as np
-from parquetdb.parquetdb import ParquetDB
+from parquetdb import ParquetDB
 import pyarrow as pa
 import pyarrow.compute as pc
 import pandas as pd
