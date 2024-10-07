@@ -131,7 +131,7 @@ class ParquetDatasetDB:
             incoming_schema = incoming_table.schema
             current_schema = self.get_schema()
             merged_schema=pyarrow_utils.merge_schemas(current_schema, incoming_schema)
-            print(merged_schema)
+
             # Align file schemas with merged schema
             current_files = glob(os.path.join(self.dataset_dir, f'{self.dataset_name}_*.parquet'))
             for current_file in current_files:
