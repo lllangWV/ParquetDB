@@ -100,10 +100,10 @@ data = [
 ]
 
 # Add data to the database
-db.create(data, table_name='employees')
+db.create(data, dataset_name='employees')
 
 # Read data from the database
-employees = db.read(table_name='employees')
+employees = db.read(dataset_name='employees')
 print(employees.to_pandas())
 ```
 
