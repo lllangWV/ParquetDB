@@ -127,13 +127,13 @@ class TestParquetDatasetDB(unittest.TestCase):
         data = [
             {'name': 'Judy', 'age': 29}
         ]
-        self.db.create(data, )
+        self.db.create(data)
 
         # Add new data with an additional field
         new_data = [
             {'name': 'Karl', 'occupation': 'Engineer'}
         ]
-        self.db.create(new_data, )
+        self.db.create(new_data)
 
         # Read back the data
         result = self.db.read()
@@ -144,6 +144,34 @@ class TestParquetDatasetDB(unittest.TestCase):
         self.assertEqual(df.iloc[1]['occupation'], 'Engineer')
         self.assertTrue(pd.isnull(df.iloc[0]['occupation']))
         self.assertTrue(np.isnan(df.iloc[1]['age']))
+
+
+    def test_nested_empty_struct_field(self):
+        # Test adding data with a new field and ensure schema evolves
+        # This also test that if new incoming data doesn't have a 
+        # field that is already in the schema, a null value of the correct type is added
+        data = [
+            {'name': {}, 'age': {"field1": {"inner_field1": 1, "inner_field2": 2}}},
+        ]
+        self.db.create(data)
+
+        # Add new data with an additional field
+        new_data = [
+            {'name': {'age':1}, 'occupation': 'Engineer'}
+        ]
+        self.db.create(new_data)
+
+        # Read back the data
+        result = self.db.read()
+        df = result.to_pandas()
+
+        # Assertions
+        # self.assertIn('occupation', df.columns)
+        self.assertIn('dummy_field', df.iloc[0]['name'])
+        self.assertEqual(df.iloc[0]['name']['dummy_field'], None)
+        self.assertEqual(df.iloc[1]['name']['dummy_field'], None)
+        self.assertEqual(df.iloc[0]['age']['field1']['inner_field1'], 1)
+        self.assertEqual(df.iloc[1]['name']['age'], 1)
 
     def test_get_schema(self):
         # Test retrieving the schema

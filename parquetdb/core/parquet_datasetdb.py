@@ -14,12 +14,11 @@ import pyarrow.dataset as ds
 import pyarrow.parquet as pq
 
 from parquetdb.utils.general_utils import timeit, is_directory_empty
-from parquetdb.utils.pyarrow_utils import combine_tables, merge_schemas, align_table,replace_none_with_nulls
+from parquetdb.utils import pyarrow_utils
 
 # Logger setup
 logger = logging.getLogger(__name__)
 
-# TODO:  If a dictionary is empty there will be an error
 
 def get_field_names(filepath, columns=None, include_cols=True):
     """
@@ -116,13 +115,14 @@ class ParquetDatasetDB:
 
         # If this is the first table, save it directly
         if is_directory_empty(self.dataset_dir):
+            incoming_table=pyarrow_utils.replace_empty_structs_in_table(incoming_table)
             incoming_save_path = self._get_save_path()
             pq.write_table(incoming_table, incoming_save_path)
             return None
 
         # Write tmp files for the original table
         # This is done to ensure that the original table is not deleted 
-        # if there is an error during the writing process
+        # if there is an exception during the writing process
         self._write_tmp_files()
 
         # Align the incoming and original schemas
@@ -130,22 +130,23 @@ class ParquetDatasetDB:
             # Merge schemas
             incoming_schema = incoming_table.schema
             current_schema = self.get_schema()
-            merged_schema=merge_schemas(current_schema, incoming_schema)
-        
+            merged_schema=pyarrow_utils.merge_schemas(current_schema, incoming_schema)
+            print(merged_schema)
             # Align file schemas with merged schema
             current_files = glob(os.path.join(self.dataset_dir, f'{self.dataset_name}_*.parquet'))
             for current_file in current_files:
                 current_table = pq.read_table(current_file)
 
                 # Align current schema to match incoming
-                updated_table=align_table(current_table, merged_schema)
+                updated_table=pyarrow_utils.align_table(current_table, merged_schema)
+
                 pq.write_table(updated_table, current_file)
 
             # Align incoming tbale to match merged schema
-            incoming_table=align_table(incoming_table, merged_schema)
+            incoming_table=pyarrow_utils.align_table(incoming_table, merged_schema)
 
         except Exception as e:
-            logger.error(f"Error aligning schemas: {e}")
+            logger.exception(f"exception aligning schemas: {e}")
             logger.info("Restoring original files")
             self._restore_tmp_files()
         
@@ -237,8 +238,8 @@ class ParquetDatasetDB:
             try:
                 updated_table = self._update_table(current_table, id_data_dict_map, update_schema)
             except Exception as e:
-                logger.error(f"Error updating {current_file}: {e}\n{traceback.format_exc()}")
-                # logger.error(f"Error updating {current_file}: {e}")
+                logger.exception(f"exception updating {current_file}")
+                # logger.exception(f"exception updating {current_file}: {e}")
                 # If something goes wrong, restore the original file
                 self._restore_tmp_files()
                 break
@@ -287,7 +288,7 @@ class ParquetDatasetDB:
             try:
                 updated_table = self._delete_ids_from_table(ids, current_table)
             except Exception as e:
-                logger.error(f"Error processing {current_file}: {e}")
+                logger.exception(f"exception processing {current_file}: {e}")
                 # If something goes wrong, restore the original file
                 self._restore_tmp_files()
                 raise e
@@ -326,7 +327,7 @@ class ParquetDatasetDB:
             try:
                 pq.write_table(updated_table, current_file)
             except Exception as e:
-                logger.error(f"Error processing {current_file}: {e}")
+                logger.exception(f"exception processing {current_file}: {e}")
                 # If something goes wrong, restore the original file
                 self._restore_tmp_files()
                 break
@@ -508,7 +509,7 @@ class ParquetDatasetDB:
             )
             logger.info(f"Optimized table {self.dataset_name}.")
         except Exception as e:
-            logger.error(f"Error optimizing table {self.dataset_name}: {e}")
+            logger.exception(f"exception optimizing table {self.dataset_name}: {e}")
             logger.info("Restoring original files")
             self._restore_tmp_files()
 
@@ -721,7 +722,11 @@ class ParquetDatasetDB:
             schema=None
 
         self._write_tmp_files()
-        final_table = self._load_data(batch_size=batch_size, output_format=output_format, load_tmp=True)
+
+        try:
+            final_table = self._load_data(batch_size=batch_size, output_format=output_format, load_tmp=True)
+        except pa.lib.ArrowNotImplementedError as e:
+            raise ValueError("The incoming data does not match the schema of the existing data.") from e
 
         try:
             logger.info(f"Writing final table to {self.dataset_dir}")
@@ -734,7 +739,7 @@ class ParquetDatasetDB:
                             existing_data_behavior='overwrite_or_ignore')
             
         except Exception as e:
-            logger.error(f"Error writing final table to {self.dataset_dir}: {e}")
+            logger.exception(f"exception writing final table to {self.dataset_dir}: {e}")
             logger.info("Restoring original files")
             self._restore_tmp_files()
 
@@ -806,9 +811,11 @@ class ParquetDatasetDB:
         """Update a single Parquet file with new data."""
 
         # Add new columns to the current table
-        # updated_table = self.add_null_columns_for_missing_fields( current_table, update_schema)
+        current_table=pyarrow_utils.replace_empty_structs_in_table(current_table)
+        update_schema = pyarrow_utils.merge_schemas(current_table.schema, update_schema)
+
         logger.debug(f"Aligning table with update schema")
-        updated_table = align_table(current_table, update_schema)
+        updated_table = pyarrow_utils.align_table(current_table, update_schema)
         logger.debug(f"Aligned table with update schema")
         # Update existing records in the current table
         current_ids_list = current_table['id'].to_pylist()
@@ -925,7 +932,7 @@ class ParquetDatasetDB:
         elif data is None:
             data_list = None
         else:
-            raise TypeError("Data must be a dictionary or a list of dictionaries.")
+            raise Typeexception("Data must be a dictionary or a list of dictionaries.")
         return data_list
     
     def _get_current_files(self):
