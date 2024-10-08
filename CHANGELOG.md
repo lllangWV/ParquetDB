@@ -1,6 +1,34 @@
 
 ___
 
+# 1.0.0 (10-08-2024)
+
+##### Bugs
+- None identified
+
+##### New Features
+- Introduced `ParquetDB`, the core class, with `ParquetDBManager` to facilitate management of multiple independent datasets.
+- Added `beautifulsoup` as a new dependency for example usage.
+- Implemented an example demonstrating the usage of `ParquetDatasetDB` to write 4 million structures and associated read capabilities.
+- Added the ability to create normalization methods that optimize performance by ensuring consistent row counts in dataset directories.
+- Enhanced the `merge_schema` function with `timeit` to measure performance during execution.
+
+##### Documentation updates
+- Updated the changelog script and revised `_version.py` and `CHANGELOG.md` for the new release.
+
+##### Maintenance
+- Added todos for future enhancement, specifically to remove raw table read and write operations for batch compatibility.
+- Moved outdated examples to the `dev_scripts/examples` directory.
+- Adjusted default values for normalization.
+- Consolidated `logging_config` and `config` into a unified base object `LoggingConfig`.
+- Added a script to run tests in the test directory.
+- Rearranged and organized the `dev_scripts` directory.
+- Merged changes from the main branch of the remote repository.
+
+___
+
+___
+
 # 0.0.8 (10-08-2024)
 
 ##### Bugs
