@@ -1,6 +1,27 @@
 
 ___
 
+# 0.0.8 (10-08-2024)
+
+##### Bugs
+- Made changes so read will no always return an empty table or batch generator if the filtering or column selection fails
+- Removed print statement
+
+##### New Features
+- Added config class. Now users can change configs by importing parquetdb; parquetdb.config.root_dir='path/to/dir' or change the logging parquetdb.logging_config.loggers.parquetdb.level='Debug'; parquetdb.logging_config.apply()
+- New dev scripts
+
+##### Documentation updates
+- Updated _version.py and CHANGELOG.md due to new release
+
+##### Maintenance
+- Removed logging from tests
+- Merge branch 'main' of https://github.com/lllangWV/ParquetDB into main
+
+___
+
+___
+
 # 0.0.7 (10-07-2024)
 
 ##### Bugs
