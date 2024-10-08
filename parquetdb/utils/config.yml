@@ -36,6 +36,10 @@ logging_config:
       level: ERROR
       handlers: [console]
       propagate: no
+    timing:
+      level: DEBUG
+      handlers: [console]
+      propagate: no
 
 
 

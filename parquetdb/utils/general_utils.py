@@ -4,6 +4,7 @@ import functools
 import time
 
 logger = logging.getLogger(__name__)
+time_logger = logging.getLogger('timing')
 
 import pyarrow as pa
 
@@ -24,7 +25,7 @@ def timeit(func):
         result = func(*args, **kwargs)
         end_time = time.time()
         elapsed_time = end_time - start_time
-        logger.debug(f"Function {func.__name__!r} executed in {elapsed_time:.4f} seconds")
+        time_logger.debug(f"Function {func.__name__!r} executed in {elapsed_time:.4f} seconds")
         return result
 
     return wrapper
