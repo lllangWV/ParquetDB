@@ -1,6 +1,8 @@
 import pyarrow as pa
 import logging
 
+from parquetdb.utils.general_utils import timeit
+
 logger = logging.getLogger(__name__)
 
 # https://arrow.apache.org/docs/python/api/datatypes.html
@@ -72,6 +74,7 @@ def merge_structs(current_type: pa.StructType, incoming_type: pa.StructType) -> 
 def schema_to_struct(schema):
     return pa.struct(schema)
 
+@timeit
 def merge_schemas(current_schema: pa.Schema, incoming_schema: pa.Schema) -> pa.Schema:
     
     merged_fields = []
@@ -179,6 +182,7 @@ def align_struct_fields(original_array: pa.Array, new_type: pa.DataType, dummy_t
     
     return pa.StructArray.from_arrays(new_arrays, fields=new_type)
 
+@timeit
 def align_table(current_table: pa.Table, new_schema: pa.Schema) -> pa.Table:
     """
     Aligns the given table to the new schema, filling in missing fields or struct fields with null values.
@@ -193,6 +197,7 @@ def align_table(current_table: pa.Table, new_schema: pa.Schema) -> pa.Table:
     current_table=replace_empty_structs_in_table(current_table)
 
     current_table=add_new_null_fields_in_table(current_table, new_schema)
+    
     current_table=order_fields_in_table(current_table, new_schema)
     
     return current_table
