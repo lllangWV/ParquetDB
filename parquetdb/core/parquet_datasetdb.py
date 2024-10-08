@@ -21,7 +21,10 @@ logger = logging.getLogger(__name__)
 
 
 #TODO: Add option to skip create aligment if the schema is the exact same
-#TODO Need better method to check if schema is the same and identify mismatch
+#TODO: Need better method to check if schema is the same and identify mismatch
+#TODO: Need to remove raw reads and writes of tables in create, update, and delete methods. 
+# This can cause issue if the original table is large. I need to adapt the method to handle batches instead.
+
 def get_field_names(filepath, columns=None, include_cols=True):
     """
     Gets the field names from a parquet file.
@@ -312,7 +315,7 @@ class ParquetDatasetDB:
         logger.info(f"Updated {self.dataset_name} table.")
 
     @timeit
-    def normalize(self, schema=None, batch_size: int = None, output_format: str = 'table',
+    def normalize(self, schema=None, batch_size: int = None, load_kwargs: dict = None, output_format: str = 'table',
               max_rows_per_file: int = 100000, min_rows_per_group: int = 0, max_rows_per_group: int = 100000,
               existing_data_behavior: str = 'overwrite_or_ignore', **kwargs):
         """
@@ -329,6 +332,8 @@ class ParquetDatasetDB:
             The schema to use for the dataset. If not provided, it will be inferred from the existing data (default: None).
         batch_size : int, optional
             The number of rows to process in each batch. Required if `output_format` is set to 'batch_generator' (default: None).
+        load_kwargs : dict, optional
+            These are the kwyword arguments to pass to either `dataset.to_batches` or `dataset.to_table`.
         output_format : str, optional
             The format of the output dataset. Supported formats are 'table' and 'batch_generator' (default: 'table').
         max_rows_per_file : int, optional
@@ -376,7 +381,7 @@ class ParquetDatasetDB:
             schema=None
 
         try:
-            dataset = self._load_data(batch_size=batch_size, output_format=output_format, load_tmp=True)
+            dataset = self._load_data(batch_size=batch_size, output_format=output_format, load_tmp=True, load_kwargs=load_kwargs)
         except pa.lib.ArrowNotImplementedError as e:
             raise ValueError("The incoming data does not match the schema of the existing data.") from e
 
