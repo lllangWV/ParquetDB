@@ -5,13 +5,13 @@ import os
 import tempfile
 
 import numpy as np
-from parquetdb import ParquetDB, logging_config
+from parquetdb import ParquetDB, config
 import pyarrow as pa
 import pyarrow.compute as pc
 import pandas as pd
 
-logging_config.logging_config.loggers.timing.level='INFO'
-logging_config.apply()
+config.logging_config.loggers.timing.level='INFO'
+config.apply()
 
 # TODO: Create tests for nested structure updates
 # TODO: Create tests for 
