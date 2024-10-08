@@ -2,6 +2,7 @@ root_dir: "."
 data_dir: "{{ root_dir }}/data"
 external_data_dir: "{{ data_dir }}/external"
 log_dir: "{{ root_dir }}/logs"
+tests_dir: "{{ root_dir }}/tests"
 db_name: 'VariConfig'
 n_cores: 
 
