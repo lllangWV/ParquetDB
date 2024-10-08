@@ -24,14 +24,15 @@ Classify them into the following categories:
 3. Documentation
 4. Maintenance
 
-Then, summarize the changes for each category into a bullet point list.
+Then, summarize the changes for each category into a bullet point list. 
 
 Follow these instructions:
 1. Use Markdown formatting
 2. Use 5 "#" to indicate a new category.
 3. Do not number the categories.
 4. If there are no changes, return "No changes"
-5. RETURN ONLY THE SUMMARY IN BULLET POINT FORMAT.
+5 Improve the writing from the commit message and be concise.
+6. RETURN ONLY THE SUMMARY IN BULLET POINT FORMAT.
 
 Here is an example:
 
