@@ -20,6 +20,8 @@ from parquetdb.utils import pyarrow_utils
 logger = logging.getLogger(__name__)
 
 
+#TODO: Add option to skip create aligment if the schema is the exact same
+#TODO Need better method to check if schema is the same and identify mismatch
 def get_field_names(filepath, columns=None, include_cols=True):
     """
     Gets the field names from a parquet file.
@@ -76,31 +78,32 @@ class ParquetDatasetDB:
         logger.info(f"n_cores: {self.n_cores}")
         logger.info(f"output_formats: {self.output_formats}")
 
-    
     @timeit
-    def create(self, data:Union[List[dict],dict,pd.DataFrame],  
+    def create(self, data:Union[List[dict],dict,pd.DataFrame],
                batch_size:int=None,
-               max_rows_per_file=10000,
-               min_rows_per_group=0,
-               max_rows_per_group=10000,
                schema=None,
                metadata=None,
-               **kwargs):
+               normalize_dataset:bool=True,
+               normalize_kwagrs:dict=dict(max_rows_per_file=10000,
+                                        min_rows_per_group=0,
+                                        max_rows_per_group=10000)
+               ):
         """
         Adds new data to the database.
 
         Args:
             data (dict or list of dicts): The data to be added to the database. 
                 This must contain
-            dataset_name (str): The name of the table to add the data to.
             batch_size (int): The batch size. 
                 If provided, create will return a generator that yields batches of data.
-            max_rows_per_file (int): The maximum number of rows per file.
-            min_rows_per_group (int): The minimum number of rows per group.
-            max_rows_per_group (int): The maximum number of rows per group.
             schema (pyarrow.Schema): The schema of the incoming table.
             metadata (dict): Metadata to be added to the table.
-            **kwargs: Additional keyword arguments to pass to the create function.
+            normalize (bool): Whether to normalize the dataset or not. The default is True.
+                This means after the reconsoling the schema adding the incoming data to its own parquet table.
+                The dataset files will be recreated to have an equal number of rows 
+                as defined by the Dataset.write_dataset function. This doubles write speed times. 
+                The better method is to have this be off and then normalize after the data ingestion.
+            normalize_kwagrs (dict): Additional keyword arguments to pass to the normalize function.
         """
         
         os.makedirs(self.dataset_dir, exist_ok=True)
@@ -130,17 +133,20 @@ class ParquetDatasetDB:
             # Merge schemas
             incoming_schema = incoming_table.schema
             current_schema = self.get_schema()
+            
             merged_schema=pyarrow_utils.merge_schemas(current_schema, incoming_schema)
+            are_schemas_equal=current_schema.equals(merged_schema)
+            logger.info(f"Schemas are equal: {are_schemas_equal}. Skiping schema alignment.")
+            if not are_schemas_equal:
+                # Align file schemas with merged schema
+                current_files = glob(os.path.join(self.dataset_dir, f'{self.dataset_name}_*.parquet'))
+                for current_file in current_files:
+                    current_table = pq.read_table(current_file)
 
-            # Align file schemas with merged schema
-            current_files = glob(os.path.join(self.dataset_dir, f'{self.dataset_name}_*.parquet'))
-            for current_file in current_files:
-                current_table = pq.read_table(current_file)
+                    # Align current schema to match incoming
+                    updated_table=pyarrow_utils.align_table(current_table, merged_schema)
 
-                # Align current schema to match incoming
-                updated_table=pyarrow_utils.align_table(current_table, merged_schema)
-
-                pq.write_table(updated_table, current_file)
+                    pq.write_table(updated_table, current_file)
 
             # Align incoming tbale to match merged schema
             incoming_table=pyarrow_utils.align_table(incoming_table, merged_schema)
@@ -154,10 +160,10 @@ class ParquetDatasetDB:
         incoming_save_path = self._get_save_path()
         pq.write_table(incoming_table, incoming_save_path)
 
-        self._finalize_dataset(incoming_table.schema, batch_size, max_rows_per_file, 
-                                min_rows_per_group, max_rows_per_group, **kwargs)
+        if normalize_dataset:
+            self.normalize(schema=incoming_table.schema, batch_size=batch_size, **normalize_kwagrs)
         return None
-
+    
     @timeit
     def read(
         self,
@@ -217,7 +223,6 @@ class ParquetDatasetDB:
         Args:
             data (dict or list of dicts or pandas.DataFrame): The data to be updated.
                 Each dict should have an 'id' key corresponding to the record to update.
-            dataset_name (str): The name of the table to update data in.
             field_type_dict (dict): A dictionary where the keys are the field names and the values are the new field types.
 
             **kwargs: Additional keyword arguments.
@@ -233,7 +238,7 @@ class ParquetDatasetDB:
         id_data_dict_map, update_schema = self._process_update_data(data_list, field_type_dict)
         
         logger.info(f"Dataset directory: {self.dataset_dir}")
-        current_files=self._get_current_files()
+        current_files=self.get_current_files()
 
         # Iterate over the original files
         self._write_tmp_files()
@@ -261,7 +266,6 @@ class ParquetDatasetDB:
 
         Args:
             ids (list): A list of IDs to delete.
-            dataset_name (str): The name of the table to delete data from.
 
         Returns:
             None
@@ -280,7 +284,7 @@ class ParquetDatasetDB:
         
         # Dataset directory
         logger.info(f"Dataset directory: {self.dataset_dir}")
-        current_files = self._get_current_files()
+        current_files = self.get_current_files()
 
         # Backup current files in case of failure
         self._write_tmp_files()
@@ -308,6 +312,90 @@ class ParquetDatasetDB:
         logger.info(f"Updated {self.dataset_name} table.")
 
     @timeit
+    def normalize(self, schema=None, batch_size: int = None, output_format: str = 'table',
+              max_rows_per_file: int = 10000, min_rows_per_group: int = 0, max_rows_per_group: int = 10000,
+              existing_data_behavior: str = 'overwrite_or_ignore', **kwargs):
+        """
+        Normalize the dataset by restructuring files for consistent row distribution.
+
+        This method optimizes performance by ensuring that files in the dataset directory have a consistent number of rows. 
+        It first creates temporary files from the current dataset and rewrites them, ensuring that no file has significantly 
+        fewer rows than others, which can degrade performance. This is particularly useful after a large data ingestion, 
+        as it enhances the efficiency of create, read, update, and delete operations.
+
+        Parameters
+        ----------
+        schema : Schema, optional
+            The schema to use for the dataset. If not provided, it will be inferred from the existing data (default: None).
+        batch_size : int, optional
+            The number of rows to process in each batch. Required if `output_format` is set to 'batch_generator' (default: None).
+        output_format : str, optional
+            The format of the output dataset. Supported formats are 'table' and 'batch_generator' (default: 'table').
+        max_rows_per_file : int, optional
+            The maximum number of rows allowed per file (default: 10,000).
+        min_rows_per_group : int, optional
+            The minimum number of rows per row group within each file (default: 0).
+        max_rows_per_group : int, optional
+            The maximum number of rows per row group within each file (default: 10,000).
+        existing_data_behavior : str, optional
+            Specifies how to handle existing data in the dataset directory. Options are 'overwrite_or_ignore' 
+            (default: 'overwrite_or_ignore').
+        **kwargs : dict, optional
+            Additional keyword arguments passed to the dataset writing process, such as 'max_partitions' or 'max_open_files'.
+
+        Returns
+        -------
+        None
+            This function does not return anything but modifies the dataset directory in place.
+
+        Examples
+        --------
+        >>> dataset.normalize(
+        ...     batch_size=1000,
+        ...     output_format='batch_generator',
+        ...     max_rows_per_file=5000,
+        ...     min_rows_per_group=500,
+        ...     max_rows_per_group=5000,
+        ...     existing_data_behavior='overwrite_or_ignore',
+        ...     max_partitions=512
+        ... )
+        """
+
+        if output_format=='batch_generator' and batch_size is None:
+            raise ValueError("batch_size must be provided when output_format is batch_generator")
+        
+        # Create tmp files. 
+        # This is done because write dataset will overwrite everything in the main dataset dir
+        self._write_tmp_files()
+        
+        if batch_size:
+            logger.debug(f"Writing data in batches")
+            output_format='batch_generator'
+            schema= self.get_schema(load_tmp=True) if schema is None else schema
+        elif output_format=='table':
+            schema=None
+
+        try:
+            dataset = self._load_data(batch_size=batch_size, output_format=output_format, load_tmp=True)
+        except pa.lib.ArrowNotImplementedError as e:
+            raise ValueError("The incoming data does not match the schema of the existing data.") from e
+
+        try:
+            logger.info(f"Writing final table to {self.dataset_dir}")
+            shutil.rmtree(self.dataset_dir)
+            
+            ds.write_dataset(dataset, self.dataset_dir, basename_template=self.basename_template, schema=schema,
+                            format="parquet", max_partitions=kwargs.get('max_partitions', 1024),
+                            max_open_files=kwargs.get('max_open_files', 1024), max_rows_per_file=max_rows_per_file, 
+                            min_rows_per_group=min_rows_per_group, max_rows_per_group=max_rows_per_group,
+                            existing_data_behavior=existing_data_behavior, **kwargs)
+            
+        except Exception as e:
+            logger.exception(f"exception writing final table to {self.dataset_dir}: {e}")
+            logger.info("Restoring original files")
+            self._restore_tmp_files()
+
+    @timeit
     def update_schema(self, field_dict:dict=None, schema:pa.Schema=None):
         """
         Updates the schema of the table.
@@ -319,7 +407,7 @@ class ParquetDatasetDB:
 
         """
         # Dataset directory
-        current_files=self._get_current_files()
+        current_files=self.get_current_files()
 
         # Backup current files in case of failure
         self._write_tmp_files()
@@ -342,7 +430,7 @@ class ParquetDatasetDB:
 
         logger.info(f"Updated Fields in {self.dataset_name} table.")
 
-    def get_schema(self):
+    def get_schema(self, load_tmp=False):
         """Get the schema of a table.
 
         Args:
@@ -351,7 +439,7 @@ class ParquetDatasetDB:
         Returns:
             pyarrow.Schema: The schema of the table.
         """
-        schema = self._load_data(output_format='dataset').schema
+        schema = self._load_data(output_format='dataset', load_tmp=load_tmp).schema
         return schema
     
     def get_metadata(self):
@@ -378,6 +466,16 @@ class ParquetDatasetDB:
         # Update metadata in schema and rewrite Parquet files
         self.update_schema(schema=pa.schema(self.get_schema().fields, metadata=metadata))
 
+    def get_current_files(self):
+        """Gets the current files in the dataset directory.
+
+        Returns
+        -------
+        List[str]
+            A list of file paths for the current dataset files.
+        """
+        return glob(os.path.join(self.dataset_dir, f'{self.dataset_name}_*.parquet'))
+    
     def dataset_exists(self, dataset_name:str=None):
         """Checks if a table exists.
 
@@ -389,7 +487,7 @@ class ParquetDatasetDB:
             dataset_dir=os.path.join(self.dir,dataset_name)
             return os.path.exists(dataset_dir)
         else:
-            return len(self._get_current_files()) != 0
+            return len(self.get_current_files()) != 0
 
     def drop_dataset(self):
         """
@@ -668,6 +766,7 @@ class ParquetDatasetDB:
         elif output_format=='table':
             return self._load_table(dataset, columns, filter, **load_kwargs)
         elif output_format=='dataset':
+            logger.info(f"Loading data as an {dataset.__class__} object")
             return dataset
         else:
             raise ValueError(f"output_format must be one of the following: {self.output_formats}")
@@ -675,19 +774,18 @@ class ParquetDatasetDB:
     def _load_batches(self, dataset, batch_size, columns:List[str]=None, filter:List[pc.Expression]=None, **kwargs):
         if batch_size is None:
             raise ValueError("batch_size must be provided when output_format is batch_generator")
-        logger.info(f"Loading in batches")
-        
         try:
             generator=dataset.to_batches(columns=columns,filter=filter, batch_size=batch_size, **kwargs)
+            logger.info(f"Loading as a {generator.__class__} object")
         except Exception as e:
             logger.debug(f"Error loading table: {e}. Returning empty table")
             generator=pyarrow_utils.create_empty_batch_generator(schema=dataset.schema, columns=columns)
         return generator
     
     def _load_table(self, dataset, columns:List[str]=None, filter:List[pc.Expression]=None, **kwargs):
-        logger.info(f"Loading data in one table")
         try:
             table=dataset.to_table(columns=columns,filter=filter,**kwargs)
+            logger.info(f"Loading data as a {table.__class__} object")
         except Exception as e:
             logger.debug(f"Error loading table: {e}. Returning empty table")
             table=pyarrow_utils.create_empty_table(schema=dataset.schema, columns=columns)
@@ -736,62 +834,6 @@ class ParquetDatasetDB:
         if n_files == 0:
             return os.path.join(self.dataset_dir, f'{self.dataset_name}_0.parquet')
         return os.path.join(self.dataset_dir, f'{self.dataset_name}_{n_files}.parquet')
-    
-    def add_null_columns_for_missing_fields(self, table, new_schema):
-        """
-        This function adds null columns for any fields that are missing in the new schema.
-
-        Args:
-            table (pa.Table): The table to add null columns to.
-            new_schema (pa.Schema): The schema of the new table.
-
-        Returns:
-            pa.Table: The table with null columns added for missing fields.
-        """
-        table_schema = table.schema
-        field_names_missing = list(set(new_schema.names) - set(table_schema.names))
-        for new_field_name in field_names_missing:
-            field_type = new_schema.field(new_field_name).type
-            null_array = pa.nulls(table.shape[0], type=field_type)
-            table = table.append_column(new_field_name, null_array)
-        return table
-    
-    def _finalize_dataset(self,
-                        schema:pa.Schema=None,
-                        batch_size:int=None, 
-                        max_rows_per_file:int=10000, 
-                        min_rows_per_group:int=0, 
-                        max_rows_per_group:int=10000, 
-                        **kwargs):
-        """Finalize the creation by writing the data to disk."""
-
-        output_format='table'
-        if batch_size:
-            output_format='batch_generator'
-        else:
-            schema=None
-
-        self._write_tmp_files()
-
-        try:
-            final_table = self._load_data(batch_size=batch_size, output_format=output_format, load_tmp=True)
-        except pa.lib.ArrowNotImplementedError as e:
-            raise ValueError("The incoming data does not match the schema of the existing data.") from e
-
-        try:
-            logger.info(f"Writing final table to {self.dataset_dir}")
-            shutil.rmtree(self.dataset_dir)
-            
-            ds.write_dataset(final_table, self.dataset_dir, basename_template=self.basename_template, schema=schema,
-                            format="parquet", max_partitions=kwargs.get('max_partitions', 1024),
-                            max_open_files=kwargs.get('max_open_files', 1024), max_rows_per_file=max_rows_per_file, 
-                            min_rows_per_group=min_rows_per_group, max_rows_per_group=max_rows_per_group,
-                            existing_data_behavior='overwrite_or_ignore')
-            
-        except Exception as e:
-            logger.exception(f"exception writing final table to {self.dataset_dir}: {e}")
-            logger.info("Restoring original files")
-            self._restore_tmp_files()
 
     def _process_update_data(self, data_list: List[dict], field_type_dict=None):
         """Process and validate incoming data, return update dictionary, incoming field names, and inferred types."""
@@ -914,7 +956,28 @@ class ParquetDatasetDB:
         return updated_table
 
     def _delete_ids_from_table(self, ids, table):
-        """Delete IDs from a table."""
+        """
+        Delete specific IDs from a given PyArrow table.
+
+        This function removes rows from a PyArrow table where the values in the 'id' column match
+        any of the IDs provided in the input `ids` set. The table is filtered to exclude rows 
+        containing those IDs.
+
+        Parameters
+        ----------
+        ids : set
+            A set of IDs to be removed from the table. These IDs should match the values in 
+            the 'id' column of the table.
+
+        table : pa.Table
+            The PyArrow table from which the rows with matching IDs will be deleted.
+
+        Returns
+        -------
+        pa.Table
+            A new PyArrow table with the rows containing the specified IDs removed.
+        """
+        
         # Get the original ids
         current_ids_list=set(table['id'].to_pylist())
 
@@ -926,7 +989,33 @@ class ParquetDatasetDB:
         return new_table
     
     def _update_dataset_schema(self, current_table, schema=None, field_dict=None):
-        """Update the schema of a table."""
+        """
+        Update the schema of a given table based on a provided schema or field modifications.
+
+        This function allows updating the schema of a PyArrow table by either replacing the entire schema 
+        or modifying individual fields within the existing schema. It can take a dictionary of field 
+        names and their corresponding new field definitions to update specific fields in the schema.
+        Alternatively, a completely new schema can be provided to replace the current one.
+
+        Parameters
+        ----------
+        current_table : pa.Table
+            The PyArrow table whose schema is to be updated.
+        
+        schema : pa.Schema, optional
+            A new schema to replace the existing schema of the table. If provided, this will
+            completely override the current schema.
+        
+        field_dict : dict, optional
+            A dictionary where the keys are existing field names and the values are the new
+            PyArrow field definitions to replace the old ones. This is used for selectively 
+            updating specific fields within the current schema.
+
+        Returns
+        -------
+        pa.Table
+            A new PyArrow table with the updated schema.
+        """
         # Check if the table name is in the list of table names
 
         current_schema=current_table.schema
@@ -948,7 +1037,27 @@ class ParquetDatasetDB:
 
         return new_table
 
+    @timeit
     def _write_tmp_files(self, tmp_dir=None):
+        """
+        Copy current dataset files to a temporary directory.
+
+        This method removes any existing files in the temporary directory and creates new ones by copying 
+        the current dataset files. This is done to safeguard the original data while performing operations 
+        that may overwrite or modify the dataset.
+
+        Parameters
+        ----------
+        tmp_dir : str, optional
+            The path to the temporary directory where the dataset files will be copied. 
+            If not provided, it defaults to `self.tmp_dir`.
+
+        Returns
+        -------
+        None
+            This function does not return anything but creates a copy of the dataset files in the specified 
+            temporary directory.
+        """
         if tmp_dir is None:
             tmp_dir=self.tmp_dir
         shutil.rmtree(self.tmp_dir)
@@ -960,8 +1069,30 @@ class ParquetDatasetDB:
             
             tmp_filepath = os.path.join(self.tmp_dir, basename)
             shutil.copyfile(current_filepath, tmp_filepath)
-
+            
+    @timeit
     def _restore_tmp_files(self, tmp_dir=None):
+        """
+        Restore temporary Parquet files from a given directory to the dataset directory.
+
+        This function moves temporary Parquet files created during dataset operations
+        from the temporary directory back to the dataset directory. It first identifies
+        all Parquet files matching the dataset name pattern in the temporary directory,
+        then copies them to the dataset directory, and finally deletes the original temporary files.
+
+        Parameters
+        ----------
+        tmp_dir : str, optional
+            The directory containing the temporary Parquet files. If not provided, it defaults
+            to `self.tmp_dir`.
+
+        Returns
+        -------
+        None
+            This function does not return any value. It performs file operations by copying
+            and deleting temporary files.
+
+        """
         if tmp_dir is None:
             tmp_dir=self.tmp_dir
  
@@ -973,6 +1104,29 @@ class ParquetDatasetDB:
             os.remove(tmp_filepath)
     
     def _validate_data(self, data):
+        """
+        Validate and convert input data into a list of dictionaries.
+
+        This function checks the type of input data and converts it into a list of dictionaries
+        if necessary. It supports input data as a dictionary, list of dictionaries, or a 
+        pandas DataFrame. If the input is a dictionary, it is wrapped in a list. If the input
+        is a pandas DataFrame, it is converted into a list of dictionaries. If the input is
+        already a list, it is returned as-is. Raises a `TypeError` for unsupported data types.
+
+        Parameters
+        ----------
+        data : dict, list, pd.DataFrame, or None
+            The input data to validate and convert. Supported types are:
+            - dict: A single dictionary will be wrapped in a list.
+            - list: A list of dictionaries will be returned as-is.
+            - pd.DataFrame: Converted to a list of dictionaries.
+            - None: Returns `None`.
+
+        Returns
+        -------
+        list or None
+            A list of dictionaries if valid data is provided, otherwise `None` if `data` is None.
+        """
         if isinstance(data, dict):
             data_list = [data]
         elif isinstance(data, list):
@@ -982,12 +1136,9 @@ class ParquetDatasetDB:
         elif data is None:
             data_list = None
         else:
-            raise Typeexception("Data must be a dictionary or a list of dictionaries.")
+            raise TypeError("Data must be a dictionary or a list of dictionaries.")
         return data_list
     
-    def _get_current_files(self):
-
-        return glob(os.path.join(self.dataset_dir, f'{self.dataset_name}_*.parquet'))
 
 def add_dummy_field_to_empty_structs(table: pa.Table, dummy_field_name="dummy_field", dummy_field_type=pa.int32()) -> pa.Table:
     """

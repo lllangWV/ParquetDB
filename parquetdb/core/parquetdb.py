@@ -54,12 +54,12 @@ class ParquetDB:
                data:Union[List[dict],dict,pd.DataFrame],  
                dataset_name:str='main',
                batch_size:int=None,
-               max_rows_per_file=10000,
-               min_rows_per_group=0,
-               max_rows_per_group=10000,
                schema=None,
                metadata=None,
-               **kwargs):
+               normalize_dataset:bool=True,
+               normalize_kwagrs:dict=dict(max_rows_per_file=10000,
+                                        min_rows_per_group=0,
+                                        max_rows_per_group=10000)):
         """
         Adds new data to the database.
 
@@ -150,6 +150,62 @@ class ParquetDB:
         dataset_db=ParquetDatasetDB(dataset_name=all_args.pop('dataset_name'), dir=self.datasets_dir, n_cores=self.n_cores)
         dataset_db.delete(**all_args)
 
+    
+    def normalize(self, dataset_name:str='main', schema=None, batch_size: int = None, output_format: str = 'table',
+              max_rows_per_file: int = 10000, min_rows_per_group: int = 0, max_rows_per_group: int = 10000,
+              existing_data_behavior: str = 'overwrite_or_ignore', **kwargs):
+        """
+        Normalize the dataset by restructuring files for consistent row distribution.
+
+        This method optimizes performance by ensuring that files in the dataset directory have a consistent number of rows. 
+        It first creates temporary files from the current dataset and rewrites them, ensuring that no file has significantly 
+        fewer rows than others, which can degrade performance. This is particularly useful after a large data ingestion, 
+        as it enhances the efficiency of create, read, update, and delete operations.
+
+        Parameters
+        ----------
+        schema : Schema, optional
+            The schema to use for the dataset. If not provided, it will be inferred from the existing data (default: None).
+        batch_size : int, optional
+            The number of rows to process in each batch. Required if `output_format` is set to 'batch_generator' (default: None).
+        output_format : str, optional
+            The format of the output dataset. Supported formats are 'table' and 'batch_generator' (default: 'table').
+        max_rows_per_file : int, optional
+            The maximum number of rows allowed per file (default: 10,000).
+        min_rows_per_group : int, optional
+            The minimum number of rows per row group within each file (default: 0).
+        max_rows_per_group : int, optional
+            The maximum number of rows per row group within each file (default: 10,000).
+        existing_data_behavior : str, optional
+            Specifies how to handle existing data in the dataset directory. Options are 'overwrite_or_ignore' 
+            (default: 'overwrite_or_ignore').
+        **kwargs : dict, optional
+            Additional keyword arguments passed to the dataset writing process, such as 'max_partitions' or 'max_open_files'.
+
+        Returns
+        -------
+        None
+            This function does not return anything but modifies the dataset directory in place.
+
+        Examples
+        --------
+        >>> dataset.normalize(
+        ...     batch_size=1000,
+        ...     output_format='batch_generator',
+        ...     max_rows_per_file=5000,
+        ...     min_rows_per_group=500,
+        ...     max_rows_per_group=5000,
+        ...     existing_data_behavior='overwrite_or_ignore',
+        ...     max_partitions=512
+        ... )
+        """
+        
+        all_args = {k: v for k, v in locals().items() if k != 'self'}
+        kwargs=all_args.pop('kwargs')
+        all_args.update(kwargs)
+        dataset_db=ParquetDatasetDB(dataset_name=all_args.pop('dataset_name'), dir=self.datasets_dir, n_cores=self.n_cores)
+        dataset_db.normalize(**all_args)
+    
     @timeit
     def update_schema(self, dataset_name:str='main', field_dict:dict=None, schema:pa.Schema=None):
         """
@@ -168,6 +224,11 @@ class ParquetDB:
     def get_datasets(self):
         """Get a list of all tables in the database."""
         return os.listdir(self.datasets_dir)
+    
+    def get_current_files(self, dataset_name:str='main'):
+        """Get a list of all files in the dataset directory."""
+        dataset_db=ParquetDatasetDB(dataset_name=dataset_name, dir=self.datasets_dir, n_cores=self.n_cores)
+        return dataset_db.get_current_files()
     
     def dataset_exists(self, dataset_name:str):
         """Checks if a table exists.

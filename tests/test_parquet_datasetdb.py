@@ -93,6 +93,29 @@ class TestParquetDatasetDB(unittest.TestCase):
         # Assertions
         self.assertEqual(len(df), 1)
         self.assertEqual(df.iloc[0]['name'], 'Frank')
+        
+    def test_create_and_normalize(self):
+        # Step 1: Create data without normalization
+        self.db.create(data=self.test_df, normalize_dataset=False)
+
+        # Step 2: Verify that data has been written to the dataset directory
+        dataset_files = self.db.get_current_files()
+        self.assertGreater(len(dataset_files), 0, "No parquet files found after create without normalization.")
+
+        # Load the data to check its state before normalization
+        loaded_data = self.db.read()
+        self.assertEqual(loaded_data.num_rows, len(self.test_data), "Mismatch in row count before normalization.")
+
+        # Step 3: Run normalization. Will normalize to 1 row per file and 1 row per group
+        self.db.normalize( max_rows_per_file= 1, max_rows_per_group = 1)
+
+        # Step 4: Verify that the data has been normalized (e.g., consistent row distribution)
+        normalized_data = self.db.read()
+        self.assertEqual(normalized_data.num_rows, 3, "Mismatch in row count after normalization.")
+
+        # Additional checks to ensure normalization affects file structure (if applicable)
+        normalized_files = self.db.get_current_files()
+        self.assertGreaterEqual(len(normalized_files), 3, "No files found after normalization.")
 
     def test_filters(self):
         # Test reading data with filters
@@ -255,11 +278,6 @@ class TestParquetDatasetDB(unittest.TestCase):
         self.assertEqual(df.iloc[1]['state'], None)
         self.assertEqual(df.iloc[0]['age'], 60)
         self.assertEqual(df.iloc[1]['age'], 35)
-
-    def test_invalid_dataset_name(self):
-        # Test using a reserved table name
-        with self.assertRaises(ValueError):
-            self.db.create(data=[], dataset_name='tmp')
 
     def test_delete_nonexistent_id(self):
         # Test deleting an ID that doesn't exist
