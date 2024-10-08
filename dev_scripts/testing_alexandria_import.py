@@ -4,22 +4,10 @@ import logging
 from glob import glob
 
 from parquetdb.utils.general_utils import timeit
-from parquetdb import ParquetDB, ParquetDatasetDB
+from parquetdb import ParquetDB, ParquetDatasetDB, logging_config
 
-logger = logging.getLogger('parquetdb')
-
-logger.setLevel(logging.DEBUG)
-
-# Create a StreamHandler
-stream_handler = logging.StreamHandler()
-stream_handler.setLevel(logging.DEBUG)
-
-# Create a formatter and add it to the handler
-formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
-stream_handler.setFormatter(formatter)
-
-# Add the handler to the logger
-logger.addHandler(stream_handler)
+# logging_config.logging_config.loggers.parquetdb.level='DEBUG'
+# logging_config.apply()
 
 
 
@@ -70,10 +58,11 @@ def main():
         
         try:
             create_dataset(data['entries'],
+                        finalize_dataset=False,
                         batch_size=100000,
-                        max_rows_per_file=5000000,
+                        max_rows_per_file=500000,
                         min_rows_per_group=0,
-                        max_rows_per_group=5000000)
+                        max_rows_per_group=500000)
         except Exception as e:
             print(e)
         
