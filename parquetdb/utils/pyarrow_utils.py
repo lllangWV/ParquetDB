@@ -488,5 +488,40 @@ def merge_tables(current_table: pa.Table, incoming_table: pa.Table, schema=None)
     return combined_table
 
 
+def create_empty_table(schema: pa.Schema, columns: list = None) -> pa.Table:
+    """
+    Creates an empty PyArrow table with the same schema as the dataset or specific columns.
+
+    Args:
+        schema (pa.Schema): The schema of the dataset to mimic in the empty generator.
+        columns (list, optional): List of column names to include in the empty table. Defaults to None.
+
+    Returns:
+        pa.Table: An empty PyArrow table with the specified schema.
+    """
+    # If specific columns are provided, filter the schema to include only those columns
+    if columns:
+        schema = pa.schema([field for field in schema if field.name in columns])
+
+    # Create an empty table with the derived schema
+    empty_table = pa.Table.from_pydict({field.name: [] for field in schema}, schema=schema)
+
+    return empty_table
+
+
+
+def create_empty_batch_generator(schema: pa.Schema, columns: list = None):
+    """
+    Returns an empty generator that yields nothing.
+
+    Args:
+        schema (pa.Schema): The schema of the dataset to mimic in the empty generator.
+        columns (list, optional): List of column names to include in the empty table. Defaults to None.
+    Yields:
+        pa.RecordBatch: Empty record batches with the specified schema.
+    """
+    if columns:
+        schema = pa.schema([field for field in schema if field.name in columns])
+    yield pa.RecordBatch.from_pydict({field.name: [] for field in schema}, schema=schema)
 
 

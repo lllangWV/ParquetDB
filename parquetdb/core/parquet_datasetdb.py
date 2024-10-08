@@ -166,7 +166,8 @@ class ParquetDatasetDB:
         include_cols: bool = True,
         filters: List[pc.Expression] = None,
         output_format: str = 'table',
-        batch_size: int = None
+        batch_size: int = None,
+        load_kwargs: dict = None
         ) -> Union[pa.Table, pa.dataset.Scanner]:
         """
         Reads data from the database.
@@ -181,6 +182,7 @@ class ParquetDatasetDB:
             It should operate on a dataframe and return the modifies dataframe
             batch_size (int): The batch size. 
                 If provided, read will return a generator that yields batches of data.
+            load_kwargs (dict): Additional keyword arguments to pass to Dataset.to_table or Dataset.to_batches.
 
         Returns:
             pandas.DataFrame or list: The data read from the database. If deserialize_data is True,
@@ -196,11 +198,15 @@ class ParquetDatasetDB:
         if filters is None:
             filters = []
             
+        if batch_size:
+            logger.info(f"Found batch_size: {batch_size}. Setting output_format to batch_generator")
+            output_format='batch_generator'
+            
         # Build filter expression
         filter_expression = self._build_filter_expression(ids, filters)
 
         data = self._load_data(columns=columns, filter=filter_expression, 
-                               batch_size=batch_size, output_format=output_format)
+                               batch_size=batch_size, output_format=output_format, load_kwargs=load_kwargs)
         return data
     
     @timeit
@@ -618,30 +624,74 @@ class ParquetDatasetDB:
                    filter:List[pc.Expression]=None, 
                    batch_size:int=None, 
                    output_format:str='table',
-                   load_tmp:bool=False):
+                   load_tmp:bool=False,
+                   load_kwargs:dict=None):
         """
         This method loads the data in the database. It can either load the data as a PyArrow Table, PyArrow Dataset, PyArrow generator.
+        
+        Parameters
+        ----------
+        
+        columns : List[str], optional
+            A list of column names to load. If None, loads all columns. Defaults to None.
+        filter : List[pc.Expression], optional
+            A list of filters to apply to the data. Defaults to None.
+        batch_size : int, optional
+            The batch size to use for loading data in batches. Defaults to None.
+        output_format : str, optional
+            The output format to use for loading data. Defaults to 'table'.
+        load_tmp : bool, optional
+            Whether to load data from the temporary directory. Defaults to False.
+        load_kwargs : dict, optional
+            Additional keyword arguments to pass to Dataset.to_table or Dataset.to_batches. Defaults to None.
+
+        Returns
+        -------
+        Union[pa.Table, pa.dataset.Scanner]
+            The loaded data as a PyArrow Table, PyArrow Dataset, or PyArrow generator.
+        
         """
+        if load_kwargs is None:
+            load_kwargs={}
+            
         dataset_dir=self.dataset_dir
         if load_tmp:
             dataset_dir=self.tmp_dir
+            
         logger.info(f"Loading data from {dataset_dir}")
         logger.info(f"Loading only columns: {columns}")
         logger.info(f"Using filter: {filter}")
 
         dataset = ds.dataset(dataset_dir, format="parquet")
         if output_format=='batch_generator':
-            if batch_size is None:
-                raise ValueError("batch_size must be provided when output_format is batch_generator")
-            logger.info(f"Loading in batches")
-            return dataset.to_batches(columns=columns,filter=filter,batch_size=batch_size)
+            return self._load_batches(dataset, batch_size, columns, filter, **load_kwargs)
         elif output_format=='table':
-            logger.info(f"Loading data in one table")
-            return dataset.to_table(columns=columns,filter=filter)
+            return self._load_table(dataset, columns, filter, **load_kwargs)
         elif output_format=='dataset':
             return dataset
         else:
             raise ValueError(f"output_format must be one of the following: {self.output_formats}")
+    
+    def _load_batches(self, dataset, batch_size, columns:List[str]=None, filter:List[pc.Expression]=None, **kwargs):
+        if batch_size is None:
+            raise ValueError("batch_size must be provided when output_format is batch_generator")
+        logger.info(f"Loading in batches")
+        
+        try:
+            generator=dataset.to_batches(columns=columns,filter=filter, batch_size=batch_size, **kwargs)
+        except Exception as e:
+            logger.debug(f"Error loading table: {e}. Returning empty table")
+            generator=pyarrow_utils.create_empty_batch_generator(schema=dataset.schema, columns=columns)
+        return generator
+    
+    def _load_table(self, dataset, columns:List[str]=None, filter:List[pc.Expression]=None, **kwargs):
+        logger.info(f"Loading data in one table")
+        try:
+            table=dataset.to_table(columns=columns,filter=filter,**kwargs)
+        except Exception as e:
+            logger.debug(f"Error loading table: {e}. Returning empty table")
+            table=pyarrow_utils.create_empty_table(schema=dataset.schema, columns=columns)
+        return table
     
     def _get_new_ids(self, data_list:List[dict]):
   
