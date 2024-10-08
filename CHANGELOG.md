@@ -1,6 +1,31 @@
 
 ___
 
+# 0.1.2 (10-08-2024)
+
+##### Bugs
+- None identified
+
+##### New Features
+- Introduced a new example demonstrating the use of `ParquetDatasetDB` with 4 million structures and highlighted some reading capabilities.
+- Added an option to create normalization methods that optimize performance by ensuring a consistent number of rows in dataset files.
+- Implemented a script for running all tests in the test directory.
+
+##### Documentation updates
+- Updated `_version.py` and `CHANGELOG.md` for the new release.
+- Consolidated logging and configuration management into a single config object.
+
+##### Maintenance
+- Added BeautifulSoup as a dependency for examples.
+- Moved old examples to the `dev_scripts/examples` directory.
+- Rearranged and improved the structure of `dev_scripts`.
+- Updated changelog script and configuration for the timing logger.
+- Merged updates from the main branch of the repository.
+
+___
+
+___
+
 # 1.0.0 (10-08-2024)
 
 ##### Bugs
