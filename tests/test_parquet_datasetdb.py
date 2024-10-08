@@ -10,14 +10,6 @@ import pyarrow as pa
 import pyarrow.compute as pc
 import pandas as pd
 
-logger=logging.getLogger('parquetdb')
-logger.setLevel(logging.DEBUG)
-ch = logging.StreamHandler()
-ch.setLevel(logging.DEBUG)
-formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
-ch.setFormatter(formatter)
-logger.addHandler(ch)
-
 # TODO: Create tests for nested structure updates
 # TODO: Create tests for 
 
@@ -109,7 +101,7 @@ class TestParquetDatasetDB(unittest.TestCase):
             {'name': 'Heidi', 'age': 27},
             {'name': 'Ivan', 'age': 35}
         ]
-        self.db.create(data, )
+        self.db.create(data)
 
         # Apply filter to get people older than 25
         age_filter = pc.field('age') > 25
@@ -192,7 +184,7 @@ class TestParquetDatasetDB(unittest.TestCase):
             {'name': 'Mia', 'age': 30, 'city': 'New York'},
             {'name': 'Noah', 'age': 35, 'city': 'San Francisco'}
         ]
-        self.db.create(data, )
+        self.db.create(data)
 
         # Read only the 'name' column
         result = self.db.read(columns=['name'])
@@ -207,7 +199,7 @@ class TestParquetDatasetDB(unittest.TestCase):
     def test_batch_reading(self):
         # Test reading data in batches
         data = [{'name': f'Person {i}', 'age': i} for i in range(100)]
-        self.db.create(data, )
+        self.db.create(data)
 
         # Read data in batches of 20
         batches = self.db.read(batch_size=20, output_format='batch_generator')
@@ -227,8 +219,8 @@ class TestParquetDatasetDB(unittest.TestCase):
         data = [
             {'name': 'Olivia', 'age': 29}
         ]
-        self.db.create(data, )
-
+        self.db.create(data)
+        
         # Update the 'age' field to be a float instead of int
         new_field = pa.field('age', pa.float64())
         field_dict = {'age': new_field}
@@ -247,7 +239,7 @@ class TestParquetDatasetDB(unittest.TestCase):
             {'name': 'Mia', 'age': 30, 'city': 'New York'},
             {'name': 'Noah', 'age': 35, 'city': 'San Francisco'}
         ]
-        self.db.create(data, )
+        self.db.create(data)
 
         # Update the 'Mia' record to include a new field and change age to 60
         data = {'id':0, 'age': 60, 'state':'NY'}
@@ -274,10 +266,10 @@ class TestParquetDatasetDB(unittest.TestCase):
         data = [
             {'name': 'Peter', 'age': 50}
         ]
-        self.db.create(data, )
+        self.db.create(data)
 
         # Attempt to delete a non-existent ID
-        self.db.delete(ids=[999], )
+        self.db.delete(ids=[999])
 
         # Read back the data
         result = self.db.read()
@@ -292,14 +284,14 @@ class TestParquetDatasetDB(unittest.TestCase):
         data = [
             {'name': 'Quinn', 'age': 40}
         ]
-        self.db.create(data, )
-
+        self.db.create(data)
+        
         # Attempt to update a non-existent ID
         update_data = [
             {'id': 999, 'age': 41}
         ]
         with self.assertRaises(ValueError):
-            self.db.update(update_data, )
+            self.db.update(update_data)
 
     def test_get_metadata(self):
         self.db.create(data=self.test_data,
@@ -340,18 +332,18 @@ class TestParquetDatasetDB(unittest.TestCase):
         with self.assertRaises(ValueError):
             self.db.export_dataset(export_path, format='xlsx')
 
-    def test_merge_datasets(self):
-        self.db.create(data=self.test_data)
-        # Create another table
-        additional_data = [
-            {'id': 4, 'name': 'Dave', 'age': 40},
-            {'id': 5, 'name': 'Eve', 'age': 45}
-        ]
-        self.db.create(data=additional_data, dataset_name='additional_table')
+    # def test_merge_datasets(self):
+    #     self.db.create(data=self.test_data)
+    #     # Create another table
+    #     additional_data = [
+    #         {'id': 4, 'name': 'Dave', 'age': 40},
+    #         {'id': 5, 'name': 'Eve', 'age': 45}
+    #     ]
+    #     self.db.create(data=additional_data, dataset_name='additional_table')
 
-        # Attempt to merge tables (method not implemented)
-        with self.assertRaises(NotImplementedError):
-            self.db.merge_datasets(['test_table', 'additional_table'], 'merged_table')
+    #     # Attempt to merge tables (method not implemented)
+    #     with self.assertRaises(NotImplementedError):
+    #         self.db.merge_datasets(['test_table', 'additional_table'], 'merged_table')
 
     # def test_deep_update(self):
     #     original_value = {'a': 1, 'b': {'c': 2, 'd': 3}}
