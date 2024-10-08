@@ -4,10 +4,12 @@ import logging
 from glob import glob
 
 from parquetdb.utils.general_utils import timeit
-from parquetdb import ParquetDB, ParquetDatasetDB, logging_config
+from parquetdb import ParquetDB, ParquetDatasetDB, config
 
 # logging_config.logging_config.loggers.parquetdb.level='DEBUG'
 # logging_config.apply()
+
+
 
 
 
@@ -43,53 +45,61 @@ def print_dict(data):
 
 
     return print_str
+
 @timeit
 def main():
     ################################################################################################
 
-    json_dir=os.path.join('data','external','alexandria','uncompressed')
-    files=glob(os.path.join(json_dir,'*.json'))
+    # json_dir=os.path.join('data','external','alexandria','uncompressed')
+    # files=glob(os.path.join(json_dir,'*.json'))
     
-    for json_file in files:
-        data = read_json(json_file)
-        base_name=os.path.basename(json_file)
-        print(base_name)
-        print(len(data['entries']))
+    # for json_file in files:
+    #     data = read_json(json_file)
+    #     base_name=os.path.basename(json_file)
+    #     print(base_name)
+    #     print(len(data['entries']))
         
-        try:
-            create_dataset(data['entries'],
-                        finalize_dataset=False,
-                        batch_size=100000,
-                        max_rows_per_file=500000,
-                        min_rows_per_group=0,
-                        max_rows_per_group=500000)
-        except Exception as e:
-            print(e)
+    #     try:
+    #         create_dataset(data['entries'],
+    #                     finalize_dataset=False,
+    #                     batch_size=100000,
+    #                     max_rows_per_file=500000,
+    #                     min_rows_per_group=0,
+    #                     max_rows_per_group=500000)
+    #     except Exception as e:
+    #         print(e)
         
-        print('-'*len(base_name))
+    #     print('-'*len(base_name))
 
 
-    print("done")
-   
     
-    # print(dataset.schema)
-    table=read_dataset(ids=[0],output_format='table')
-    # table=read_dataset()
-    df=table.to_pandas()
-    print(df.head())
-    print(df.shape)
-    print(df.columns)
-    compostion=df.iloc[0]['composition']
-    print(compostion)
-    for name in df.columns:
-        print('-'*len(name))
-        print(name)
-        print(df.iloc[0][name])
+    
+    db.normalize(output_format='batch_generator',
+                 load_kwargs={'batch_readahead': 10,
+                              'fragment_readahead': 2,
+                              },
+                 batch_size = 100000, 
+                 max_rows_per_file=500000, 
+                 max_rows_per_group=500000)
+    # print("done")
+    # # print(dataset.schema)
+    # table=read_dataset(ids=[0],output_format='table')
+    # # table=read_dataset()
+    # df=table.to_pandas()
+    # print(df.head())
+    # print(df.shape)
+    # print(df.columns)
+    # compostion=df.iloc[0]['composition']
+    # print(compostion)
+    # for name in df.columns:
+    #     print('-'*len(name))
+    #     print(name)
+    #     print(df.iloc[0][name])
         
-    table=read_dataset(columns=['id'],output_format='table')
+    # table=read_dataset(columns=['id'],output_format='table')
     
-    print(table.columns)
-    print(table.shape)
+    # print(table.columns)
+    # print(table.shape)
         
 if __name__ == '__main__':
     main()

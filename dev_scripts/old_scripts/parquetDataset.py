@@ -1,10 +1,10 @@
-from parquetdb import ParquetDatasetDB, logging_config
+from parquetdb import ParquetDatasetDB, config
 import pyarrow as pa
 
 from parquetdb.utils import pyarrow_utils
 
-logging_config.logging_config.loggers.parquetdb.level='DEBUG'
-logging_config.apply()
+config.logging_config.loggers.parquetdb.level='DEBUG'
+config.apply()
 
 db = ParquetDatasetDB(dataset_name='dev', dir='C:/Users/lllang/Desktop/Current_Projects/ParquetDB/data/raw/ParquetDB_Dev', n_cores=1)
 
@@ -26,8 +26,11 @@ db.create(data)
 
 # schema=pyarrow_utils.merge_schemas(table_1.schema, table_2.schema)
 # print(schema)
-result = db.read()
-df = result.to_pandas()
+results = db.read(batch_size=10)
+print(results)
+for result in results:
+    print(result)
+# df = result.to_pandas()
 
-print(df.columns)
-print(df.head())
+# print(df.columns)
+# print(df.head())
