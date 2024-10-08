@@ -57,9 +57,9 @@ class ParquetDB:
                schema=None,
                metadata=None,
                normalize_dataset:bool=True,
-               normalize_kwagrs:dict=dict(max_rows_per_file=10000,
+               normalize_kwagrs:dict=dict(max_rows_per_file=100000,
                                         min_rows_per_group=0,
-                                        max_rows_per_group=10000)):
+                                        max_rows_per_group=100000)):
         """
         Adds new data to the database.
 
@@ -152,7 +152,7 @@ class ParquetDB:
 
     
     def normalize(self, dataset_name:str='main', schema=None, batch_size: int = None, output_format: str = 'table',
-              max_rows_per_file: int = 10000, min_rows_per_group: int = 0, max_rows_per_group: int = 10000,
+              max_rows_per_file: int = 100000, min_rows_per_group: int = 0, max_rows_per_group: int = 100000,
               existing_data_behavior: str = 'overwrite_or_ignore', **kwargs):
         """
         Normalize the dataset by restructuring files for consistent row distribution.
