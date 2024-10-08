@@ -1,0 +1,45 @@
+root_dir: "."
+data_dir: "{{ root_dir }}/data"
+external_data_dir: "{{ data_dir }}/external"
+log_dir: "{{ root_dir }}/logs"
+db_name: 'VariConfig'
+n_cores: 
+
+numpy_config:
+  np_printoptions:
+    linewidth:  400
+    precision: 3
+
+logging_config:
+  version: 1
+  disable_existing_loggers: False
+
+  formatters:
+    simple:
+      format: '%(asctime)s - %(name)s - %(levelname)s - %(message)s'
+      datefmt: '%Y-%m-%d %H:%M:%S'
+
+  handlers:
+    console:
+      class: logging.StreamHandler
+      formatter: simple
+      stream: ext://sys.stdout
+
+    file:
+      class: logging.FileHandler
+      formatter: simple
+      filename: "{{ log_dir }}/variconfig.log"
+      mode: a
+
+  loggers:
+    parquetdb:
+      level: ERROR
+      handlers: [console]
+      propagate: no
+
+
+
+  # root:
+  #   level: INFO
+  #   handlers: [console]
+  #   propagate: no
