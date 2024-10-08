@@ -1,7 +1,7 @@
 from tempfile import mkdtemp
 import logging
 
-from parquetdb import ParquetDB
+from parquetdb import ParquetDBManager
 import pyarrow.compute as pc
 
 logger=logging.getLogger('parquetdb')
@@ -28,7 +28,7 @@ initial = {
 	}
 
 dir = mkdtemp()
-db = ParquetDB(dir)
+db = ParquetDBManager(dir)
 
 def set_global(key: bytes, value: bytes):
 	try:

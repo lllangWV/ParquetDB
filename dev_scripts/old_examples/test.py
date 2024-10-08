@@ -21,7 +21,7 @@ def test_filter_func(df):
 
 if __name__ == '__main__':
     save_dir='data/raw/ParquetDB'
-    db = ParquetDB(db_path=save_dir)
+    db = ParquetDB(dataset_name='main',dir=save_dir)
 
     ex_json_file_1='data/production/materials_project/json_database/mp-27352.json'
     ex_json_file_2='data/production/materials_project/json_database/mp-1000.json'
@@ -65,7 +65,7 @@ if __name__ == '__main__':
     # filters=[pc.equal(pc.field('band_gap'), 1.593)]
     # table=db.read(table_name='main', ids = [0,1,2,3,4], filters=filters)
 
-    table=db.read(table_name='main_test', columns=['id'])
+    table=db.read(columns=['id'])
     df=table.to_pandas()
     print(df.columns)
     print(df.head())

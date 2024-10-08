@@ -34,7 +34,7 @@ def generate_test_data(materials_data, size, num_columns):
 def benchmark_read_performance():
     # Create a temporary directory for the database
     save_dir = 'C:/Users/lllang/Desktop/Current_Projects/ParquetDB/data/raw/ParquetDB'
-    db = ParquetDB(db_path=save_dir)
+    db = ParquetDB(dataset_name='main',dir=save_dir)
 
     # Define dataset sizes and columns to test
     dataset_sizes = [1000, 5000, 10000, 50000, 100000]  # Adjust sizes as needed
@@ -70,7 +70,7 @@ def benchmark_read_performance():
                 # Create the table
                 table_name = f"test_table_{size}_{num_columns}_columns"
                 start_time = time.perf_counter()
-                db.create(data=test_data, table_name=table_name)
+                db.create(data=test_data)
                 end_time = time.perf_counter()
                 write_time=end_time - start_time
                 write_times[num_columns].append(write_time)
@@ -79,7 +79,7 @@ def benchmark_read_performance():
 
                 # Measure read time
                 start_time = time.perf_counter()
-                table = db.read(table_name=table_name, output_format='table')
+                table = db.read(output_format='table')
                 end_time = time.perf_counter()
                 elapsed_time = end_time - start_time
                 read_time=end_time - start_time

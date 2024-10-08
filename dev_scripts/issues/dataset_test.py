@@ -1,6 +1,6 @@
 from tempfile import mkdtemp
 
-from parquetdb import ParquetDatasetDB
+from parquetdb import ParquetDB
 import pyarrow.compute as pc
 
 initial = {
@@ -19,7 +19,7 @@ initial = {
 
 dir = mkdtemp()
 dir = "C:/Users/lllang/Desktop/Current_Projects/ParquetDB/data/raw/ParquetDB_Dev"
-db = ParquetDatasetDB(dataset_name="global", dir=dir, n_cores=1)
+db = ParquetDB(dataset_name="global", dir=dir, n_cores=1)
 
 def set_global(key: bytes, value: bytes):
 	try:

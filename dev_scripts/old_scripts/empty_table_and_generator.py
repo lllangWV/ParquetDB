@@ -53,13 +53,13 @@ def create_empty_batch_generator(schema: pa.Schema, columns: list = None):
 
 if __name__ == "__main__":
     
-    from parquetdb import ParquetDatasetDB,ParquetDB
+    from parquetdb import ParquetDB,ParquetDBManager
     data = [
         {'a': 1, 'b': {'x': 10, 'y': 20}, 'c': {}},
         {'a': 2, 'b': {'x': 30, 'y': 40}, 'c': {}},
     ]
     # print(data)
-    
+    db=ParquetDBManager('data/raw/ParquetDB')
 
     db.create(data, dataset_name='main')
     # dataset = ds.dataset(db.dataset_dir, format="parquet")

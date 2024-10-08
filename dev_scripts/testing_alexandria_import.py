@@ -4,7 +4,7 @@ import logging
 from glob import glob
 
 from parquetdb.utils.general_utils import timeit
-from parquetdb import ParquetDB, ParquetDatasetDB, config
+from parquetdb import ParquetDBManager, ParquetDB, config
 
 # logging_config.logging_config.loggers.parquetdb.level='DEBUG'
 # logging_config.apply()
@@ -15,7 +15,7 @@ from parquetdb import ParquetDB, ParquetDatasetDB, config
 
 
 
-db=ParquetDatasetDB(dataset_name='alexandria_3D_test',dir=os.path.join('data', 'ParquetDB'))
+db=ParquetDB(dataset_name='alexandria_3D_test',dir=os.path.join('data', 'ParquetDB'))
 
 @timeit
 def read_json(json_file):

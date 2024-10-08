@@ -5,7 +5,7 @@ import os
 import tempfile
 
 import numpy as np
-from parquetdb import ParquetDatasetDB
+from parquetdb import ParquetDB
 import pyarrow as pa
 import pyarrow.compute as pc
 import pandas as pd
@@ -13,12 +13,12 @@ import pandas as pd
 # TODO: Create tests for nested structure updates
 # TODO: Create tests for 
 
-class TestParquetDatasetDB(unittest.TestCase):
+class TestParquetDB(unittest.TestCase):
     def setUp(self):
         # Create a temporary directory for the database
         self.temp_dir = tempfile.mkdtemp()
         self.dataset_name='test_dataset'
-        self.db = ParquetDatasetDB(dataset_name=self.dataset_name, dir=self.temp_dir, n_cores=1)
+        self.db = ParquetDB(dataset_name=self.dataset_name, dir=self.temp_dir, n_cores=1)
 
         # Create some test data
         self.test_data = [

@@ -12,8 +12,8 @@ import json
 
 import pyarrow as pa
 
-from parquetdb import ParquetDB, ParquetDatasetDB
-from parquetdb.pyarrow_utils import align_table, merge_schemas, merge_structs, combine_tables
+from parquetdb import ParquetDBManager, ParquetDB
+from parquetdb.utils.pyarrow_utils import align_table, merge_schemas, merge_structs, combine_tables
 
 logger=logging.getLogger('parquetdb')
 logger.setLevel(logging.DEBUG)

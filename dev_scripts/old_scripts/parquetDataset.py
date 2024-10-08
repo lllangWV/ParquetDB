@@ -1,4 +1,4 @@
-from parquetdb import ParquetDatasetDB, config
+from parquetdb import ParquetDB, config
 import pyarrow as pa
 
 from parquetdb.utils import pyarrow_utils
@@ -6,7 +6,7 @@ from parquetdb.utils import pyarrow_utils
 config.logging_config.loggers.parquetdb.level='DEBUG'
 config.apply()
 
-db = ParquetDatasetDB(dataset_name='dev', dir='C:/Users/lllang/Desktop/Current_Projects/ParquetDB/data/raw/ParquetDB_Dev', n_cores=1)
+db = ParquetDB(dataset_name='dev', dir='C:/Users/lllang/Desktop/Current_Projects/ParquetDB/data/raw/ParquetDB_Dev', n_cores=1)
 
 data = [
     {'name': 'Judy', 'age': 29}

@@ -7,7 +7,7 @@ import shutil
 from pyarrow import compute as pc
 
 from parquetdb.utils.general_utils import timeit
-from parquetdb import ParquetDB, ParquetDatasetDB, config
+from parquetdb import ParquetDB, config
 from parquetdb.utils.external_utils import download_alexandria_3d_database
 
 config.logging_config.loggers.parquetdb.level='DEBUG'
@@ -48,7 +48,7 @@ if __name__ == "__main__":
     
     
     # Here we create a ParquetDatasetDB object to interact with the database
-    db=ParquetDatasetDB(dataset_name='alexandria_3D',dir=base_dir)
+    db=ParquetDB(dataset_name='alexandria_3D',dir=base_dir)
 
 
     # Here, we create the dataset inside the database

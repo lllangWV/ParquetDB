@@ -24,7 +24,7 @@ def benchmark_read_performance():
     temp_dir = tempfile.mkdtemp()
     save_dir='C:/Users/lllang/Desktop/Current_Projects/ParquetDB/data/raw/ParquetDB'
     # os.makedirs(save_dir, exist_ok=True)
-    db = ParquetDB(db_path=save_dir)
+    db = ParquetDB(dataset_name='main',dir=save_dir)
 
     # Define dataset sizes to test
     dataset_sizes = [1000, 5000, 10000, 50000, 100000]  # Adjust sizes as needed
@@ -52,7 +52,7 @@ def benchmark_read_performance():
             # Create the table
             table_name = f"test_table_{size}"
             start_time = time.perf_counter()
-            db.create(data=test_data, table_name=table_name)
+            db.create(data=test_data)
             end_time = time.perf_counter()
             write_time = end_time - start_time
             write_times.append(write_time)
@@ -60,7 +60,7 @@ def benchmark_read_performance():
             print(f"Write time: {write_time:.4f} seconds")
             # Measure read time
             start_time = time.perf_counter()
-            table = db.read(table_name=table_name, output_format='table')
+            table = db.read(output_format='table')
             n_columns = table.shape[1]
             end_time = time.perf_counter()
             elapsed_time = end_time - start_time
