@@ -112,16 +112,21 @@ class ParquetDB:
         os.makedirs(self.dataset_dir, exist_ok=True)
         
         # Prepare the data and field data
-        data_list=self._validate_data(data)
-        new_ids = self._get_new_ids( data_list)
+        data_list, incoming_schema=self._validate_data(data)
+        new_ids = self._get_new_ids(data_list)
 
+        if schema is None:
+            schema=incoming_schema
+        schema=schema.with_metadata(metadata)
         # Create the incoming table
-        incoming_table=pa.Table.from_pylist(data_list, schema=schema, metadata=metadata)
+        incoming_table=pa.Table.from_pylist(data_list, schema=schema)
         incoming_table=incoming_table.append_column(pa.field('id', pa.int64()), [new_ids])
-
+        incoming_table=pyarrow_utils.replace_empty_structs_in_table(incoming_table)
+        
+        incoming_schema=incoming_table.schema
+        
         # If this is the first table, save it directly
         if is_directory_empty(self.dataset_dir):
-            incoming_table=pyarrow_utils.replace_empty_structs_in_table(incoming_table)
             incoming_save_path = self._get_save_path()
             pq.write_table(incoming_table, incoming_save_path)
             return None
@@ -133,26 +138,26 @@ class ParquetDB:
 
         # Align the incoming and original schemas
         try:
-            # Merge schemas
-            incoming_schema = incoming_table.schema
             current_schema = self.get_schema()
             
-            merged_schema=pyarrow_utils.merge_schemas(current_schema, incoming_schema)
-            are_schemas_equal=current_schema.equals(merged_schema)
+            # merged_schema=pyarrow_utils.merge_schemas(current_schema, incoming_schema)
+            merged_schema = pa.unify_schemas([current_schema, incoming_schema],promote_options='permissive')
+            are_schemas_equal=current_schema.equals(incoming_schema)
+        
             logger.info(f"Schemas are equal: {are_schemas_equal}. Skiping schema alignment.")
             if not are_schemas_equal:
+                logger.debug(f"\n\n{merged_schema}\n\n")
                 # Align file schemas with merged schema
                 current_files = glob(os.path.join(self.dataset_dir, f'{self.dataset_name}_*.parquet'))
                 for current_file in current_files:
+                    # Opening a table with a merged schema will add missing values to the table
                     current_table = pq.read_table(current_file)
+                    current_table=pa.Table.from_pylist(current_table.to_pylist(), schema=merged_schema)
+                    pq.write_table(current_table, current_file)
 
-                    # Align current schema to match incoming
-                    updated_table=pyarrow_utils.align_table(current_table, merged_schema)
-
-                    pq.write_table(updated_table, current_file)
-
-            # Align incoming tbale to match merged schema
-            incoming_table=pyarrow_utils.align_table(incoming_table, merged_schema)
+                incoming_table=incoming_table.to_pylist()
+                incoming_table=pa.Table.from_pylist(data_list, schema=merged_schema)
+                # incoming_table=pyarrow_utils.align_table(incoming_table, merged_schema)
 
         except Exception as e:
             logger.exception(f"exception aligning schemas: {e}")
@@ -235,7 +240,7 @@ class ParquetDB:
         """
 
         # Data processing and validation.
-        data_list = self._validate_data(data)
+        data_list, incoming_schema = self._validate_data(data)
 
         # Process update data and get id_data_dict_map and update schema
         id_data_dict_map, update_schema = self._process_update_data(data_list, field_type_dict)
@@ -459,6 +464,7 @@ class ParquetDB:
         if not self.dataset_exists():
             raise ValueError(f"Dataset {self.dataset_name} does not exist.")
         schema = self.get_schema()
+        logger.debug(f"Metadata:\n\n {schema.metadata}\n\n")
         return schema.metadata
     
     def set_metadata(self, metadata:dict):
@@ -1142,7 +1148,11 @@ class ParquetDB:
             data_list = None
         else:
             raise TypeError("Data must be a dictionary or a list of dictionaries.")
-        return data_list
+        
+        # Convert to pyarrow array to get the schema
+        struct=pa.array(data_list)
+        schema=pa.schema(struct.type)
+        return data_list, schema
     
 
 def add_dummy_field_to_empty_structs(table: pa.Table, dummy_field_name="dummy_field", dummy_field_type=pa.int32()) -> pa.Table:
