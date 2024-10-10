@@ -25,19 +25,27 @@ logger = logging.getLogger(__name__)
 # This can cause issue if the original table is large. I need to adapt the method to handle batches instead.
 
 class ParquetDB:
-    def __init__(self, dataset_name, dir='', n_cores=8):
+    def __init__(self, dataset_name, dir=''):
         """
-        Initializes the ParquetDBDataset object.
+        Initializes the ParquetDB object.
 
-        Args:
-            db_path (str): The path to the root directory of the database.
-            n_cores (int): The number of CPU cores to be used for parallel processing.
+        Parameters
+        ----------
+        dataset_name : str
+            The name of the dataset to be created or accessed.
+        dir : str, optional
+            The directory where the dataset will be stored (default is the current directory).
+        n_cores : int, optional
+            The number of CPU cores to use for parallel processing (default is 8).
+        
+        Example
+        -------
+        >>> db = ParquetDB(dataset_name='my_dataset', dir='/path/to/db', n_cores=4)
         """
         self.dir = dir
         self.dataset_name=dataset_name
         self.dataset_dir=os.path.join(self.dir,self.dataset_name)
         self.tmp_dir=os.path.join(self.dir,'tmp')
-        self.n_cores = n_cores
         self.basename_template = f'{dataset_name}_{{i}}.parquet'
 
 
@@ -66,19 +74,24 @@ class ParquetDB:
         """
         Adds new data to the database.
 
-        Args:
-            data (dict or list of dicts): The data to be added to the database. 
-                This must contain
-            batch_size (int): The batch size. 
-                If provided, create will return a generator that yields batches of data.
-            schema (pyarrow.Schema): The schema of the incoming table.
-            metadata (dict): Metadata to be added to the table.
-            normalize (bool): Whether to normalize the dataset or not. The default is True.
-                This means after the reconsoling the schema adding the incoming data to its own parquet table.
-                The dataset files will be recreated to have an equal number of rows 
-                as defined by the Dataset.write_dataset function. This doubles write speed times. 
-                The better method is to have this be off and then normalize after the data ingestion.
-            normalize_kwagrs (dict): Additional keyword arguments to pass to the normalize function.
+        Parameters
+        ----------
+        data : dict, list of dict, or pandas.DataFrame
+            The data to be added to the database.
+        batch_size : int, optional
+            The batch size. If provided, returns a generator that yields batches of data.
+        schema : pyarrow.Schema, optional
+            The schema for the incoming data.
+        metadata : dict, optional
+            Metadata to be attached to the table.
+        normalize_dataset : bool, optional
+            If True, the dataset will be normalized after the data is added (default is True).
+        normalize_kwagrs : dict, optional
+            Additional arguments for the normalization process (default is a dictionary with row group settings).
+        
+        Example
+        -------
+        >>> db.create(data=my_data, batch_size=1000, schema=my_schema, metadata={'source': 'api'}, normalize_dataset=True)
         """
         
         os.makedirs(self.dataset_dir, exist_ok=True)
@@ -160,25 +173,35 @@ class ParquetDB:
         output_format: str = 'table',
         batch_size: int = None,
         load_kwargs: dict = None
-        ) -> Union[pa.Table, pa.dataset.Scanner]:
+        ):
         """
         Reads data from the database.
 
-        Args:
-            ids (list): A list of IDs to read. If None, reads all data.
-            dataset_name (str): The name of the table to read data from.
-            columns (list): A list of columns to include in the returned data. By default, all columns are included.
-            include_cols (bool): If True, includes the only the fields listed in columns
-                If False, includes all fields except the ones listed in columns.
-            filters (List): A list of fliters to apply to the data.
-            It should operate on a dataframe and return the modifies dataframe
-            batch_size (int): The batch size. 
-                If provided, read will return a generator that yields batches of data.
-            load_kwargs (dict): Additional keyword arguments to pass to Dataset.to_table or Dataset.to_batches.
-
-        Returns:
-            pandas.DataFrame or list: The data read from the database. If deserialize_data is True,
-            returns a list of dictionaries with their 'id's. Otherwise, returns the DataFrame with serialized data.
+        Parameters
+        ----------
+        ids : list of int, optional
+            A list of IDs to read. If None, all data is read (default is None).
+        columns : list of str, optional
+            The columns to include in the output. If None, all columns are included (default is None).
+        include_cols : bool, optional
+            If True, includes only the specified columns. If False, excludes the specified columns (default is True).
+        filters : list of pyarrow.compute.Expression, optional
+            Filters to apply to the data (default is None).
+        output_format : str, optional
+            The format of the returned data: 'table' or 'batch_generator' (default is 'table').
+        batch_size : int, optional
+            The batch size. If provided, returns a generator yielding batches of data (default is None).
+        load_kwargs : dict, optional
+            Additional arguments passed to the data loading function (default is None).
+        
+        Returns
+        -------
+        pa.Table, generator, or dataset
+            The data read from the database. The output can be in table format or as a batch generator.
+        
+        Example
+        -------
+        >>> data = db.read(ids=[1, 2, 3], columns=['name', 'age'], filters=[pc.field('age') > 18])
         """
 
         # Check if the table name is in the list of table names
@@ -202,19 +225,19 @@ class ParquetDB:
         return data
     
     @timeit
-    def update(self, data: Union[List[dict], dict, pd.DataFrame], field_type_dict=None):
+    def update(self, data: Union[List[dict], dict, pd.DataFrame]):
         """
-        Updates data in the database.
+        Updates existing records in the database.
 
-        Args:
-            data (dict or list of dicts or pandas.DataFrame): The data to be updated.
-                Each dict should have an 'id' key corresponding to the record to update.
-            field_type_dict (dict): A dictionary where the keys are the field names and the values are the new field types.
+        Parameters
+        ----------
+        data : dict, list of dicts, or pandas.DataFrame
+            The data to be updated in the database. Each record must contain an 'id' key 
+            corresponding to the record to be updated.
 
-            **kwargs: Additional keyword arguments.
-
-        Raises:
-            ValueError: If new fields are found in the update data that do not exist in the schema.
+        Example
+        -------
+        >>> db.update(data=[{'id': 1, 'name': 'John', 'age': 30}, {'id': 2, 'name': 'Jane', 'age': 25}])
         """
 
         # Data processing and validation.
@@ -269,13 +292,20 @@ class ParquetDB:
     @timeit
     def delete(self, ids:List[int]):
         """
-        Deletes data from the database.
+        Deletes records from the database.
 
-        Args:
-            ids (list): A list of IDs to delete.
+        Parameters
+        ----------
+        ids : list of int
+            A list of record IDs to delete from the database.
 
-        Returns:
-            None
+        Returns
+        -------
+        None
+
+        Example
+        -------
+        >>> db.delete(ids=[1, 2, 3])
         """
         logger.info("Deleting data from the database")
         ids=set(ids)
@@ -402,13 +432,18 @@ class ParquetDB:
     @timeit
     def update_schema(self, field_dict:dict=None, schema:pa.Schema=None):
         """
-        Updates the schema of the table.
+        Updates the schema of the table in the dataset.
 
-        Args:
-            dataset_name (str): The name of the table to update the schema of.
-            field_dict (dict): A dictionary where the keys are the field names and the values are the new field types.
-            schema (pyarrow.Schema): The new schema for the table.
+        Parameters
+        ----------
+        field_dict : dict, optional
+            A dictionary where keys are the field names and values are the new field types.
+        schema : pyarrow.Schema, optional
+            The new schema to apply to the table.
 
+        Example
+        -------
+        >>> db.update_schema(field_dict={'age': pa.int32()})
         """
         # Dataset directory
         current_files=self.get_current_files()
@@ -438,28 +473,46 @@ class ParquetDB:
         logger.info(f"Updated Fields in {self.dataset_name} table.")
 
     def get_schema(self, load_tmp=False):
-        """Get the schema of a table.
+        """
+        Retrieves the schema of the dataset table.
 
-        Args:
-            dataset_name (str): The name of the table.
+        Parameters
+        ----------
+        load_tmp : bool, optional
+            Whether to load from temporary files if available (default is False).
 
-        Returns:
-            pyarrow.Schema: The schema of the table.
+        Returns
+        -------
+        pyarrow.Schema
+            The schema of the table.
+
+        Example
+        -------
+        >>> schema = db.get_schema()
         """
         schema = self._load_data(output_format='dataset', load_tmp=load_tmp).schema
         return schema
     
     def get_field_names(self, columns=None, include_cols=True):
         """
-        Gets the field names from a parquet file.
+        Retrieves the field names from the dataset schema.
 
-        Args:
-            filepath (str): The path to the parquet file.
-            columns (list): A list of column names to include.
-            include_cols (bool): If True, includes all columns except the ones listed in columns.
+        Parameters
+        ----------
+        columns : list, optional
+            A list of specific column names to include.
+        include_cols : bool, optional
+            If True, includes only the specified columns. If False, includes all columns 
+            except the ones in `columns` (default is True).
 
-        Returns:
-            list: A list of column names.
+        Returns
+        -------
+        list
+            A list of field names.
+
+        Example
+        -------
+        >>> fields = db.get_field_names(columns=['name', 'age'], include_cols=False)
         """
         if not include_cols:
             schema=self.get_schema()
@@ -477,13 +530,17 @@ class ParquetDB:
         return columns
     
     def get_metadata(self):
-        """Get the metadata of a table.
-        
-        Args:
-            dataset_name (str): The name of the table.
+        """
+        Retrieves the metadata of the dataset table.
 
-        Returns:
-            dict: The metadata of the table.
+        Returns
+        -------
+        dict
+            The metadata of the table.
+
+        Example
+        -------
+        >>> metadata = db.get_metadata()
         """
         if not self.dataset_exists():
             raise ValueError(f"Dataset {self.dataset_name} does not exist.")
@@ -492,30 +549,54 @@ class ParquetDB:
         return schema.metadata
     
     def set_metadata(self, metadata:dict):
-        """Set the metadata of a table.
+        """
+        Sets or updates the metadata of the dataset table.
 
-        Args:
-            dataset_name (str): The name of the table.
-            metadata (dict): The metadata to set.
+        Parameters
+        ----------
+        metadata : dict
+            A dictionary of metadata to set for the table.
+
+        Example
+        -------
+        >>> db.set_metadata({'source': 'API', 'version': '1.0'})
         """
         # Update metadata in schema and rewrite Parquet files
         self.update_schema(schema=pa.schema(self.get_schema().fields, metadata=metadata))
 
     def get_current_files(self):
-        """Gets the current files in the dataset directory.
+        """
+        Retrieves the list of current Parquet files in the dataset directory.
 
         Returns
         -------
-        List[str]
+        list of str
             A list of file paths for the current dataset files.
+
+        Example
+        -------
+        >>> files = db.get_current_files()
         """
         return glob(os.path.join(self.dataset_dir, f'{self.dataset_name}_*.parquet'))
     
     def dataset_exists(self, dataset_name:str=None):
-        """Checks if a table exists.
+        """
+        Checks if the specified dataset exists.
 
-        Returns:
-            bool: True if the table exists, False otherwise.
+        Parameters
+        ----------
+        dataset_name : str, optional
+            The name of the dataset to check. If None, checks the current dataset.
+
+        Returns
+        -------
+        bool
+            True if the dataset exists, False otherwise.
+
+        Example
+        -------
+        >>> db.dataset_exists('my_dataset')
+        True
         """
         
         if dataset_name:
@@ -526,10 +607,15 @@ class ParquetDB:
 
     def drop_dataset(self):
         """
-        Drops a table. by removing the table directory.
+        Removes the current dataset directory, effectively dropping the table.
 
-        Args:
-            dataset_name (str): The name of the table to drop.
+        Returns
+        -------
+        None
+
+        Example
+        -------
+        >>> db.drop_dataset()
         """
       
         if os.path.exists(self.dataset_dir):
@@ -540,11 +626,16 @@ class ParquetDB:
     
     def rename_dataset(self, new_name:str):
         """
-        Renames a table.
+        Renames the current dataset to a new name.
 
-        Args:
-            old_name (str): The current name of the table.
-            new_name (str): The new name of the table.
+        Parameters
+        ----------
+        new_name : str
+            The new name for the dataset.
+
+        Example
+        -------
+        >>> db.rename_dataset('new_dataset_name')
         """
         if not self.dataset_exists():
             raise ValueError(f"Dataset {self.dataset_name} does not exist.")
@@ -573,11 +664,18 @@ class ParquetDB:
 
     def copy_dataset(self, dest_name: str, overwrite: bool = False):
         """
-        Copies a table to a new table.
+        Copies the current dataset to a new dataset.
 
-        Args:
-            source_table (str): The name of the source table.
-            dest_table (str): The name of the destination table.
+        Parameters
+        ----------
+        dest_name : str
+            The name of the destination dataset.
+        overwrite : bool, optional
+            Whether to overwrite the destination dataset if it already exists (default is False).
+
+        Example
+        -------
+        >>> db.copy_dataset('new_dataset_copy', overwrite=True)
         """
         if overwrite and self.dataset_exists(dest_name):
             shutil.rmtree(os.path.join(self.dir, dest_name))
@@ -609,15 +707,24 @@ class ParquetDB:
                     batch_size=None,
                     **kwargs):
         """
-        Optimizes the table by merging small Parquet files.
+        Optimizes the dataset by merging small Parquet files into larger files.
 
-        Args:
-            dataset_name (str): The name of the table to optimize.
-            max_rows_per_file (int): The maximum number of rows per file.
-            min_rows_per_group (int): The minimum number of rows per group.
-            max_rows_per_group (int): The maximum number of rows per group.
-            batch_size (int): The batch size.
-            **kwargs: Additional keyword arguments to pass to the pq.write_to_dataset function.
+        Parameters
+        ----------
+        max_rows_per_file : int, optional
+            The maximum number of rows per Parquet file (default is 10,000).
+        min_rows_per_group : int, optional
+            The minimum number of rows per group (default is 0).
+        max_rows_per_group : int, optional
+            The maximum number of rows per group (default is 10,000).
+        batch_size : int, optional
+            The size of the batches to process. If None, the entire dataset is processed at once.
+        **kwargs : dict, optional
+            Additional arguments passed to the `pq.write_dataset` function.
+
+        Example
+        -------
+        >>> db.optimize_dataset(max_rows_per_file=5000, batch_size=100)
         """
 
         # Read the entire dataset either in batches or as a whole
@@ -641,8 +748,8 @@ class ParquetDB:
                 schema=schema,
                 format="parquet",
                 max_rows_per_file=max_rows_per_file,
-                min_rows_per_group=0,
-                max_rows_per_group=10000,
+                min_rows_per_group=min_rows_per_group,
+                max_rows_per_group=max_rows_per_group,
                 existing_data_behavior='overwrite_or_ignore'
                 **kwargs
             )
@@ -654,12 +761,23 @@ class ParquetDB:
 
     def export_dataset(self, file_path: str, format: str = 'csv'):
         """
-        Exports the table to a specified file format.
+        Exports the dataset to a specified file format.
 
-        Args:
-            dataset_name (str): The name of the table to export.
-            file_path (str): The file path to export the data to.
-            format (str): The format to export ('csv', 'json').
+        Parameters
+        ----------
+        file_path : str
+            The path where the exported file will be saved.
+        format : str, optional
+            The format for exporting the data ('csv', 'json'). Default is 'csv'.
+
+        Raises
+        ------
+        ValueError
+            If an unsupported export format is provided.
+
+        Example
+        -------
+        >>> db.export_dataset(file_path='/path/to/file.csv', format='csv')
         """
         table = self._load_data(output_format='table')
         if format == 'csv':
@@ -679,16 +797,24 @@ class ParquetDB:
                                    batch_size: int = None, 
                                    **kwargs):
         """
-        This method exports a partitioned dataset to a specified file format.
+        Exports the dataset to a specified directory with partitioning.
 
-        Args:
-            dataset_name (str): The name of the table to export.
-            export_dir (str): The directory to export the data to.
-            partitioning (dict): The partitioning to use for the dataset.
-            partitioning_flavor (str): The partitioning flavor to use.
-            batch_size (int): The batch size.
-            **kwargs: Additional keyword arguments to pass to the pq.write_to_dataset function.
+        Parameters
+        ----------
+        export_dir : str
+            The directory where the partitioned dataset will be saved.
+        partitioning : dict
+            The partitioning strategy to use (e.g., by columns).
+        partitioning_flavor : str, optional
+            The partitioning flavor to use (e.g., 'hive' partitioning).
+        batch_size : int, optional
+            The size of the batches to process. If None, the entire dataset is processed at once.
+        **kwargs : dict, optional
+            Additional arguments passed to the `pq.write_to_dataset` function.
 
+        Example
+        -------
+        >>> db.export_partitioned_dataset(export_dir='/path/to/export', partitioning={'year': '2023'}, partitioning_flavor='hive')
         """
 
         # Read the entire dataset either in batches or as a whole
@@ -711,13 +837,25 @@ class ParquetDB:
 
     def import_dataset(self, file_path: str, format: str = 'csv', **kwargs):
         """
-        Imports a table from a specified file format.
+        Imports data from a specified file into the dataset.
 
-        Args:
-            file_path (str): The file path to import the data from.
-            dataset_name (str): The name of the table to import the data into.
-            format (str): The format to import ('csv', 'json').
-            **kwargs: Additional keyword arguments to pass to the create function.
+        Parameters
+        ----------
+        file_path : str
+            The path of the file to import.
+        format : str, optional
+            The format of the file to import ('csv', 'json'). Default is 'csv'.
+        **kwargs : dict, optional
+            Additional arguments passed to the data loading function (e.g., pandas read options).
+
+        Raises
+        ------
+        ValueError
+            If an unsupported import format is provided.
+
+        Example
+        -------
+        >>> db.import_dataset(file_path='/path/to/file.csv', format='csv')
         """
         if format == 'csv':
             df = pd.read_csv(file_path, **kwargs)
@@ -733,20 +871,32 @@ class ParquetDB:
     
     def backup_database(self, backup_path: str):
         """
-        Creates a backup of the database.
+        Creates a backup of the current dataset by copying it to the specified backup path.
 
-        Args:
-            backup_path (str): The path where the backup will be stored.
+        Parameters
+        ----------
+        backup_path : str
+            The path where the backup will be stored.
+
+        Example
+        -------
+        >>> db.backup_database(backup_path='/path/to/backup')
         """
         shutil.copytree(self.dataset_dir, backup_path)
         logger.info(f"Database backed up to {backup_path}.")
 
     def restore_database(self, backup_path: str):
         """
-        Restores the database from a backup.
+        Restores the dataset from a specified backup path.
 
-        Args:
-            backup_path (str): The path to the backup to restore from.
+        Parameters
+        ----------
+        backup_path : str
+            The path to the backup from which the database will be restored.
+
+        Example
+        -------
+        >>> db.restore_database(backup_path='/path/to/backup')
         """
         if os.path.exists(self.dataset_dir):
             shutil.rmtree(self.dataset_dir)
@@ -760,29 +910,31 @@ class ParquetDB:
                    load_tmp:bool=False,
                    load_kwargs:dict=None):
         """
-        This method loads the data in the database. It can either load the data as a PyArrow Table, PyArrow Dataset, PyArrow generator.
-        
+        Loads data from the dataset, supporting various output formats such as PyArrow Table, Dataset, or a batch generator.
+
         Parameters
         ----------
-        
-        columns : List[str], optional
-            A list of column names to load. If None, loads all columns. Defaults to None.
-        filter : List[pc.Expression], optional
-            A list of filters to apply to the data. Defaults to None.
+        columns : list of str, optional
+            A list of column names to load. If None, all columns are loaded (default is None).
+        filter : list of pyarrow.compute.Expression, optional
+            A list of filters to apply to the data (default is None).
         batch_size : int, optional
-            The batch size to use for loading data in batches. Defaults to None.
+            The batch size to use for loading data in batches. If None, data is loaded as a whole (default is None).
         output_format : str, optional
-            The output format to use for loading data. Defaults to 'table'.
+            The format for loading the data: 'table', 'batch_generator', or 'dataset' (default is 'table').
         load_tmp : bool, optional
-            Whether to load data from the temporary directory. Defaults to False.
+            If True, loads data from the temporary directory (default is False).
         load_kwargs : dict, optional
-            Additional keyword arguments to pass to Dataset.to_table or Dataset.to_batches. Defaults to None.
+            Additional keyword arguments passed to `Dataset.to_table` or `Dataset.to_batches` (default is None).
 
         Returns
         -------
-        Union[pa.Table, pa.dataset.Scanner]
-            The loaded data as a PyArrow Table, PyArrow Dataset, or PyArrow generator.
-        
+        Union[pa.Table, pa.dataset.Scanner, Iterator[pa.RecordBatch]]
+            The loaded data as a PyArrow Table, Dataset, or batch generator, depending on the specified output format.
+
+        Example
+        -------
+        >>> data = db._load_data(columns=['name', 'age'], output_format='table')
         """
         if load_kwargs is None:
             load_kwargs={}
@@ -807,6 +959,31 @@ class ParquetDB:
             raise ValueError(f"output_format must be one of the following: {self.output_formats}")
     
     def _load_batches(self, dataset, batch_size, columns:List[str]=None, filter:List[pc.Expression]=None, **kwargs):
+        """
+        Loads data in batches from the dataset, returning an iterator of PyArrow RecordBatches.
+
+        Parameters
+        ----------
+        dataset : pa.dataset.Dataset
+            The PyArrow dataset from which to load data.
+        batch_size : int
+            The size of each batch to load.
+        columns : list of str, optional
+            A list of column names to load. If None, all columns are loaded (default is None).
+        filter : list of pyarrow.compute.Expression, optional
+            A list of filters to apply to the data (default is None).
+        **kwargs : dict, optional
+            Additional keyword arguments passed to `Dataset.to_batches`.
+
+        Returns
+        -------
+        Iterator[pa.RecordBatch]
+            An iterator yielding batches of data as PyArrow RecordBatches.
+
+        Example
+        -------
+        >>> batches = db._load_batches(dataset, batch_size=100, columns=['name', 'age'])
+        """
         if batch_size is None:
             raise ValueError("batch_size must be provided when output_format is batch_generator")
         try:
@@ -818,6 +995,29 @@ class ParquetDB:
         return generator
     
     def _load_table(self, dataset, columns:List[str]=None, filter:List[pc.Expression]=None, **kwargs):
+        """
+        Loads the entire dataset as a PyArrow Table.
+
+        Parameters
+        ----------
+        dataset : pa.dataset.Dataset
+            The PyArrow dataset from which to load data.
+        columns : list of str, optional
+            A list of column names to load. If None, all columns are loaded (default is None).
+        filter : list of pyarrow.compute.Expression, optional
+            A list of filters to apply to the data (default is None).
+        **kwargs : dict, optional
+            Additional keyword arguments passed to `Dataset.to_table`.
+
+        Returns
+        -------
+        pa.Table
+            The loaded data as a PyArrow Table.
+
+        Example
+        -------
+        >>> table = db._load_table(dataset, columns=['name', 'age'])
+        """
         try:
             table=dataset.to_table(columns=columns,filter=filter,**kwargs)
             logger.info(f"Loading data as a {table.__class__} object")
@@ -933,6 +1133,23 @@ class ParquetDB:
         return data_list, schema
     
     def _get_new_ids(self, data_list:List[dict]):
+        """
+        Generates a list of new IDs for the incoming data, starting from the next available ID.
+
+        Parameters
+        ----------
+        data_list : list of dict
+            The incoming data for which new IDs will be generated. Each entry represents a row in the dataset.
+
+        Returns
+        -------
+        list of int
+            A list of new unique IDs for each entry in the data list.
+
+        Example
+        -------
+        >>> new_ids = db._get_new_ids(data_list=[{'name': 'Alice'}, {'name': 'Bob'}])
+        """
   
         if is_directory_empty(self.dataset_dir):
             logger.debug("Directory is empty. Starting id from 0")
@@ -949,7 +1166,25 @@ class ParquetDB:
         return new_ids
     
     def _build_filter_expression(self, ids: List[int], filters: List[pc.Expression]):
-        """Helper function to build the filter expression."""
+        """
+        Builds a filter expression from provided IDs and additional filters.
+
+        Parameters
+        ----------
+        ids : list of int, optional
+            A list of IDs to include in the filter.
+        filters : list of pyarrow.compute.Expression, optional
+            Additional filter expressions to apply to the dataset.
+
+        Returns
+        -------
+        pyarrow.compute.Expression or None
+            A combined filter expression, or None if no filters are provided.
+
+        Example
+        -------
+        >>> filter_expr = db._build_filter_expression(ids=[1, 2, 3], filters=[pc.field('age') > 18])
+        """
         final_filters = []
         
         # Add ID filter if provided
@@ -971,7 +1206,18 @@ class ParquetDB:
         return filter_expression
 
     def _get_save_path(self):
-        """Determine the path to save the incoming table."""
+        """
+        Determines the path to save the incoming table based on the number of existing files in the dataset directory.
+
+        Returns
+        -------
+        str
+            The file path where the new table will be saved.
+
+        Example
+        -------
+        >>> save_path = db._get_save_path()
+        """
 
         n_files = len(glob(os.path.join(self.dataset_dir, f'{self.dataset_name}_*.parquet')))
         
@@ -980,6 +1226,22 @@ class ParquetDB:
         return os.path.join(self.dataset_dir, f'{self.dataset_name}_{n_files}.parquet')
 
     def _validate_id(self, id_column):
+        """
+        Validates the incoming ID column by checking if the IDs exist in the main table.
+
+        Parameters
+        ----------
+        id_column : pyarrow.Array
+            The ID column from the incoming table to validate.
+
+        Returns
+        -------
+        None
+
+        Example
+        -------
+        >>> db._validate_id(id_column=incoming_table['id'])
+        """
         logger.info(f"Validating ids")
         current_table=self.read(columns=['id'], output_format='table').combine_chunks()
         filtered_table = current_table.filter(~pc.field('id').isin(id_column))
