@@ -126,8 +126,6 @@ class ParquetDB:
         incoming_table=pyarrow_utils.fill_null_nested_structs_in_table(incoming_table)
         incoming_table=pyarrow_utils.replace_empty_structs_in_table(incoming_table)
         
-        incoming_schema=incoming_table.schema
-        
         # If this is the first table, save it directly
         if is_directory_empty(self.dataset_dir):
             incoming_save_path = self._get_save_path()
@@ -165,9 +163,7 @@ class ParquetDB:
 
                     pq.write_table(current_table, current_file)
 
-                incoming_table=incoming_table.to_pylist()
-                incoming_table=pa.Table.from_pylist(data_list, schema=merged_schema)
-                # incoming_table=pyarrow_utils.align_table(incoming_table, merged_schema)
+                incoming_table=pa.Table.from_pylist(incoming_table.to_pylist(), schema=merged_schema)
 
         except Exception as e:
             logger.exception(f"exception aligning schemas: {e}")
@@ -940,11 +936,14 @@ class ParquetDB:
     def _get_new_ids(self, data_list:List[dict]):
   
         if is_directory_empty(self.dataset_dir):
+            logger.debug("Directory is empty. Starting id from 0")
             start_id = 0
         else:
             table = self._load_data(columns=['id'],output_format='table')
             max_val=pc.max(table.column('id')).as_py()
             start_id = max_val + 1  # Start from the next available ID
+            
+            logger.debug(f"Directory is not empty. Starting id from {start_id}")
     
         # Create a list of new IDs
         new_ids = list(range(start_id, start_id + len(data_list)))
