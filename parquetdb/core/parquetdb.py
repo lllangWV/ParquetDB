@@ -309,33 +309,28 @@ class ParquetDB:
         Returns:
             None
         """
+        logger.info("Deleting data from the database")
         ids=set(ids)
 
-        logger.info(f"Deleting data from {self.dataset_name}")
-
-        main_id_column=self._load_data(columns=['id'], output_format='table')
-
-        # Check if any of the IDs to delete exist in the table
-        filtered_table = main_id_column.filter( pc.field('id').isin(ids) )
-        if filtered_table.num_rows==0:
+        # Check if any of the IDs to delete exist in the table. If not, return None
+        current_id_table=self._load_data(columns=['id'], output_format='table')
+        filtered_id_table = current_id_table.filter( pc.field('id').isin(ids) )
+        if filtered_id_table.num_rows==0:
             logger.info(f"No data found to delete.")
             return None
         
         # Dataset directory
         logger.info(f"Dataset directory: {self.dataset_dir}")
-        current_files = self.get_current_files()
-
+        
         # Backup current files in case of failure
         self._write_tmp_files()
-
+        current_files = self.get_current_files()
         for current_file in current_files:
             filename=os.path.basename(current_file)
 
-            current_table=pq.read_table(current_file)
-
-            # Delete the IDs from the table
             try:
-                updated_table = self._delete_ids_from_table(ids, current_table)
+                current_table=pq.read_table(current_file)
+                updated_table = current_table.filter( ~pc.field('id').isin(ids) )
             except Exception as e:
                 logger.exception(f"exception processing {current_file}: {e}")
                 # If something goes wrong, restore the original file
@@ -883,39 +878,6 @@ class ParquetDB:
         filtered_table = current_table.filter(~pc.field('id').isin(id_column))
         logger.warning(f"The following ids are not in the main table", extra={'ids_do_not_exist': filtered_table['id'].to_pylist()})
         return None
-    
-    def _delete_ids_from_table(self, ids, table):
-        """
-        Delete specific IDs from a given PyArrow table.
-
-        This function removes rows from a PyArrow table where the values in the 'id' column match
-        any of the IDs provided in the input `ids` set. The table is filtered to exclude rows 
-        containing those IDs.
-
-        Parameters
-        ----------
-        ids : set
-            A set of IDs to be removed from the table. These IDs should match the values in 
-            the 'id' column of the table.
-
-        table : pa.Table
-            The PyArrow table from which the rows with matching IDs will be deleted.
-
-        Returns
-        -------
-        pa.Table
-            A new PyArrow table with the rows containing the specified IDs removed.
-        """
-        
-        # Get the original ids
-        current_ids_list=set(table['id'].to_pylist())
-
-        # Get the ids that are in the current table
-        ids_in_table = current_ids_list & ids
-
-        # Applying the negative id filter
-        new_table = table.filter(~pc.field('id').isin(ids_in_table))
-        return new_table
     
     def _update_dataset_schema(self, current_table, schema=None, field_dict=None):
         """
