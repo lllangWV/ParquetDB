@@ -11,6 +11,21 @@ from parquetdb import config
 
 # Function to download the file
 def download_file(file_url, output_path):
+    """
+    Downloads a file from the specified URL to a local output path.
+
+    Parameters
+    ----------
+    file_url : str
+        The URL of the file to download.
+    output_path : str
+        The local file path where the downloaded file will be saved.
+
+    Example
+    -------
+    >>> download_file('https://example.com/file.zip', 'data/file.zip')
+    Downloaded: data/file.zip
+    """
     response = requests.get(file_url, stream=True)
     if response.status_code == 200:
         with open(output_path, 'wb') as f:
@@ -22,12 +37,44 @@ def download_file(file_url, output_path):
         
         
 def download_file_mp_task(file_name, url = "https://alexandria.icams.rub.de/data/pbe/", output_dir='.'):
+    """
+    Downloads a file by combining the base URL and file name, then saves it to the specified output directory.
+
+    Parameters
+    ----------
+    file_name : str
+        The name of the file to download.
+    url : str, optional
+        The base URL to use for downloading files. Default is 'https://alexandria.icams.rub.de/data/pbe/'.
+    output_dir : str, optional
+        The directory where the downloaded file will be saved. Default is the current directory.
+
+    Example
+    -------
+    >>> download_file_mp_task('alexandria_data.json.bz2', output_dir='data/downloads')
+    Downloaded: data/downloads/alexandria_data.json.bz2
+    """
     file_url = url + file_name
     output_path = os.path.join(output_dir, file_name)
     download_file(file_url, output_path)
 
 # Scrape the page to find all file links that match the pattern
 def scrape_files(output_dir='data/external/alexandria/uncompressed', n_cores=1):
+    """
+    Scrapes a web page to find all file links matching the pattern `alexandria_***.json.bz2` and downloads them.
+
+    Parameters
+    ----------
+    output_dir : str, optional
+        The directory where the downloaded files will be saved. Default is 'data/external/alexandria/uncompressed'.
+    n_cores : int, optional
+        The number of CPU cores to use for downloading files in parallel. Default is 1 (no multiprocessing).
+
+    Example
+    -------
+    >>> scrape_files(output_dir='data/downloads', n_cores=4)
+    Using Multiprocessing
+    """
     
     os.makedirs(output_dir, exist_ok=True)
     # The URL of the page to scrape
@@ -64,6 +111,23 @@ def scrape_files(output_dir='data/external/alexandria/uncompressed', n_cores=1):
         
 
 def decompress_bz2_file(file_name, source_dir='compressed', dest_dir='uncompressed'):
+    """
+    Decompresses a .bz2 file and saves the decompressed content to the destination directory.
+
+    Parameters
+    ----------
+    file_name : str
+        The name of the .bz2 file to decompress.
+    source_dir : str, optional
+        The directory containing the .bz2 file. Default is 'compressed'.
+    dest_dir : str, optional
+        The directory where the decompressed file will be saved. Default is 'uncompressed'.
+
+    Example
+    -------
+    >>> decompress_bz2_file('data.bz2', source_dir='compressed', dest_dir='uncompressed')
+    Decompressed: compressed/data.bz2 -> uncompressed/data
+    """
     if file_name.endswith('.bz2'):
         # Path to the .bz2 file
         bz2_file_path = os.path.join(source_dir, file_name)
@@ -80,6 +144,22 @@ def decompress_bz2_file(file_name, source_dir='compressed', dest_dir='uncompress
         print(f"Decompressed: {bz2_file_path} -> {decompressed_file_path}")
         
 def decompress_bz2_files(source_dir, dest_dir, n_cores):
+    """
+    Decompresses all .bz2 files in the source directory using multiple cores.
+
+    Parameters
+    ----------
+    source_dir : str
+        The directory containing the .bz2 files.
+    dest_dir : str
+        The directory where decompressed files will be saved.
+    n_cores : int
+        The number of CPU cores to use for parallel decompression.
+
+    Example
+    -------
+    >>> decompress_bz2_files('compressed', 'uncompressed', n_cores=4)
+    """
     # Ensure the destination directory exists
     os.makedirs(dest_dir, exist_ok=True)
 
@@ -94,6 +174,27 @@ def decompress_bz2_files(source_dir, dest_dir, n_cores):
             decompress_bz2_file(filename, source_dir, dest_dir)
 
 def download_alexandria_3d_database(output_dir, n_cores=8, from_scratch=False):
+    """
+    Downloads and decompresses the Alexandria 3D database.
+
+    Parameters
+    ----------
+    output_dir : str
+        The directory where the database will be downloaded and stored.
+    n_cores : int, optional
+        The number of CPU cores to use for downloading and decompressing files. Default is 8.
+    from_scratch : bool, optional
+        If True, removes any existing data and starts the download process from scratch. Default is False.
+
+    Returns
+    -------
+    str
+        The path to the destination directory containing the decompressed database.
+
+    Example
+    -------
+    >>> destination_dir = download_alexandria_3d_database(output_dir='data/alexandria', n_cores=4, from_scratch=True)
+    """
     n_cores=8
     # Create a folder to save the downloaded files
     if from_scratch and os.path.exists(output_dir):
