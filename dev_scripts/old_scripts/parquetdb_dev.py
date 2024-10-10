@@ -11,7 +11,7 @@ import json
 
 import pyarrow as pa
 
-from parquetdb import ParquetDB
+from parquetdb import ParquetDB, config
 
 logger=logging.getLogger('parquetdb')
 logger.setLevel(logging.DEBUG)
@@ -22,7 +22,7 @@ ch.setFormatter(formatter)
 logger.addHandler(ch)
 
 
-materials_dir = "C:/Users/lllang/Desktop/Current_Projects/ParquetDB/data/raw/materials_data"
+materials_dir = os.path.join(config.data_dir, 'raw', 'materials_data')
 files = glob(os.path.join(materials_dir, '*.json'))
 
 # Load materials data from JSON files
@@ -32,7 +32,7 @@ for file in files:
         materials_data.append(json.load(f))
 
 
-save_dir = 'C:/Users/lllang/Desktop/Current_Projects/ParquetDB/data/raw/ParquetDB'
+save_dir = os.path.join(config.data_dir, 'raw', 'ParquetDB')
 db = ParquetDB(db_path=save_dir)
 db.drop_table('main_test')
 

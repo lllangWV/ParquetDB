@@ -7,7 +7,7 @@ mpl.use('Agg')
 import matplotlib.pyplot as plt
 from glob import glob
 import json
-from parquetdb import ParquetDB
+from parquetdb import ParquetDB, config
 
 
 def generate_test_data(materials_data, size, num_columns):
@@ -33,7 +33,7 @@ def generate_test_data(materials_data, size, num_columns):
 
 def benchmark_read_performance():
     # Create a temporary directory for the database
-    save_dir = 'C:/Users/lllang/Desktop/Current_Projects/ParquetDB/data/raw/ParquetDB'
+    save_dir = os.path.join(config.data_dir, 'raw', 'ParquetDB')
     db = ParquetDB(dataset_name='main',dir=save_dir)
 
     # Define dataset sizes and columns to test
@@ -48,7 +48,7 @@ def benchmark_read_performance():
     read_times = {num_columns: [] for num_columns in num_columns_list}
     write_times = {num_columns: [] for num_columns in num_columns_list}
 
-    materials_dir = "C:/Users/lllang/Desktop/Current_Projects/ParquetDB/data/raw/materials_data"
+    materials_dir = os.path.join(config.data_dir, 'raw', 'materials_data')
     files = glob(os.path.join(materials_dir, '*.json'))
     
     # Load materials data from JSON files
@@ -119,7 +119,9 @@ def benchmark_read_performance():
 
     # Save the plot
     plt.tight_layout()
-    plt.savefig(os.path.join('data', 'read_write_performance_by_columns_and_samples.png'))
+    
+
+    plt.savefig(save_fig)
 
     # Optionally print the results
     print("\nBenchmark Results:")

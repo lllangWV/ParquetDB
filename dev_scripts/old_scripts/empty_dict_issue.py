@@ -144,17 +144,17 @@ import pyarrow as pa
 #     new_table = pa.Table.from_arrays(new_columns, schema=new_schema)
 #     return new_table
 
-save_dir = 'C:/Users/lllang/Desktop/Current_Projects/ParquetDB/data/raw/ParquetDB_Dev'
+# save_dir = 'C:/Users/lllang/Desktop/Current_Projects/ParquetDB/data/raw/ParquetDB_Dev'
 
-temp_dir = tempfile.mkdtemp()
-db = ParquetDB(dataset_name='dev', dir=save_dir, n_cores=1)
+# temp_dir = tempfile.mkdtemp()
+# db = ParquetDB(dataset_name='dev', dir=save_dir, n_cores=1)
 
-table=db.read(columns=['id'])
+# table=db.read(columns=['id'])
 
-print(f"Table shape: {table.shape}")
-print(f"Table: {table}\n")
-print(f"Empty Chunked Array: {type(table['id'])}" )
-print(f"Empty Chunked Array: {table['id']}")
+# print(f"Table shape: {table.shape}")
+# print(f"Table: {table}\n")
+# print(f"Empty Chunked Array: {type(table['id'])}" )
+# print(f"Empty Chunked Array: {table['id']}")
 
 
 

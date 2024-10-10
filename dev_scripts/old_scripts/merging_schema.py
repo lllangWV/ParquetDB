@@ -20,8 +20,7 @@ config.logging_config.loggers.parquetdb.level='ERROR'
 config.logging_config.loggers.timing.level='DEBUG'
 config.apply()
 
-
-materials_dir = "C:/Users/lllang/Desktop/Current_Projects/ParquetDB/data/raw/materials_data"
+materials_dir = os.path.join(config.data_dir, 'raw', 'materials_data')
 files = glob(os.path.join(materials_dir, '*.json'))
 
 # Load materials data from JSON files
@@ -122,22 +121,25 @@ current_table=pa.Table.from_pylist(current_data, schema=union_schema)
 incoming_table=pa.Table.from_pylist(incoming_struct, schema=union_schema)
 
 
-current_table=pyarrow_utils.fill_null_nested_structs_in_table(current_table)
-incoming_table=pyarrow_utils.fill_null_nested_structs_in_table(incoming_table)
+for x in incoming_table['id'].combine_chunks():
+    print(x)
 
-current_table=pyarrow_utils.replace_empty_structs_in_table(current_table)
-incoming_table=pyarrow_utils.replace_empty_structs_in_table(incoming_table)
+# current_table=pyarrow_utils.fill_null_nested_structs_in_table(current_table)
+# incoming_table=pyarrow_utils.fill_null_nested_structs_in_table(incoming_table)
 
-
-
-print(f"Current table shape: {current_table.shape}")
-print(f"Incoming table shape: {incoming_table.shape}")
-
-print(f"\n\nCurrent schema: {current_table.schema}\n\n")
-print(f"\n\nIncoming schema: {incoming_table.schema}\n\n")
+# current_table=pyarrow_utils.replace_empty_structs_in_table(current_table)
+# incoming_table=pyarrow_utils.replace_empty_structs_in_table(incoming_table)
 
 
-updated_table=pyarrow_utils.update_table(current_table, incoming_table, flatten_method=True)
+
+# print(f"Current table shape: {current_table.shape}")
+# print(f"Incoming table shape: {incoming_table.shape}")
+
+# print(f"\n\nCurrent schema: {current_table.schema}\n\n")
+# print(f"\n\nIncoming schema: {incoming_table.schema}\n\n")
+
+
+# updated_table=pyarrow_utils.update_table(current_table, incoming_table, flatten_method=True)
 # def my_function():
 #     updated_table=pyarrow_utils.update_table(current_table, incoming_table, flatten_method=True)
 # # print(updated_table.to_pandas())

@@ -2,7 +2,7 @@ import os
 import logging
 import json
 
-from parquetdb import ParquetDB
+from parquetdb import ParquetDB, config
 
 logger=logging.getLogger('parquetdb')
 logger.setLevel(logging.DEBUG)
@@ -20,11 +20,11 @@ def test_filter_func(df):
      
 
 if __name__ == '__main__':
-    save_dir='data/raw/ParquetDB'
+    save_dir=os.path.join(config.data_dir, 'raw', 'ParquetDB')
     db = ParquetDB(dataset_name='main',dir=save_dir)
 
-    ex_json_file_1='data/production/materials_project/json_database/mp-27352.json'
-    ex_json_file_2='data/production/materials_project/json_database/mp-1000.json'
+    ex_json_file_1=os.path.join(config.data_dir, 'production', 'materials_project', 'json_database', 'mp-27352.json')
+    ex_json_file_2=os.path.join(config.data_dir, 'production', 'materials_project', 'json_database', 'mp-1000.json')
 
     # files=glob('data/production/materials_project/json_database/*.json')
 

@@ -14,7 +14,7 @@ import pandas as pd
 from typing import List
 
 # Assuming ParquetDB is in the module parquetdb
-from parquetdb import ParquetDB
+from parquetdb import ParquetDB, config
 
 
 
@@ -22,7 +22,7 @@ from parquetdb import ParquetDB
 def benchmark_read_performance():
     # Create a temporary directory for the database
     temp_dir = tempfile.mkdtemp()
-    save_dir='C:/Users/lllang/Desktop/Current_Projects/ParquetDB/data/raw/ParquetDB'
+    save_dir=os.path.join(config.data_dir, 'raw', 'ParquetDB')
     # os.makedirs(save_dir, exist_ok=True)
     db = ParquetDB(dataset_name='main',dir=save_dir)
 
@@ -31,7 +31,7 @@ def benchmark_read_performance():
     read_times = []
     write_times = []
 
-    materials_dir="C:/Users/lllang/Desktop/Current_Projects/ParquetDB/data/raw/materials_data"
+    materials_dir=os.path.join(config.data_dir, 'raw', 'materials_data')
 
     files=glob(os.path.join(materials_dir,'*.json'))
     print(files)
@@ -103,7 +103,8 @@ def benchmark_read_performance():
     ax1.grid(True)
 
     # Saving the plot
-    plt.savefig(os.path.join('data', 'read_write_performance.png'))
+    save_fig=os.path.join(config.data_dir, 'read_write_performance.png')
+    plt.savefig(save_fig)
 
 
     # Optionally, print the results in a table format
