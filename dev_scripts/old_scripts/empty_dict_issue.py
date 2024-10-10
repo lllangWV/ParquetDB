@@ -11,9 +11,10 @@ from glob import glob
 import json
 
 import pyarrow as pa
+import pyarrow.compute as pc
 
 from parquetdb import ParquetDBManager, ParquetDB
-from parquetdb.utils.pyarrow_utils import align_table, merge_schemas, merge_structs, combine_tables
+from parquetdb.utils.pyarrow_utils import  merge_schemas, merge_structs
 
 logger=logging.getLogger('parquetdb')
 logger.setLevel(logging.DEBUG)
@@ -34,138 +35,132 @@ logger.addHandler(ch)
 #         materials_data.append(json.load(f))
 ##########################################################################################################################
 
-import pyarrow as pa
 
 
-# def process_type(data_type):
-#     if pa.types.is_struct(data_type):
-#         fields = [field for field in struct_type]
 
-#         if len(fields) == 0:
-#             # Create a dummy field for empty structs
-#             dummy_field = pa.field('dummy', pa.null())
-#             return pa.struct([dummy_field])
+
+# def replace_empty_structs(struct_type, dummy_field=pa.field('dummy_field', pa.int16())):
+#     dummy_struct_type=pa.struct([dummy_field])
+#     # If the struct is empty, return the dummy struct
+#     if len(struct_type)==0:
+#         return dummy_struct_type
+
+#     field_list=[]
+#     # Iterate over the fields in the struct
+#     for field in struct_type:
+#         field_name=field.name
+#         # Handles the determination of the field type
+#         if pa.types.is_struct(field.type):
+#             # Handles empty structs.
+#             if len(field.flatten())==0:
+#                 field_type=dummy_struct_type
+#             # Handles nested structs.
+#             else:
+#                 field_type=replace_empty_structs(field.type)
 #         else:
-#             # Recursively process each field in the struct
-#             new_fields = [pa.field(field.name, process_type(field.type), field.nullable, field.metadata)
-#                           for field in fields]
-#             return pa.struct(new_fields)
-#     elif pa.types.is_list(data_type):
-#         # Process the value type of the list
-#         value_type = process_type(data_type.value_type)
-#         return pa.list_(value_type)
-#     elif pa.types.is_large_list(data_type):
-#         value_type = process_type(data_type.value_type)
-#         return pa.large_list(value_type)
-#     elif pa.types.is_map(data_type):
-#         # Process the key and item types of the map
-#         key_type = process_type(data_type.key_type)
-#         item_type = process_type(data_type.item_type)
-#         return pa.map_(key_type, item_type)
-#     elif pa.types.is_union(data_type):
-#         # Process each child type of the union
-#         new_fields = [pa.field(field.name, process_type(field.type), field.nullable, field.metadata)
-#                       for field in data_type]
-#         return pa.union(new_fields, data_type.mode)
+#             field_type=field.type
+
+#         field_list.append((field_name,field_type))
+
+#     return pa.struct(field_list)
+
+# def replace_empty_structs_in_struct(column_array: pa.Array, dummy_field=pa.field('dummy_field', pa.int16())) -> pa.Array:
+#     dummy_struct_type=pa.struct([dummy_field])
+
+#     # Combine chunks if necessary
+#     if isinstance(column_array, pa.ChunkedArray):
+#         column_array = column_array.combine_chunks()
+
+#     # Detecting if array is a struct type
+#     original_type = column_array.type
+#     if pa.types.is_struct(original_type):
+#         # Adding dummy field to the struct type
+#         new_type = replace_empty_structs(original_type)
 #     else:
-#         # Return the data type as is for other types
-#         return data_type
+#         # If the array is not a struct type, return the original array
+#         return column_array
 
-# def process_schema(schema):
-#     # Recursively process the schema to modify data types
-#     new_fields = [pa.field(field.name, process_type(field.type), field.nullable, field.metadata)
-#                   for field in schema]
-#     return pa.schema(new_fields, metadata=schema.metadata)
+#     original_fields_dict = {field.name: i for i, field in enumerate(original_type)}
 
-# def process_array(array, old_type, new_type):
-#     if old_type == new_type:
-#         return array
-#     elif pa.types.is_struct(old_type):
-#         if pa.types.is_struct(new_type):
-#             old_fields = {field.name: field for field in old_type}
-#             new_fields = {field.name: field for field in new_type}
-#             child_arrays = []
-#             for field_name in new_fields:
-#                 if field_name in old_fields:
-#                     old_child_array = array.field(field_name)
-#                     child_array = process_array(old_child_array,
-#                                                 old_fields[field_name].type,
-#                                                 new_fields[field_name].type)
-#                 else:
-#                     # Create a null array for the new dummy field
-#                     length = len(array)
-#                     child_array = pa.nulls(length, type=new_fields[field_name].type)
-#                 child_arrays.append(child_array)
-#             # Create a new StructArray with updated fields
-#             return pa.StructArray.from_arrays(child_arrays, fields=list(new_fields.values()))
+#     # Build a new struct with all the required fields
+#     new_arrays=[]
+#     for field in new_type:
+#         if field.name in original_fields_dict:
+#             logger.debug("Adding values to a existing field")
+#             # Recursively generate the new array for the field
+#             field_array = column_array.field(original_fields_dict[field.name])
+#             new_field_array = replace_empty_structs_in_struct(field_array)
+#             new_arrays.append(new_field_array)
 #         else:
-#             raise TypeError("Type mismatch: old type is struct, new type is not struct")
-#     elif pa.types.is_list(old_type):
-#         if pa.types.is_list(new_type):
-#             old_value_type = old_type.value_type
-#             new_value_type = new_type.value_type
-#             value_array = array.values
-#             new_value_array = process_array(value_array, old_value_type, new_value_type)
-#             return pa.ListArray.from_arrays(array.offsets, new_value_array)
-#         else:
-#             raise TypeError("Type mismatch: old type is list, new type is not list")
-#     elif pa.types.is_large_list(old_type):
-#         if pa.types.is_large_list(new_type):
-#             old_value_type = old_type.value_type
-#             new_value_type = new_type.value_type
-#             value_array = array.values
-#             new_value_array = process_array(value_array, old_value_type, new_value_type)
-#             return pa.LargeListArray.from_arrays(array.offsets, new_value_array)
-#         else:
-#             raise TypeError("Type mismatch: old type is large list, new type is not large list")
-#     else:
-#         # For other types, attempt to cast
-#         try:
-#             return array.cast(new_type)
-#         except:
-#             raise TypeError(f"Cannot cast array of type {old_type} to {new_type}")
-
-# def process_chunked_array(chunked_array, old_type, new_type):
-#     new_chunks = [process_array(chunk, old_type, new_type) for chunk in chunked_array.chunks]
-#     return pa.chunked_array(new_chunks, type=new_type)
-
-# def add_dummy_field_to_empty_structs(table):
-#     # Process the schema to get the new schema
-#     new_schema = process_schema(table.schema)
-#     new_columns = []
-#     for i, field in enumerate(table.schema):
-#         old_type = field.type
-#         new_type = new_schema.field(i).type
-#         chunked_array = table.column(i)
-#         # Process each column's data to match the new schema
-#         new_chunked_array = process_chunked_array(chunked_array, old_type, new_type)
-#         new_columns.append(new_chunked_array)
-#     # Create a new table with the updated schema and data
-#     new_table = pa.Table.from_arrays(new_columns, schema=new_schema)
-#     return new_table
-
-# save_dir = 'C:/Users/lllang/Desktop/Current_Projects/ParquetDB/data/raw/ParquetDB_Dev'
-
-# temp_dir = tempfile.mkdtemp()
-# db = ParquetDB(dataset_name='dev', dir=save_dir, n_cores=1)
-
-# table=db.read(columns=['id'])
-
-# print(f"Table shape: {table.shape}")
-# print(f"Table: {table}\n")
-# print(f"Empty Chunked Array: {type(table['id'])}" )
-# print(f"Empty Chunked Array: {table['id']}")
+#             logger.debug("Adding null values to a previously non-existing field")
+#             null_array = pa.nulls(len(column_array), field.type)
+#             new_arrays.append(null_array)
+#     return pa.StructArray.from_arrays(new_arrays, fields=new_type)
 
 
+def replace_empty_structs(column_array: pa.Array, dummy_field=pa.field('dummy_field', pa.int16())):
+    if isinstance(column_array, pa.ChunkedArray):
+        column_array = column_array.combine_chunks()
+    
+    # Catches non struct field cases
+    if not pa.types.is_struct(column_array.type):
+        return column_array
+    
+    # Catches empty structs cases
+    if len(column_array.type)==0:
+        null_array = pa.nulls(len(column_array), dummy_field.type)
+        return pc.make_struct(null_array, field_names=[dummy_field.name])
+    
+    
+    child_field_names=[field.name for field in column_array.type]
+    child_chunked_array_list = column_array.flatten()
+    
+    child_arrays=[]
+    for child_array, child_field_name in zip(child_chunked_array_list, child_field_names):
+        child_array=replace_empty_structs(child_array)
+        child_arrays.append(child_array)
+    
+
+    return pc.make_struct(*child_arrays, field_names=child_field_names)
+    
 
 
+def replace_empty_structs_in_table(table, dummy_field=pa.field('dummy_field', pa.int16())):
+    for field_name in table.column_names:
+        field_index=table.schema.get_field_index(field_name)
+        
+        field=table.field(field_index)
+        column_array = table.column(field_index)
+        
+        if pa.types.is_struct(column_array.type):
+            logger.debug('This column is a struct')
+            # Replacing empty structs with dummy structs
+            new_column_array=replace_empty_structs(column_array, dummy_field=dummy_field)
+            new_field=pa.field(field_name, new_column_array.type)
+        else:
+            new_column_array=column_array
+            new_field=field
+            
+        table = table.set_column(field_index,
+                                 new_field, 
+                                 new_column_array)
+    return table
 
+
+current_data = [
+        {'b': {'x': 10, 'y': 20, 'z':{}}, 'c': {}},
+        {'b': {'x': 30, 'y': 40, 'z':{}}, 'c': {}},
+    ]
 
 
 
+current_table=pa.Table.from_pylist(current_data)
 
 
+current_table=replace_empty_structs_in_table(current_table)
 
+
+print(current_table.to_pandas())
 
 
 
