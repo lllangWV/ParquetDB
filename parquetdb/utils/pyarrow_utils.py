@@ -700,45 +700,23 @@ def update_table_column(current_table, incoming_table, column_name):
     It also assumes that the incoming and current tables have a fully flattened schema.
 
     """
-    profiler = cProfile.Profile()
-    profiler.enable()
-
     logger.debug(f"Updating column: {column_name}")
 
-    # Start profiling this section
-    profiler.enable()
     incoming_filter = pc.field('id').isin(current_table['id']) & ~pc.field(column_name).is_null(incoming_table[column_name])
     filtered_incoming_table = incoming_table.filter(incoming_filter)
     updates_are_present_and_not_null = filtered_incoming_table.num_rows != 0
 
-    profiler.disable()
     if not updates_are_present_and_not_null:
         logger.debug("No updates are present or non-null")
         return None
     
-    profiler.enable()
     # Creating a boolean mask
     current_mask = pc.is_in(current_table['id'], value_set=filtered_incoming_table['id']).combine_chunks()
-    
-    profiler.disable()
-    profiler.enable()
     current_array = current_table[column_name].combine_chunks()
     incoming_array = filtered_incoming_table[column_name].combine_chunks()
     
-    profiler.disable()
-    profiler.enable()
     updated_array = pc.replace_with_mask(current_array, current_mask, incoming_array)
-    
-    profiler.disable()
-    
-    # Log and output profiling results
-    s = io.StringIO()
-    ps = pstats.Stats(profiler, stream=s).sort_stats('tottime')
-    ps.print_stats()
 
-    with open('data/profile_results.log', 'w') as f:
-        f.write(s.getvalue())
-    
     return updated_array
 
 def update_table_flatten_method(current_table, incoming_table):
