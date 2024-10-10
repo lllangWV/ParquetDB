@@ -132,6 +132,23 @@ data = [
 db.create(data)
 ```
 
+### Normalizing
+
+Normalization is a crucial process for ensuring the optimal performance and efficient management of data. In the context of file-based databases, like the ones used in ParquetDB, normalization helps balance the distribution of data across multiple files. Without proper normalization, files can end up with uneven row counts, leading to performance bottlenecks during operations like queries, inserts, updates, or deletions.
+
+This method does not return anything but modifies the dataset directory in place, ensuring a more consistent and efficient structure for future operations.
+
+```python
+dataset.normalize(
+    batch_size=10000,
+    batch_readahead=10 # Controls the number of batches to load in memory a head of time. This will have impacts on amount of RAM consumed
+    fragment_readahead=2 # Controls the number of files to load in memory ahead of time. This will have impacts on amount of RAM consumed
+    output_format='batch_generator', # Uses the batch generator to normalize
+    max_rows_per_file=100000, # Controls the max number of rows per parquet file
+    max_rows_per_group=100000, # Controls the max number of rows per group parquet file
+)
+```
+
 ### Reading Data
 
 Read data from the database using the `read` method. You can filter data by IDs, specify columns, and apply filters.
