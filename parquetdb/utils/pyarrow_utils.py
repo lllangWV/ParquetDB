@@ -327,7 +327,7 @@ def order_fields_in_table(table, new_schema):
             new_struct_type = field.type
             column_array = order_fields_in_struct(original_column, new_struct_type)
         else:
-            column_array = column_array
+            column_array = original_column
         new_columns.append(column_array)
 
     return pa.Table.from_arrays(new_columns, schema=new_schema)
@@ -1044,3 +1044,89 @@ def update_schema(current_schema, schema=None, field_dict=None):
         updated_schema=schema
 
     return updated_schema
+
+
+def align_table(current_table: pa.Table, new_schema: pa.Schema) -> pa.Table:
+    """
+    Aligns the given table to the new schema, filling in missing fields or struct fields with null values.
+
+    Args:
+        table (pa.Table): The table to align.
+        new_schema (pa.Schema): The target schema to align the table to.
+
+    Returns:
+        pa.Table: The aligned table.
+    """
+    # current_table=replace_empty_structs_in_table(current_table)
+
+    current_table=add_new_null_fields_in_table(current_table, new_schema)
+    
+    current_table=order_fields_in_table(current_table, new_schema)
+    
+    return current_table
+
+def add_new_null_fields_in_column(column_array, field, new_type):    
+    column_type = column_array.type
+    logger.debug(f"Field name:  {field.name}")
+    logger.debug(f"Column type: {column_type}")
+    logger.debug(f"New type: {new_type}")
+    
+    if pa.types.is_struct(column_type):
+        logger.debug('This column is a struct')
+        # Replacing empty structs with dummy structs
+        new_type_names=[field.name for field in new_type]
+        if field.name in new_type_names:
+            new_struct_type=new_type.field(field.name).type
+        else:
+            new_struct_type=new_type
+        new_struct_type = merge_structs(new_struct_type,column_type)
+        logger.debug(f"New struct type: {new_struct_type}")
+        new_array=add_new_null_fields_in_struct(column_array, new_struct_type)
+        new_field=pa.field(field.name, new_array.type)
+        return new_array, new_field
+    else:
+        logger.debug('This column is not a struct')
+        return column_array, field
+
+def add_new_null_fields_in_table(table, new_schema):
+    new_columns_fields=[]
+    new_columns=[]
+    for field in new_schema:
+        if field.name not in table.schema.names:
+            new_column=pa.nulls(table.num_rows, type=field.type)
+            new_field=pa.field(field.name, field.type)  
+        else:
+            original_column = table.column(field.name)
+            new_column, new_field = add_new_null_fields_in_column(original_column, field, field.type)
+
+        new_columns.append(new_column)
+        new_columns_fields.append(new_field)
+    table = pa.Table.from_arrays(new_columns, schema=pa.schema(new_columns_fields))
+    return table
+
+
+def add_new_null_fields_in_struct(column_array, new_struct_type):
+    # Combine chunks if necessary
+    if isinstance(column_array, pa.ChunkedArray):
+        column_array = column_array.combine_chunks()
+
+    # Detecting if array is a struct type
+    original_type = column_array.type
+    if not pa.types.is_struct(original_type):
+        return column_array
+
+    original_fields_dict = {field.name: i for i, field in enumerate(original_type)}
+
+    new_arrays=[]
+    for field in new_struct_type:
+        if field.name in original_fields_dict:
+            logger.debug("Adding values to a existing field")
+            # Recursively generate the new array for the field
+            field_array = column_array.field(original_fields_dict[field.name])
+            new_field_array = add_new_null_fields_in_struct(field_array, field_array.type)
+            new_arrays.append(new_field_array)
+        else:
+            logger.debug("Adding null values to a previously non-existing field")
+            null_array = pa.nulls(len(column_array), field.type)
+            new_arrays.append(null_array)
+    return pa.StructArray.from_arrays(new_arrays, fields=new_struct_type)

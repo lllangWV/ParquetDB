@@ -140,14 +140,17 @@ class ParquetDB:
                     # This was done because this will automatically fill non-exisiting 
                     # fields in the current table if the update creates new fields
                     current_table = pq.read_table(current_file)
-                    current_table=pa.Table.from_pylist(current_table.to_pylist(), schema=merged_schema)
+                    current_table=pyarrow_utils.align_table(current_table, merged_schema)
+                    
+                    # current_table=pa.Table.from_pylist(current_table.to_pylist(), schema=merged_schema)
                     # Sometimes records have a  nested dictionaries and some do not. 
                     # This ensures all records have the same nested structes
-                    current_table=pyarrow_utils.fill_null_nested_structs_in_table(current_table)
+                    # current_table=pyarrow_utils.fill_null_nested_structs_in_table(current_table)
 
                     pq.write_table(current_table, current_file)
 
-                incoming_table=pa.Table.from_pylist(incoming_table.to_pylist(), schema=merged_schema)
+                incoming_table=pyarrow_utils.align_table(incoming_table, merged_schema)
+                # incoming_table=pa.Table.from_pylist(incoming_table.to_pylist(), schema=merged_schema)
 
         except Exception as e:
             logger.exception(f"exception aligning schemas: {e}")
@@ -272,8 +275,9 @@ class ParquetDB:
                 # This was done because this will automatically fill non-exisiting 
                 # fields in the current table if the update creates new fields
                 current_table = pq.read_table(current_file)
-                current_table=pa.Table.from_pylist(current_table.to_pylist(), schema=merged_schema)
-                current_table=pyarrow_utils.fill_null_nested_structs_in_table(current_table)
+                current_table=pyarrow_utils.align_table(current_table, merged_schema)
+                # current_table=pa.Table.from_pylist(current_table.to_pylist(), schema=merged_schema)
+                # current_table=pyarrow_utils.fill_null_nested_structs_in_table(current_table)
                 
                 # The flatten method will flatten out all nested structs, update, then rebuild the nested structs
                 updated_table=pyarrow_utils.update_table(current_table, incoming_table, flatten_method=True)
@@ -458,8 +462,9 @@ class ParquetDB:
             
             try:
                 current_table=pq.read_table(current_file)
-                pylist=current_table.to_pylist()
-                updated_table=pa.Table.from_pylist(pylist, schema=updated_schema)
+                # pylist=current_table.to_pylist()
+                # updated_table=pa.Table.from_pylist(pylist, schema=updated_schema)
+                updated_table=pyarrow_utils.align_table(current_table, updated_schema)
                 pq.write_table(updated_table, current_file)
             except Exception as e:
                 logger.exception(f"exception processing {current_file}: {e}")
@@ -1244,6 +1249,6 @@ class ParquetDB:
         logger.info(f"Validating ids")
         current_table=self.read(columns=['id'], output_format='table').combine_chunks()
         filtered_table = current_table.filter(~pc.field('id').isin(id_column))
-        logger.warning(f"The following ids are not in the main table", extra={'ids_do_not_exist': filtered_table['id'].to_pylist()})
+        logger.warning(f"The following ids are not in the main table", extra={'ids_do_not_exist': filtered_table['id']})
         return None
     
