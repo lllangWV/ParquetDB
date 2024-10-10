@@ -1,6 +1,24 @@
 
 ___
 
+# 0.2.2 (10-10-2024)
+
+##### Bugs
+- Fixed a bug related to the old method of aligning the table with the new schema, resulting in improved performance.
+
+##### New features
+- Updated example functionality to enhance usability.
+
+##### Documentation updates
+- Updated _version.py and CHANGELOG.md for the new release.
+
+##### Maintenance
+- Merged changes from the main branch to ensure project stays up-to-date.
+
+___
+
+___
+
 # 0.2.1 (10-10-2024)
 
 ##### Bugs
