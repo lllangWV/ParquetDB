@@ -65,7 +65,7 @@ class ParquetDB:
                batch_size:int=None,
                schema=None,
                metadata=None,
-               normalize_dataset:bool=True,
+               normalize_dataset:bool=False,
                normalize_kwagrs:dict=dict(max_rows_per_file=100000,
                                         min_rows_per_group=0,
                                         max_rows_per_group=100000)
