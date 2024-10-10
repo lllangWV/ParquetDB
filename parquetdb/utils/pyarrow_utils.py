@@ -4,10 +4,6 @@ import logging
 from parquetdb.utils.general_utils import timeit
 import pyarrow.compute as pc
 
-
-import cProfile
-import pstats
-import io
 logger = logging.getLogger(__name__)
 
 # https://arrow.apache.org/docs/python/api/datatypes.html
@@ -29,12 +25,24 @@ def find_difference_between_pyarrow_schemas(schema1, schema2):
     """
     Finds the difference between two PyArrow schemas.
 
-    Args:
-        schema1 (pyarrow.Schema): The first schema.
-        schema2 (pyarrow.Schema): The second schema.
+    Parameters
+    ----------
+    schema1 : pyarrow.Schema
+        The first schema to compare.
+    schema2 : pyarrow.Schema
+        The second schema to compare.
 
-    Returns:
-        set: A set of field names that are in schema1 but not in schema2.
+    Returns
+    -------
+    set
+        A set of field names that are present in `schema1` but not in `schema2`.
+
+    Examples
+    --------
+    >>> schema1 = pa.schema([("a", pa.int32()), ("b", pa.string())])
+    >>> schema2 = pa.schema([("b", pa.string())])
+    >>> find_difference_between_pyarrow_schemas(schema1, schema2)
+    {'a'}
     """
     # Create a set of field names from the first schema
     field_names1 = set(schema1)
@@ -45,6 +53,28 @@ def find_difference_between_pyarrow_schemas(schema1, schema2):
     return difference
 
 def merge_structs(current_type: pa.StructType, incoming_type: pa.StructType) -> pa.StructType:
+    """
+    Recursively merges two PyArrow StructTypes.
+
+    Parameters
+    ----------
+    current_type : pa.StructType
+        The existing struct type.
+    incoming_type : pa.StructType
+        The new struct type to merge with the existing struct.
+
+    Returns
+    -------
+    pa.StructType
+        A new PyArrow StructType representing the merged result of the two input structs.
+
+    Examples
+    --------
+    >>> current = pa.struct([("a", pa.int32()), ("b", pa.string())])
+    >>> incoming = pa.struct([("b", pa.string()), ("c", pa.float64())])
+    >>> merge_structs(current, incoming)
+    StructType(a: int32, b: string, c: float64)
+    """
     # Create a dictionary of the current fields for easy comparison
     current_fields_dict = {field.name: field for field in current_type}
     merged_fields = []
@@ -76,12 +106,32 @@ def merge_structs(current_type: pa.StructType, incoming_type: pa.StructType) -> 
 
     return pa.struct(merged_fields)
 
-def schema_to_struct(schema):
-    return pa.struct(schema)
+
 
 @timeit
 def merge_schemas(current_schema: pa.Schema, incoming_schema: pa.Schema) -> pa.Schema:
-    
+    """
+    Merges two PyArrow schemas, combining fields and recursively merging struct fields.
+
+    Parameters
+    ----------
+    current_schema : pyarrow.Schema
+        The existing schema to merge.
+    incoming_schema : pyarrow.Schema
+        The new schema to merge with the existing schema.
+
+    Returns
+    -------
+    pa.Schema
+        A new PyArrow schema that represents the merged result of the two input schemas.
+
+    Examples
+    --------
+    >>> current_schema = pa.schema([("a", pa.int32()), ("b", pa.string())])
+    >>> incoming_schema = pa.schema([("b", pa.string()), ("c", pa.float64())])
+    >>> merge_schemas(current_schema, incoming_schema)
+    Schema(a: int32, b: string, c: float64)
+    """
     merged_fields = []
     incoming_field_names = {field.name for field in incoming_schema}
     # Iterate through fields in the current schema
@@ -112,318 +162,117 @@ def merge_schemas(current_schema: pa.Schema, incoming_schema: pa.Schema) -> pa.S
     # Return the merged schema
     return pa.schema(merged_fields)
 
-def add_null_columns_for_missing_fields(table: pa.Table, new_schema: pa.Schema) -> pa.Table:
+def replace_empty_structs(column_array: pa.Array, dummy_field=pa.field('dummy_field', pa.int16())):
     """
-    Adds null columns for any fields that are missing in the new schema.
+    Replaces empty PyArrow struct arrays with a struct containing a dummy field.
 
-    Args:
-        table (pa.Table): The table to add null columns to.
-        new_schema (pa.Schema): The schema of the new table.
+    Parameters
+    ----------
+    column_array : pa.Array
+        The column array to inspect for empty structs.
+    dummy_field : pa.Field, optional
+        The dummy field to insert into empty structs. Defaults to a field named 'dummy_field' with type `pa.int16()`.
 
-    Returns:
-        pa.Table: The table with null columns added for missing fields.
+    Returns
+    -------
+    pa.Array
+        The input array with empty structs replaced by structs containing the dummy field.
+
+    Examples
+    --------
+    >>> column_array = pa.array([{'a': 1}, {}, {'a': 2}], type=pa.struct([pa.field('a', pa.int32())]))
+    >>> replace_empty_structs(column_array)
+    <pyarrow.StructArray object at 0x...>
     """
-    table_schema = table.schema
-    field_names_missing = list(set(new_schema.names) - set(table_schema.names))
+    if isinstance(column_array, pa.ChunkedArray):
+        column_array = column_array.combine_chunks()
     
-    # Add missing fields with null values
-    for new_field_name in field_names_missing:
-        field_type = new_schema.field(new_field_name).type
-        null_array = pa.nulls(table.num_rows, type=field_type)
-        table = table.append_column(new_field_name, null_array)
+    # Catches non struct field cases
+    if not pa.types.is_struct(column_array.type):
+        return column_array
     
-    return table
+    # Catches empty structs cases
+    if len(column_array.type)==0:
+        null_array = pa.nulls(len(column_array), dummy_field.type)
+        return pc.make_struct(null_array, field_names=[dummy_field.name])
+    
+    
+    child_field_names=[field.name for field in column_array.type]
+    child_chunked_array_list = column_array.flatten()
+    
+    child_arrays=[]
+    for child_array, child_field_name in zip(child_chunked_array_list, child_field_names):
+        child_array=replace_empty_structs(child_array)
+        child_arrays.append(child_array)
+    
 
-def align_struct_fields(original_array: pa.Array, new_type: pa.DataType, dummy_type=pa.struct([('dummy_field', pa.int16())])) -> pa.Array:
+    return pc.make_struct(*child_arrays, field_names=child_field_names)
+    
+def replace_empty_structs_in_table(table, dummy_field=pa.field('dummy_field', pa.int16())):
     """
-    Aligns the fields of an array to match the new type, filling missing fields with null values.
-    Handles nested struct types recursively and replaces empty structs with a dummy struct.
+    Replaces empty struct fields in a PyArrow table with a struct containing a dummy field.
 
-    Args:
-        original_array (pa.Array): The original array (can be a struct or any other type).
-        new_type (pa.DataType): The target type to align to.
+    Parameters
+    ----------
+    table : pa.Table
+        The table in which to replace empty structs.
+    dummy_field : pa.Field, optional
+        The dummy field to insert into empty structs. Defaults to a field named 'dummy_field' with type `pa.int16()`.
 
-    Returns:
-        pa.Array: The aligned array.
+    Returns
+    -------
+    pa.Table
+        The table with empty struct fields replaced by structs containing the dummy field.
+
+    Examples
+    --------
+    >>> table = pa.table([{'a': 1}, {}, {'a': 2}], schema=pa.schema([pa.field('a', pa.struct([pa.field('a', pa.int32())]))]))
+    >>> replace_empty_structs_in_table(table)
+    pyarrow.Table
     """
-    
-    # Combine chunks if necessary
-    if isinstance(original_array, pa.ChunkedArray):
-        original_array = pa.concat_arrays(original_array.chunks)
-    
-    # If the new type is not a struct, just cast and return
-    if not isinstance(new_type, pa.StructType):
-        return original_array.cast(new_type)
-
-    dummy_field_name = [field.name for field in dummy_type][-1]
-
-    original_type = original_array.type
-    original_fields_dict = {field.name: i for i, field in enumerate(original_type)}
-    
-    # Build a new struct with all the required fields
-    new_arrays=[]
-    for field in new_type:
-        if field.name in original_fields_dict:
-            # If the field exists, align it recursively
-            original_field = original_array.field(original_fields_dict[field.name])
-            aligned_field = align_struct_fields(original_field, field.type)
+    for field_name in table.column_names:
+        field_index=table.schema.get_field_index(field_name)
+        
+        field=table.field(field_index)
+        column_array = table.column(field_index)
+        
+        if pa.types.is_struct(column_array.type):
+            logger.debug('This column is a struct')
+            # Replacing empty structs with dummy structs
+            new_column_array=replace_empty_structs(column_array, dummy_field=dummy_field)
+            new_field=pa.field(field_name, new_column_array.type)
+        else:
+            new_column_array=column_array
+            new_field=field
             
-            # Check if the aligned field is an empty struct
-            if isinstance(field.type, pa.StructType) and len(field.type) == 0:
-                # Replace empty struct with dummy struct
-                dummy_array = pa.array([{dummy_field_name: None}] * len(original_array), type=dummy_type)
-                new_arrays.append(dummy_array)
-            else:
-                new_arrays.append(aligned_field)
-        else:
-            # If the field doesn't exist, fill with nulls
-            if isinstance(field.type, pa.StructType) and len(field.type) == 0:
-                # For empty struct fields, use the dummy struct
-                dummy_array = pa.array([{dummy_field_name: None}] * len(original_array), type=dummy_type)
-                new_arrays.append(dummy_array)
-            else:
-                null_array = pa.nulls(len(original_array), field.type)
-                new_arrays.append(null_array)
-    
-    return pa.StructArray.from_arrays(new_arrays, fields=new_type)
-
-@timeit
-def align_table(current_table: pa.Table, new_schema: pa.Schema) -> pa.Table:
-    """
-    Aligns the given table to the new schema, filling in missing fields or struct fields with null values.
-
-    Args:
-        table (pa.Table): The table to align.
-        new_schema (pa.Schema): The target schema to align the table to.
-
-    Returns:
-        pa.Table: The aligned table.
-    """
-    current_table=replace_empty_structs_in_table(current_table)
-
-    current_table=add_new_null_fields_in_table(current_table, new_schema)
-    
-    current_table=order_fields_in_table(current_table, new_schema)
-    
-    return current_table
-
-def combine_tables(current_table: pa.Table, incoming_table: pa.Table, merged_schema: pa.Schema=None) -> pa.Table:
-    """
-    Combines the current table and incoming table by aligning them to the merged schema and filling missing fields with nulls.
-
-    Args:
-        current_table (pa.Table): The current table.
-        incoming_table (pa.Table): The incoming table.
-        merged_schema (pa.Schema): The merged schema.
-
-    Returns:
-        pa.Table: The combined table.
-    """
-    if merged_schema is None:
-        current_schema = current_table.schema
-        incoming_schema = incoming_table.schema
-        merged_schema = merge_schemas(current_schema, incoming_schema)
-
-    current_table=align_table(current_table, merged_schema)
-    incoming_table=align_table(incoming_table, merged_schema)
-
-    # Reorder the columns to match the merged schema
-    current_table = current_table.select(merged_schema.names)
-    incoming_table = incoming_table.select(merged_schema.names)
-
-    # Combine the tables
-    combined_table = pa.concat_tables([current_table, incoming_table])
-    
-    return combined_table
-
-def replace_none_with_nulls(data, schema_field):
-    """
-    Replaces None values in the data list with null values according to the schema.
-
-    Args:
-        data (list): A list of elements to check.
-        schema_field (pa.Field or pa.DataType): The field or type that defines the schema.
-
-    Returns:
-        list: The updated list with None values replaced with nulls.
-    """
-    # Check if the schema_field is a pa.Field or pa.DataType
-    schema_type = schema_field.type if isinstance(schema_field, pa.Field) else schema_field
-
-    updated_data = []
-
-    for element in data:
-        if element is None:
-            # Replace None with the equivalent null value
-            null_value = pa.scalar(None, type=schema_type)
-            updated_data.append(null_value.as_py())
-        elif pa.types.is_struct(schema_type):
-            # If the field is a struct, recursively check its fields
-            updated_data.append(
-                {key: replace_none_with_nulls([val], schema_type.field(key))[0] 
-                 if val is None else val for key, val in element.items()}
-            )
-        elif pa.types.is_list(schema_type):
-            # If the field is a list, recursively check the elements of the list
-            updated_data.append(replace_none_with_nulls(element, schema_type.value_type))
-        else:
-            # Otherwise, keep the element as is
-            updated_data.append(element)
-
-    return updated_data
-
-def replace_empty_structs(struct_type, dummy_field=pa.field('dummy_field', pa.int16())):
-    dummy_struct_type=pa.struct([dummy_field])
-    # If the struct is empty, return the dummy struct
-    if len(struct_type)==0:
-        return dummy_struct_type
-
-    field_list=[]
-    # Iterate over the fields in the struct
-    for field in struct_type:
-        field_name=field.name
-        # Handles the determination of the field type
-        if pa.types.is_struct(field.type):
-            # Handles empty structs.
-            if len(field.flatten())==0:
-                field_type=dummy_struct_type
-            # Handles nested structs.
-            else:
-                field_type=replace_empty_structs(field.type)
-        else:
-            field_type=field.type
-
-        field_list.append((field_name,field_type))
-
-    return pa.struct(field_list)
-
-def replace_empty_structs_in_struct(column_array: pa.Array, dummy_field=pa.field('dummy_field', pa.int16())) -> pa.Array:
-    dummy_struct_type=pa.struct([dummy_field])
-
-    # Combine chunks if necessary
-    if isinstance(column_array, pa.ChunkedArray):
-        column_array = column_array.combine_chunks()
-
-    # Detecting if array is a struct type
-    original_type = column_array.type
-    if pa.types.is_struct(original_type):
-        # Adding dummy field to the struct type
-        new_type = replace_empty_structs(original_type)
-    else:
-        # If the array is not a struct type, return the original array
-        return column_array
-
-    original_fields_dict = {field.name: i for i, field in enumerate(original_type)}
-
-    # Build a new struct with all the required fields
-    new_arrays=[]
-    for field in new_type:
-        if field.name in original_fields_dict:
-            logger.debug("Adding values to a existing field")
-            # Recursively generate the new array for the field
-            field_array = column_array.field(original_fields_dict[field.name])
-            new_field_array = replace_empty_structs_in_struct(field_array)
-            new_arrays.append(new_field_array)
-        else:
-            logger.debug("Adding null values to a previously non-existing field")
-            null_array = pa.nulls(len(column_array), field.type)
-            new_arrays.append(null_array)
-    return pa.StructArray.from_arrays(new_arrays, fields=new_type)
-
-def replace_empty_structs_in_column(column_array, field, dummy_type=pa.field('dummy_field', pa.int16())):    
-    column_type = column_array.type
-    logger.debug(f"Field name: {field.name}")
-    logger.debug(f"Column type: {column_type}")
-    logger.debug(f"Dummy_type type: {dummy_type}")
-    if pa.types.is_struct(column_type):
-        logger.debug('This column is a struct')
-        # Replacing empty structs with dummy structs
-        new_array=replace_empty_structs_in_struct(column_array)
-        new_field=pa.field(field.name, new_array.type)
-        return new_array, new_field
-    else:
-        logger.debug('This column is not a struct')
-        # If the column is not a struct type, return the original column
-        return column_array, field
-
-def replace_empty_structs_in_table(table, dummy_type=pa.field('dummy_field', pa.int16())):
-    for col_idx in range(table.num_columns):
-        field=table.field(col_idx)
-        column_array = table.column(col_idx)
-
-        column_array, field = replace_empty_structs_in_column(column_array, field, dummy_type=dummy_type)
-        table = table.set_column(col_idx, field, column_array)
-    return table
-
-def add_new_null_fields_in_struct(column_array, new_struct_type):
-    # Combine chunks if necessary
-    if isinstance(column_array, pa.ChunkedArray):
-        column_array = column_array.combine_chunks()
-
-    # Detecting if array is a struct type
-    original_type = column_array.type
-    if not pa.types.is_struct(original_type):
-        print(column_array.type)
-        logger.debug(f"Column is not a struct type. Returning original column array")
-        print(column_array)
-        return column_array
-
-    original_fields_dict = {field.name: i for i, field in enumerate(original_type)}
-
-    new_arrays=[]
-    for field in new_struct_type:
-        if field.name in original_fields_dict:
-            logger.debug("Adding values to a existing field")
-            # Recursively generate the new array for the field
-            field_array = column_array.field(original_fields_dict[field.name])
-            new_field_array = add_new_null_fields_in_struct(field_array, field_array.type)
-            new_arrays.append(new_field_array)
-        else:
-            logger.debug("Adding null values to a previously non-existing field")
-            null_array = pa.nulls(len(column_array), field.type)
-            new_arrays.append(null_array)
-    return pa.StructArray.from_arrays(new_arrays, fields=new_struct_type)
-
-def add_new_null_fields_in_column(column_array, field):    
-    column_type = column_array.type
-    logger.debug(f"Field name:  {field.name}")
-    logger.debug(f"Column type: {column_type}")
-    logger.debug(f"New type: {field.type}")
-    
-    if pa.types.is_struct(column_type):
-        logger.debug('This column is a struct')
-        # Replacing empty structs with dummy structs
-        new_type_names=[field.name for field in field.type]
-        if field.name in new_type_names:
-            new_struct_type=field.type.field(field.name).type
-        else:
-            new_struct_type=field.type
-        new_struct_type = merge_structs(new_struct_type,column_type)
-        logger.debug(f"New struct type: {new_struct_type}")
-        new_array=add_new_null_fields_in_struct(column_array, new_struct_type)
-        new_field=pa.field(field.name, new_array.type)
-        return new_array, new_field
-    else:
-        logger.debug('This column is not a struct')
-        return column_array, field
-
-def add_new_null_fields_in_table(table, new_schema):
-    new_columns_fields=[]
-    new_columns=[]
-    for field in new_schema:
-        if field.name not in table.schema.names:
-            new_column=pa.nulls(table.num_rows, type=field.type)
-            new_field=pa.field(field.name, field.type)  
-        else:
-            original_column = table.column(field.name)
-            new_column, new_field = add_new_null_fields_in_column(original_column, field)
-
-        new_columns.append(new_column)
-        new_columns_fields.append(new_field)
-    table = pa.Table.from_arrays(new_columns, schema=pa.schema(new_columns_fields))
+        table = table.set_column(field_index,
+                                 new_field, 
+                                 new_column_array)
     return table
 
 def order_fields_in_struct(column_array, new_struct_type):
+    """
+    Orders the fields in a struct array to match a new struct type.
+
+    Parameters
+    ----------
+    column_array : pa.Array
+        The original struct array.
+    new_struct_type : pa.StructType
+        The new struct type with the desired field order.
+
+    Returns
+    -------
+    pa.Array
+        A new struct array with fields ordered according to `new_struct_type`.
+
+    Examples
+    --------
+    >>> column_array = pa.array([{'b': 2, 'a': 1}], type=pa.struct([pa.field('b', pa.int32()), pa.field('a', pa.int32())]))
+    >>> new_struct_type = pa.struct([pa.field('a', pa.int32()), pa.field('b', pa.int32())])
+    >>> order_fields_in_struct(column_array, new_struct_type)
+    <pyarrow.StructArray object at 0x...>
+    """
     # Combine chunks if necessary
     if isinstance(column_array, pa.ChunkedArray):
         column_array = column_array.combine_chunks()
@@ -446,68 +295,66 @@ def order_fields_in_struct(column_array, new_struct_type):
 
         new_arrays.append(new_field_array)
 
-
     return pa.StructArray.from_arrays(new_arrays, fields=new_struct_type)
 
-def order_fields_in_column(column_array, field):
-    # Combine chunks if necessary
-    if pa.types.is_struct(field.type):
-        new_struct_type = field.type
-        column_array = order_fields_in_struct(column_array, new_struct_type)
-    else:
-        column_array = column_array
-    return column_array
-
 def order_fields_in_table(table, new_schema):
+    """
+    Orders the fields in a table's struct columns to match a new schema.
+
+    Parameters
+    ----------
+    table : pa.Table
+        The original table.
+    new_schema : pa.Schema
+        The new schema with the desired field order.
+
+    Returns
+    -------
+    pa.Table
+        A new table with fields ordered according to `new_schema`.
+
+    Examples
+    --------
+    >>> table = pa.table([{'b': 2, 'a': 1}], schema=pa.schema([pa.field('b', pa.int32()), pa.field('a', pa.int32())]))
+    >>> new_schema = pa.schema([pa.field('a', pa.int32()), pa.field('b', pa.int32())])
+    >>> order_fields_in_table(table, new_schema)
+    pyarrow.Table
+    """
     new_columns = []
     for field in new_schema:
         original_column = table.column(field.name)
-        column_array=order_fields_in_column(original_column, field)
+        if pa.types.is_struct(field.type):
+            new_struct_type = field.type
+            column_array = order_fields_in_struct(original_column, new_struct_type)
+        else:
+            column_array = column_array
         new_columns.append(column_array)
 
     return pa.Table.from_arrays(new_columns, schema=new_schema)
-
-def merge_tables(current_table: pa.Table, incoming_table: pa.Table, schema=None) -> pa.Table:
-    """
-    Combines the current table and incoming table by aligning them to the merged schema and filling missing fields with nulls.
-
-    Args:
-        current_table (pa.Table): The current table.
-        incoming_table (pa.Table): The incoming table.
-        merged_schema (pa.Schema): The merged schema.
-
-    Returns:
-        pa.Table: The combined table.
-    """
-    current_table=replace_empty_structs_in_table(current_table)
-    incoming_table=replace_empty_structs_in_table(incoming_table)
-
-    if schema is None:
-        current_schema = current_table.schema
-        incoming_schema = incoming_table.schema
-        merged_schema = merge_schemas(current_schema, incoming_schema)
-
-    current_table=add_new_null_fields_in_table(current_table, merged_schema)
-    incoming_table=add_new_null_fields_in_table(incoming_table, merged_schema)
-
-    current_table=order_fields_in_table(current_table, merged_schema)
-    incoming_table=order_fields_in_table(incoming_table, merged_schema)
-
-    # # Combine the tables
-    combined_table = pa.concat_tables([current_table, incoming_table])
-    
-    return combined_table
 
 def create_empty_table(schema: pa.Schema, columns: list = None, special_fields: list = [pa.field('id', pa.int64())]) -> pa.Table:
     """
     Creates an empty PyArrow table with the same schema as the dataset or specific columns.
 
-    Args:
-        schema (pa.Schema): The schema of the dataset to mimic in the empty generator.
-        columns (list, optional): List of column names to include in the empty table. Defaults to None.
+    Parameters
+    ----------
+    schema : pa.Schema
+        The schema of the dataset to mimic in the empty generator.
+    columns : list, optional
+        List of column names to include in the empty table. Defaults to None.
+    special_fields : list, optional
+        A list of fields to use if the schema is empty. Defaults to a field named 'id' of type `pa.int64()`.
 
-    Returns:
-        pa.Table: An empty PyArrow table with the specified schema.
+    Returns
+    -------
+    pa.Table
+        An empty PyArrow table with the specified schema.
+
+    Examples
+    --------
+    >>> schema = pa.schema([pa.field('a', pa.int32()), pa.field('b', pa.string())])
+    >>> create_empty_table(schema)
+    pyarrow.Table
     """
     # If specific columns are provided, filter the schema to include only those columns
     if columns:
@@ -528,13 +375,26 @@ def create_empty_batch_generator(schema: pa.Schema,
                                  columns: list = None, 
                                  special_fields: list = [pa.field('id', pa.int64())]):
     """
-    Returns an empty generator that yields nothing.
+    Orders the fields in a table's struct columns to match a new schema.
 
-    Args:
-        schema (pa.Schema): The schema of the dataset to mimic in the empty generator.
-        columns (list, optional): List of column names to include in the empty table. Defaults to None.
-    Yields:
-        pa.RecordBatch: Empty record batches with the specified schema.
+    Parameters
+    ----------
+    table : pa.Table
+        The original table.
+    new_schema : pa.Schema
+        The new schema with the desired field order.
+
+    Returns
+    -------
+    pa.Table
+        A new table with fields ordered according to `new_schema`.
+
+    Examples
+    --------
+    >>> table = pa.table([{'b': 2, 'a': 1}], schema=pa.schema([pa.field('b', pa.int32()), pa.field('a', pa.int32())]))
+    >>> new_schema = pa.schema([pa.field('a', pa.int32()), pa.field('b', pa.int32())])
+    >>> order_fields_in_table(table, new_schema)
+    pyarrow.Table
     """
     if columns:
         schema = pa.schema([field for field in schema if field.name in columns])
@@ -545,6 +405,25 @@ def create_empty_batch_generator(schema: pa.Schema,
     yield pa.RecordBatch.from_pydict({field.name: [] for field in schema}, schema=schema)
 
 def fill_null_nested_structs(array):
+    """
+    Fills null values within a nested PyArrow StructArray, recursively processing any nested structs.
+
+    Parameters
+    ----------
+    array : pa.Array
+        The PyArrow StructArray that may contain nested structs with null values.
+
+    Returns
+    -------
+    pa.StructArray
+        A new StructArray with nulls handled recursively within nested structs.
+
+    Examples
+    --------
+    >>> array = pa.array([{'a': 1, 'b': None}, {'a': None, 'b': {'c': 2}}], type=pa.struct([('a', pa.int32()), ('b', pa.struct([('c', pa.int32())]))]))
+    >>> fill_null_nested_structs(array)
+    <pyarrow.StructArray object at 0x...>
+    """
     array_type = array.type
     child_field_names=[field.name for field in array_type]
 
@@ -565,6 +444,25 @@ def fill_null_nested_structs(array):
     return pa.StructArray.from_arrays(arrays, fields=fields)
 
 def fill_null_nested_structs_in_table(table):
+    """
+    Recursively fills null values within nested struct columns of a PyArrow table.
+
+    Parameters
+    ----------
+    table : pa.Table
+        The PyArrow table to process for nested structs and null values.
+
+    Returns
+    -------
+    pa.Table
+        A new table where nulls within nested struct columns have been handled.
+
+    Examples
+    --------
+    >>> table = pa.table([{'a': 1, 'b': None}, {'a': None, 'b': {'c': 2}}], schema=pa.schema([('a', pa.int32()), ('b', pa.struct([('c', pa.int32())]))]))
+    >>> fill_null_nested_structs_in_table(table)
+    pyarrow.Table
+    """
     column_names=table.column_names
     for column_name in column_names:
         column_array=table.column(column_name)
@@ -579,8 +477,28 @@ def fill_null_nested_structs_in_table(table):
             table=table.set_column(column_names.index(column_name), table.field(column_name), column_array)
     return table
 
-@timeit
-def flatten_nested_chunked_arrays(array, parent_name):
+def flatten_nested_structs(array, parent_name):
+    """
+    Flattens nested structs within a PyArrow array, creating fully qualified field names.
+
+    Parameters
+    ----------
+    array : pa.Array
+        The PyArrow StructArray containing nested fields to flatten.
+    parent_name : str
+        The name of the parent field, used to generate fully qualified field names.
+
+    Returns
+    -------
+    list of tuple
+        A list of tuples, where each tuple contains a flattened array and its corresponding field.
+
+    Examples
+    --------
+    >>> array = pa.array([{'a': {'b': 1}}, {'a': {'b': 2}}], type=pa.struct([('a', pa.struct([('b', pa.int32())]))]))
+    >>> flatten_nested_structs(array, 'a')
+    [(array([1, 2], type=int32), Field<name: a.b, type: int32>)]
+    """
     array_type = array.type
     child_field_names=[field.name for field in array_type]
 
@@ -591,22 +509,39 @@ def flatten_nested_chunked_arrays(array, parent_name):
 
         name = f"{parent_name}.{child_field_name}"
         if pa.types.is_struct(child_field_type):
-            flattened_array=flatten_nested_chunked_arrays(child_array, name)
-            flattened_arrays.extend(flatten_nested_chunked_arrays(child_array, name))
+            flattened_arrays.extend(flatten_nested_structs(child_array, name))
         else:
             flattened_arrays.append((child_array, pa.field(name, child_field_type)))
             
     return flattened_arrays
 
-@timeit
 def flatten_table(table):
+    """
+    Flattens nested struct columns within a PyArrow table.
+
+    Parameters
+    ----------
+    table : pa.Table
+        The PyArrow table containing nested struct columns to flatten.
+
+    Returns
+    -------
+    pa.Table
+        A new table with flattened struct fields.
+
+    Examples
+    --------
+    >>> table = pa.table([{'a': {'b': 1}}, {'a': {'b': 2}}], schema=pa.schema([('a', pa.struct([('b', pa.int32())]))]))
+    >>> flatten_table(table)
+    pyarrow.Table
+    """
     flattened_columns = []
     flattened_fields = []
 
     for i, column in enumerate(table.columns):
         column_name = table.field(i).name
         if pa.types.is_struct(column.type):
-            flattened_arrays_and_fields = flatten_nested_chunked_arrays(column, column_name)
+            flattened_arrays_and_fields = flatten_nested_structs(column, column_name)
             
             # This is to handle empty structs
             if len(flattened_arrays_and_fields)==0:
@@ -626,25 +561,34 @@ def flatten_table(table):
     
     return pa.Table.from_arrays(flattened_columns, schema=pa.schema(flattened_fields))
 
-def struct_from_dict(type_dict):
-    fields=[]
-    for name, value in type_dict.items():
-        if isinstance(value, dict):
-            field=pa.field(name, struct_from_dict(value))
-        else:
-            field=pa.field(name, value)
-            
-        fields.append(field)
-    return pa.struct(fields)
 
 @timeit
-def struct_arrays_from_dict(nested_dict):
+def create_struct_arrays_from_dict(nested_dict):
+    """
+    Creates PyArrow StructArrays and schema from a nested dictionary.
+
+    Parameters
+    ----------
+    nested_dict : dict
+        The dictionary where keys represent field names and values are either arrays or nested dictionaries.
+
+    Returns
+    -------
+    tuple of (pa.StructArray, pa.StructType)
+        A tuple containing the created StructArray and its corresponding StructType schema.
+
+    Examples
+    --------
+    >>> nested_dict = {'a': pa.array([1, 2]), 'b': {'c': pa.array([3, 4])}}
+    >>> create_struct_arrays_from_dict(nested_dict)
+    (<pyarrow.StructArray object at 0x...>, StructType(a: int64, b: StructType(c: int64)))
+    """
     arrays=[]
     fields=[]
     field_names=[]
     for name, value in nested_dict.items():
         if isinstance(value, dict):
-            array, struct = struct_arrays_from_dict(value)
+            array, struct = create_struct_arrays_from_dict(value)
             field=pa.field(name, struct)
         else:
             array=value
@@ -657,7 +601,26 @@ def struct_arrays_from_dict(nested_dict):
     return pa.StructArray.from_arrays(arrays, fields=fields), pa.struct(fields)
 
 @timeit
-def get_nested_type_dict_from_flattened_table(table):
+def create_nested_arrays_dict_from_flattened_table(table):
+    """
+    Reconstructs a nested dictionary of arrays from a flattened PyArrow table.
+
+    Parameters
+    ----------
+    table : pa.Table
+        The PyArrow table with flattened field names.
+
+    Returns
+    -------
+    dict
+        A dictionary where keys represent the nested field structure, and values are the corresponding arrays.
+
+    Examples
+    --------
+    >>> table = pa.table([pa.array([1, 2]), pa.array([3, 4])], names=['a.b', 'a.c'])
+    >>> create_nested_arrays_dict_from_flattened_table(table)
+    {'a': {'b': <pyarrow.Array object at 0x...>, 'c': <pyarrow.Array object at 0x...>}}
+    """
     # Get the column names
     columns = table.column_names
 
@@ -679,23 +642,39 @@ def get_nested_type_dict_from_flattened_table(table):
                 current = current[part]
                 current_arrays = current_arrays[part]
                 
-    return nested_fields, nested_arrays
+    return nested_arrays
 
 @timeit
 def rebuild_nested_table(table):
-    type_dict, nested_arrays_dict = get_nested_type_dict_from_flattened_table(table)
-    nested_arrays, new_struct = struct_arrays_from_dict(nested_arrays_dict)
+    nested_arrays_dict = create_nested_arrays_dict_from_flattened_table(table)
+    nested_arrays, new_struct = create_struct_arrays_from_dict(nested_arrays_dict)
     new_schema=pa.schema(new_struct)
     return pa.Table.from_arrays(nested_arrays.flatten(), schema=new_schema)
 
 def update_table_column(current_table, incoming_table, column_name):
-    """Update a the current table column with the values from the incoming table. 
-    First it will check if the incoming ids are in the current table. 
-    Then it it will filter the incoming table for only the ids and non-null values
+    """
+    Updates a specific column in the current table with values from the incoming table, 
+    based on matching 'id' fields. Non-null values in the incoming table will replace 
+    corresponding values in the current table.
 
-    This function updates assumes the incoming and current tables have the same schema.
-    It also assumes that the incoming and current tables have a fully flattened schema.
+    Parameters
+    ----------
+    current_table : pa.Table
+        The current PyArrow table to update.
+    incoming_table : pa.Table
+        The incoming PyArrow table containing updated values.
+    column_name : str
+        The name of the column to update in the current table.
 
+    Returns
+    -------
+    pa.Array or None
+        The updated column array if updates are present and non-null; otherwise, returns None.
+
+    Examples
+    --------
+    >>> update_table_column(current_table, incoming_table, 'column1')
+    <pyarrow.Array object at 0x...>
     """
     logger.debug(f"Updating column: {column_name}")
 
@@ -718,9 +697,25 @@ def update_table_column(current_table, incoming_table, column_name):
 
 def update_table_flatten_method(current_table, incoming_table):
     """
-    This method will update the current table with the values from the incoming table.
-    It will update the current table by flattening the both the current and incoming tables, 
-    applying the update, then rebuilding the nested structure
+    Updates the current table using the values from the incoming table by flattening both 
+    tables, applying the updates, and then rebuilding the nested structure.
+
+    Parameters
+    ----------
+    current_table : pa.Table
+        The current PyArrow table to update.
+    incoming_table : pa.Table
+        The incoming PyArrow table containing updated values.
+
+    Returns
+    -------
+    pa.Table
+        The updated PyArrow table with flattened and rebuilt structure.
+
+    Examples
+    --------
+    >>> updated_table = update_table_flatten_method(current_table, incoming_table)
+    pyarrow.Table
     """
     
     logger.debug("Updating table with the flatten method")
@@ -738,7 +733,30 @@ def update_table_flatten_method(current_table, incoming_table):
 
     return current_table
 
-def update_struct_field(current_table, incoming_table, field_path):
+def update_struct_child_field(current_table, incoming_table, field_path):
+    """
+    Updates a nested child field within a struct column in the current table based on 
+    values from the incoming table.
+
+    Parameters
+    ----------
+    current_table : pa.Table
+        The current PyArrow table to update.
+    incoming_table : pa.Table
+        The incoming PyArrow table containing updated values.
+    field_path : list of str
+        The path to the nested field inside the struct.
+
+    Returns
+    -------
+    pa.Array or None
+        The updated nested field array if updates are present and non-null; otherwise, returns None.
+
+    Examples
+    --------
+    >>> update_struct_child_field(current_table, incoming_table, ['parent_field', 'child_field'])
+    <pyarrow.Array object at 0x...>
+    """
     logger.debug(f"field_path: {field_path}")
 
     parent_name=field_path[0]
@@ -775,6 +793,29 @@ def update_struct_field(current_table, incoming_table, field_path):
     return new_array
 
 def update_field(current_table, incoming_table, field_name):
+    """
+    Updates a specific field in the current table with values from the incoming table,
+    based on matching 'id' fields.
+
+    Parameters
+    ----------
+    current_table : pa.Table
+        The current PyArrow table to update.
+    incoming_table : pa.Table
+        The incoming PyArrow table containing updated values.
+    field_name : str
+        The name of the field to update in the current table.
+
+    Returns
+    -------
+    pa.Array or None
+        The updated field array if updates are present and non-null; otherwise, returns None.
+
+    Examples
+    --------
+    >>> update_field(current_table, incoming_table, 'field_name')
+    <pyarrow.Array object at 0x...>
+    """
     logger.debug(f"field_name: {field_name}")
     
     incoming_filter=pc.field('id').isin(current_table['id']) & ~pc.field(field_name).is_null(incoming_table[field_name])
@@ -801,7 +842,32 @@ def update_field(current_table, incoming_table, field_name):
     new_array = pc.replace_with_mask(current_array,current_mask,incoming_array)
     return new_array
 
-def update_nested_field(current_table, incoming_table, field_path, current_array=None):
+def update_struct_field(current_table, incoming_table, field_path, current_array=None):
+    """
+    Recursively updates nested fields in a struct column of the current table using values 
+    from the incoming table.
+
+    Parameters
+    ----------
+    current_table : pa.Table
+        The current PyArrow table to update.
+    incoming_table : pa.Table
+        The incoming PyArrow table containing updated values.
+    field_path : list of str
+        The path to the nested field inside the struct.
+    current_array : pa.Array, optional
+        The current struct array being processed. Defaults to None.
+
+    Returns
+    -------
+    pa.StructArray
+        The updated struct array with nested fields updated.
+
+    Examples
+    --------
+    >>> update_struct_field(current_table, incoming_table, ['parent_field', 'child_field'])
+    <pyarrow.StructArray object at 0x...>
+    """
     if current_array is None:
         logger.debug("This is the first call to update_nested_field")
         current_array=current_table[field_path[0]]
@@ -820,9 +886,9 @@ def update_nested_field(current_table, incoming_table, field_path, current_array
         sub_path.append(child_field_name)
 
         if pa.types.is_struct(child_field_type):
-            update_array=update_nested_field(current_table, incoming_table, sub_path, current_array=child_array)
+            update_array=update_struct_field(current_table, incoming_table, sub_path, current_array=child_array)
         else:
-            update_array=update_struct_field(current_table, incoming_table, sub_path)
+            update_array=update_struct_child_field(current_table, incoming_table, sub_path)
         
         if update_array:
             logger.debug(f"update_array is None for field: {child_field_name}")
@@ -835,13 +901,34 @@ def update_nested_field(current_table, incoming_table, field_path, current_array
     return pc.make_struct(*child_arrays, field_names=child_field_names)
 
 def update_table_nested_method(current_table, incoming_table):
+    """
+    Updates the current table with values from the incoming table using a nested field update approach.
+    If a field is a struct, it will recursively update the nested fields. Otherwise, it updates the field directly.
+
+    Parameters
+    ----------
+    current_table : pa.Table
+        The current PyArrow table to update.
+    incoming_table : pa.Table
+        The incoming PyArrow table containing updated values.
+
+    Returns
+    -------
+    pa.Table
+        The updated PyArrow table with the changes from the incoming table.
+
+    Examples
+    --------
+    >>> updated_table = update_table_nested_method(current_table, incoming_table)
+    pyarrow.Table
+    """
     logger.debug("Updating table with nested method")
     for field_name in current_table.column_names:
         logger.debug(f"Looking for updates in field: {field_name}")
         if pa.types.is_struct(current_table.schema.field(field_name).type):
             
-            # Process nestedstruct fields
-            updated_array=update_nested_field(current_table, incoming_table, [field_name])
+            # Process nested struct fields
+            updated_array=update_struct_field(current_table, incoming_table, [field_name])
         else:
             # Process non-struct fields
             updated_array=update_field(current_table, incoming_table, field_name)
@@ -855,6 +942,29 @@ def update_table_nested_method(current_table, incoming_table):
 
 @timeit
 def update_table(current_table, incoming_table, flatten_method=False):
+    """
+    Updates the current table using either a flatten method or a nested method depending on the `flatten_method` flag.
+    
+    Parameters
+    ----------
+    current_table : pa.Table
+        The current PyArrow table to update.
+    incoming_table : pa.Table
+        The incoming PyArrow table containing updated values.
+    flatten_method : bool, optional
+        If True, the flatten method will be used; otherwise, the nested method is used. 
+        Defaults to False.
+
+    Returns
+    -------
+    pa.Table
+        The updated PyArrow table after applying the changes from the incoming table.
+
+    Examples
+    --------
+    >>> updated_table = update_table(current_table, incoming_table, flatten_method=True)
+    pyarrow.Table
+    """
     logger.info("Updating table")
     if flatten_method:
         current_table=update_table_flatten_method(current_table, incoming_table)
@@ -865,6 +975,26 @@ def update_table(current_table, incoming_table, flatten_method=False):
 
 
 def infer_pyarrow_types(self, data_dict: dict):
+    """
+    Infers PyArrow types for the given dictionary of data. The function skips the 'id' field and infers
+    the data types for all other keys.
+
+    Parameters
+    ----------
+    data_dict : dict
+        A dictionary where keys represent field names and values represent data values.
+
+    Returns
+    -------
+    dict
+        A dictionary where keys are field names and values are the inferred PyArrow data types.
+
+    Examples
+    --------
+    >>> data_dict = {'a': 123, 'b': 'string_value', 'id': 1}
+    >>> infer_pyarrow_types(data_dict)
+    {'a': DataType(int64), 'b': DataType(string)}
+    """
     infered_types = {}
     for key, value in data_dict.items():
         if key != 'id':
