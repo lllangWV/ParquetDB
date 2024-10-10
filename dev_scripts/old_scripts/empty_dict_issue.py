@@ -147,25 +147,52 @@ import pyarrow as pa
 save_dir = 'C:/Users/lllang/Desktop/Current_Projects/ParquetDB/data/raw/ParquetDB_Dev'
 
 temp_dir = tempfile.mkdtemp()
-db = ParquetDatasetDB(dataset_name='dev', dir=save_dir, n_cores=1)
-# db.drop_table('dev')
+db = ParquetDB(dataset_name='dev', dir=save_dir, n_cores=1)
+
+table=db.read(columns=['id'])
+
+print(f"Table shape: {table.shape}")
+print(f"Table: {table}\n")
+print(f"Empty Chunked Array: {type(table['id'])}" )
+print(f"Empty Chunked Array: {table['id']}")
 
 
 
-data=[{'field1':{
-            'field-11': {'field-21': {}, 'field-22': '5'} , 
-            'field-12': {}}, 
-        'field2':1}
-    ]
-struct_type = pa.struct({'x': pa.int32(), 'y': pa.string()})
-
-field_names= [field.name for field in struct_type]
-# print(struct_type.names)
-print(field_names)
-table=pa.Table.from_pylist(data)
 
 
-schema=table.schema
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+# struct_type = pa.struct({'x': pa.int32(), 'y': pa.string()})
+
+# field_names= [field.name for field in struct_type]
+# # print(struct_type.names)
+# print(field_names)
+# table=pa.Table.from_pylist(data)
+
+
+# schema=table.schema
 # def find_struct_fields(schema, find_empty_structs=False):
 #     struct_fields=[]
 #     empty_fields=[]
@@ -183,121 +210,121 @@ schema=table.schema
 #             nested_struct_fields,nested_empty_fields=find_struct_fields(flatten_field)
 #             if nested_struct_fields:
 #                 struct_fields.extend(nested_struct_fields)
-#             if nested_empty_fields:
-#                 empty_fields.extend(nested_empty_fields)
+# #             if nested_empty_fields:
+# #                 empty_fields.extend(nested_empty_fields)
 
-#     return struct_fields, empty_fields
+# #     return struct_fields, empty_fields
 
-def find_struct_fields(schema):
-    struct_fields=[]
-    for field in schema:
-        if pa.types.is_struct(field.type):
-            struct_fields.append(field)
-            flatten_field = field.flatten()
-            nested_struct_fields=find_struct_fields(flatten_field)
-            if nested_struct_fields:
-                struct_fields.extend(nested_struct_fields)
+# def find_struct_fields(schema):
+#     struct_fields=[]
+#     for field in schema:
+#         if pa.types.is_struct(field.type):
+#             struct_fields.append(field)
+#             flatten_field = field.flatten()
+#             nested_struct_fields=find_struct_fields(flatten_field)
+#             if nested_struct_fields:
+#                 struct_fields.extend(nested_struct_fields)
 
-    return struct_fields
+#     return struct_fields
 
-def find_empty_structs(schema):
-    empty_fields=[]
-    struct_fields=find_struct_fields(schema)
-    for field in struct_fields:
-        if len(field.flatten())==0:
-            empty_fields.append(field)
-    return empty_fields
+# def find_empty_structs(schema):
+#     empty_fields=[]
+#     struct_fields=find_struct_fields(schema)
+#     for field in struct_fields:
+#         if len(field.flatten())==0:
+#             empty_fields.append(field)
+#     return empty_fields
 
-def add_dummy_field_to_schemas_with_empty_structs(table):
-    schema=table.schema
-    print(schema.field('field1.field-11'))
-    empty_fields=find_empty_structs(schema)
-    print(empty_fields)
-    for field in empty_fields:
-        field_name=field.name
-        nested_field_names=field_name.split('.')
-        nested_field=None
-        for i,nest_filed_name in enumerate(nested_field_names):
-            # print(i)
-            # print(dir(field.type))
-            # if i==len(nested_field_names)-1:
-            #     continue
-            if nested_field is None:
-                nested_field=schema.field(nest_filed_name)
-            else:
-                nested_field=nested_field.type.field(nest_filed_name)
-            # if nested_field is None:
-            #     nested_field=schema.field(nest_filed_name)
-            # else:
-            #     nested_field=nested_field.field(nest_filed_name)
-        # nested_field = 
-        print(nested_field)
-        print(nested_field_names)
-    # return struct_fields
+# def add_dummy_field_to_schemas_with_empty_structs(table):
+#     schema=table.schema
+#     print(schema.field('field1.field-11'))
+#     empty_fields=find_empty_structs(schema)
+#     print(empty_fields)
+#     for field in empty_fields:
+#         field_name=field.name
+#         nested_field_names=field_name.split('.')
+#         nested_field=None
+#         for i,nest_filed_name in enumerate(nested_field_names):
+#             # print(i)
+#             # print(dir(field.type))
+#             # if i==len(nested_field_names)-1:
+#             #     continue
+#             if nested_field is None:
+#                 nested_field=schema.field(nest_filed_name)
+#             else:
+#                 nested_field=nested_field.type.field(nest_filed_name)
+#             # if nested_field is None:
+#             #     nested_field=schema.field(nest_filed_name)
+#             # else:
+#             #     nested_field=nested_field.field(nest_filed_name)
+#         # nested_field = 
+#         print(nested_field)
+#         print(nested_field_names)
+#     # return struct_fields
 
-# for field in schema:
-#     print(field.name, field.type)
+# # for field in schema:
+# #     print(field.name, field.type)
 
-# empty_fields=find_empty_structs(schema)
+# # empty_fields=find_empty_structs(schema)
 
-# empty_field=empty_fields[0]
-# print(empty_field)
-# nested_field_names=empty_field.name.split('.')
-# field=schema.field(nested_field_names[0])
-# print(field)
-dummy_struct_type=pa.struct([('dummy_field', pa.int16())])
-def replace_empty_structs(struct_type):
-    field_list=[]
-    for field in struct_type:
-        field_name=field.name
-        # Handles the determination of the field type
-        if pa.types.is_struct(field.type):
-            # Handles empty structs.
-            if len(field.flatten())==0:
-                field_type=dummy_struct_type
-            # Handles nested structs.
-            else:
-                field_type=replace_empty_structs(field.type)
-        else:
-            field_type=field.type
+# # empty_field=empty_fields[0]
+# # print(empty_field)
+# # nested_field_names=empty_field.name.split('.')
+# # field=schema.field(nested_field_names[0])
+# # print(field)
+# dummy_struct_type=pa.struct([('dummy_field', pa.int16())])
+# def replace_empty_structs(struct_type):
+#     field_list=[]
+#     for field in struct_type:
+#         field_name=field.name
+#         # Handles the determination of the field type
+#         if pa.types.is_struct(field.type):
+#             # Handles empty structs.
+#             if len(field.flatten())==0:
+#                 field_type=dummy_struct_type
+#             # Handles nested structs.
+#             else:
+#                 field_type=replace_empty_structs(field.type)
+#         else:
+#             field_type=field.type
 
-        field_list.append((field_name,field_type))
-    return pa.struct(field_list)
+#         field_list.append((field_name,field_type))
+#     return pa.struct(field_list)
 
-def replace_empty_structs_in_schema(schema):
-    field_list=[]
-    for field in schema:
-        field_name=field.name
-        field_type=field.type
-        if pa.types.is_struct(field.type):
-            field_type=replace_empty_structs(field.type)
-        else:
-            field_type=field.type
-        field_list.append((field_name,field_type))
-    return pa.schema(field_list)
-
-
-new_schema=replace_empty_structs_in_schema(schema)
+# def replace_empty_structs_in_schema(schema):
+#     field_list=[]
+#     for field in schema:
+#         field_name=field.name
+#         field_type=field.type
+#         if pa.types.is_struct(field.type):
+#             field_type=replace_empty_structs(field.type)
+#         else:
+#             field_type=field.type
+#         field_list.append((field_name,field_type))
+#     return pa.schema(field_list)
 
 
-def add_null_values_for_missing_nested_fields(chunked_array, new_struct_type):
+# new_schema=replace_empty_structs_in_schema(schema)
 
-    new_struct_names= [field.name for field in struct_type]
-    current_names= [field.name for field in chunked_array.type]
-    # table_schema = table.schema
-    # current_names= [field.name for field in table_schema.field(field_name)]
 
-    # field_type=field.type
+# def add_null_values_for_missing_nested_fields(chunked_array, new_struct_type):
 
-    field_names_missing = list(set(new_struct_names) - set(current_names))
+#     new_struct_names= [field.name for field in struct_type]
+#     current_names= [field.name for field in chunked_array.type]
+#     # table_schema = table.schema
+#     # current_names= [field.name for field in table_schema.field(field_name)]
+
+#     # field_type=field.type
+
+#     field_names_missing = list(set(new_struct_names) - set(current_names))
     
-    # Add missing fields with null values
-    for new_field_name in field_names_missing:
-        field_type = new_struct_type.field(new_field_name).type
-        if pa.types.is_struct(field_type):
-            add_null_values_for_missing_nested_fields(chunked_array, new_struct_type)
-        # null_array = pa.nulls(table.num_rows, type=field_type)
-        # table = table.append_column(new_field_name, null_array)
+#     # Add missing fields with null values
+#     for new_field_name in field_names_missing:
+#         field_type = new_struct_type.field(new_field_name).type
+#         if pa.types.is_struct(field_type):
+#             add_null_values_for_missing_nested_fields(chunked_array, new_struct_type)
+#         # null_array = pa.nulls(table.num_rows, type=field_type)
+#         # table = table.append_column(new_field_name, null_array)
     
     # return field
 # column_table=table.select(columns=['field1'])
@@ -309,33 +336,33 @@ def add_null_values_for_missing_nested_fields(chunked_array, new_struct_type):
 
 
 ####################################################################################
-data=[{'field1':{
-            'field-11': {'field-21': {'field-31':1}, 'field-22': '5'} , 
-            'field-12': {'field-21':1}}, 
-        'field2':1},
-        {'field1':{
-            'field-11': {'field-21': {'field-32':1}, 'field-22': '5'} , 
-            'field-12': {'field-23':1}}, 
-        'field2':1},
-        {'field1':{
-            'field-11': {'field-21': {'field-32':1}, 'field-22': '5'} , 
-            'field-12': {'field-23':1}}, 
-        'field2':1}
-    ]
+# data=[{'field1':{
+#             'field-11': {'field-21': {'field-31':1}, 'field-22': '5'} , 
+#             'field-12': {'field-21':1}}, 
+#         'field2':1},
+#         {'field1':{
+#             'field-11': {'field-21': {'field-32':1}, 'field-22': '5'} , 
+#             'field-12': {'field-23':1}}, 
+#         'field2':1},
+#         {'field1':{
+#             'field-11': {'field-21': {'field-32':1}, 'field-22': '5'} , 
+#             'field-12': {'field-23':1}}, 
+#         'field2':1}
+#     ]
 
-table_1=pa.Table.from_pylist(data)
+# table_1=pa.Table.from_pylist(data)
 
 
-data=[{'field1':{
-            'field-11': {'field-21': {'field-32':1}, 'field-22': '5'} , 
-            'field-12': {'field-23':1}}, 
-        'field2':1}]
+# data=[{'field1':{
+#             'field-11': {'field-21': {'field-32':1}, 'field-22': '5'} , 
+#             'field-12': {'field-23':1}}, 
+#         'field2':1}]
 
-table_2=pa.Table.from_pylist(data)
-new_schema=merge_schemas(current_schema=table_1.schema, incoming_schema=table_2.schema)
-# new_schema=table_1.schema
-new_table_2=align_table(table, new_schema)
-print(new_table_2.to_pandas())
+# table_2=pa.Table.from_pylist(data)
+# new_schema=merge_schemas(current_schema=table_1.schema, incoming_schema=table_2.schema)
+# # new_schema=table_1.schema
+# new_table_2=align_table(table, new_schema)
+# print(new_table_2.to_pandas())
 
 
 # # print(select_column)
