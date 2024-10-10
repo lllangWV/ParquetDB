@@ -887,3 +887,11 @@ def update_table(current_table, incoming_table, flatten_method=False):
         current_table=update_table_nested_method(current_table, incoming_table)
         
     return current_table
+
+
+def infer_pyarrow_types(self, data_dict: dict):
+    infered_types = {}
+    for key, value in data_dict.items():
+        if key != 'id':
+            infered_types[key] = pa.infer_type([value])
+    return infered_types

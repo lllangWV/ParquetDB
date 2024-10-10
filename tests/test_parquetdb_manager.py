@@ -278,20 +278,6 @@ class TestParquetDBManager(unittest.TestCase):
         self.assertEqual(len(df), 1)
         self.assertEqual(df.iloc[0]['name'], 'Peter')
 
-    def test_update_nonexistent_id(self):
-        # Test updating an ID that doesn't exist
-        data = [
-            {'name': 'Quinn', 'age': 40}
-        ]
-        self.db.create(data, dataset_name=self.dataset_name)
-
-        # Attempt to update a non-existent ID
-        update_data = [
-            {'id': 999, 'age': 41}
-        ]
-        with self.assertRaises(ValueError):
-            self.db.update(update_data, dataset_name=self.dataset_name)
-
     def test_get_datasets(self):
         # Should return a list containing 'test_dataset'
         self.db.create(data=self.test_data, dataset_name='test_dataset')
@@ -381,8 +367,8 @@ class TestParquetDBManager(unittest.TestCase):
         self.db.create(data=self.test_data, dataset_name='test_dataset')
         # Create another dataset
         additional_data = [
-            {'id': 4, 'name': 'Dave', 'age': 40},
-            {'id': 5, 'name': 'Eve', 'age': 45}
+            {'name': 'Dave', 'age': 40},
+            {'name': 'Eve', 'age': 45}
         ]
         self.db.create(data=additional_data, dataset_name='additional_dataset')
 

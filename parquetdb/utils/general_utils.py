@@ -1,6 +1,8 @@
+import copy
 import os
 import logging
 import functools
+import random
 import time
 
 logger = logging.getLogger(__name__)
@@ -60,3 +62,31 @@ def is_contained(list1, list2):
 
 
 
+def generate_similar_data(template_data, num_entries):
+    def generate_value(value):
+        if isinstance(value, int):
+            return random.randint(value - 10, value + 10)
+        elif isinstance(value, float):
+            return round(random.uniform(value * 0.8, value * 1.2), 2)
+        elif isinstance(value, str):
+            return f"{value}_{random.randint(1, 100)}"
+        elif isinstance(value, dict):
+            return {k: generate_value(v) for k, v in value.items()}
+        # elif isinstance(value, list):
+        #     return [generate_value(item) for item in value]
+        elif value is None:
+            return None
+        else:
+            return value
+
+    generated_data = []
+    for i in range(num_entries):
+        new_entry = copy.deepcopy(random.choice(template_data))
+        for key, value in new_entry.items():
+            if key == 'id':
+                new_entry[key] = i
+            else:
+                new_entry[key] = generate_value(value)
+        generated_data.append(new_entry)
+
+    return generated_data

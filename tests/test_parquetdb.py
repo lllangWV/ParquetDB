@@ -304,20 +304,6 @@ class TestParquetDB(unittest.TestCase):
         self.assertEqual(len(df), 1)
         self.assertEqual(df.iloc[0]['name'], 'Peter')
 
-    def test_update_nonexistent_id(self):
-        # Test updating an ID that doesn't exist
-        data = [
-            {'name': 'Quinn', 'age': 40}
-        ]
-        self.db.create(data)
-        
-        # Attempt to update a non-existent ID
-        update_data = [
-            {'id': 999, 'age': 41}
-        ]
-        with self.assertRaises(ValueError):
-            self.db.update(update_data)
-
     def test_get_metadata(self):
         self.db.create(data=self.test_data,
                        metadata={'key1':'value1', 'key2':'value2'})

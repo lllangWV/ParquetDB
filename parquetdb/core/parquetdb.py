@@ -121,6 +121,9 @@ class ParquetDB:
         # Create the incoming table
         incoming_table=pa.Table.from_pylist(data_list, schema=schema)
         incoming_table=incoming_table.append_column(pa.field('id', pa.int64()), [new_ids])
+        # Sometimes records have a  nested dictionaries and some do not. 
+        # This ensures all records have the same nested structes
+        incoming_table=pyarrow_utils.fill_null_nested_structs_in_table(incoming_table)
         incoming_table=pyarrow_utils.replace_empty_structs_in_table(incoming_table)
         
         incoming_schema=incoming_table.schema
@@ -150,9 +153,16 @@ class ParquetDB:
                 # Align file schemas with merged schema
                 current_files = glob(os.path.join(self.dataset_dir, f'{self.dataset_name}_*.parquet'))
                 for current_file in current_files:
-                    # Opening a table with a merged schema will add missing values to the table
+                    # This might inefficient because I convert the table to a pylist 
+                    # and then back to a table with the merged schema
+                    # This was done because this will automatically fill non-exisiting 
+                    # fields in the current table if the update creates new fields
                     current_table = pq.read_table(current_file)
                     current_table=pa.Table.from_pylist(current_table.to_pylist(), schema=merged_schema)
+                    # Sometimes records have a  nested dictionaries and some do not. 
+                    # This ensures all records have the same nested structes
+                    current_table=pyarrow_utils.fill_null_nested_structs_in_table(current_table)
+
                     pq.write_table(current_table, current_file)
 
                 incoming_table=incoming_table.to_pylist()
@@ -242,20 +252,41 @@ class ParquetDB:
         # Data processing and validation.
         data_list, incoming_schema = self._validate_data(data)
 
-        # Process update data and get id_data_dict_map and update schema
-        id_data_dict_map, update_schema = self._process_update_data(data_list, field_type_dict)
         
-        logger.info(f"Dataset directory: {self.dataset_dir}")
-        current_files=self.get_current_files()
-
+        # Schema validation steps
+        current_schema=self.get_schema()
+        merged_schema = pa.unify_schemas([current_schema, incoming_schema],promote_options='default')
+        
+        incoming_table=pa.Table.from_pylist(data_list, schema=merged_schema)
+        
+        # Non-exisiting id warning step. THis is not really necessary but might be nice for user to check
+        self._validate_id(incoming_table['id'].combine_chunks())
+        
+        # Sometimes records have a  nested dictionaries and some do not. 
+        # This ensures all records have the same nested structes
+        incoming_table=pyarrow_utils.fill_null_nested_structs_in_table(incoming_table)
+        
+        # This ensures empty structs/dicts are not empty, it fills it with dummy varaible. 
+        # This is important because saving will raise an issue if they are empty
+        incoming_table=pyarrow_utils.replace_empty_structs_in_table(incoming_table)
+        
         # Iterate over the original files
         self._write_tmp_files()
-
+        current_files=self.get_current_files()
         for i_file, current_file in enumerate(current_files):
-            current_table = pq.read_table(current_file)
-
+            # Opening a table with a merged schema will add missing values to the table
+            
             try:
-                updated_table = self._update_table(current_table, id_data_dict_map, update_schema)
+                # This might inefficient because I convert the table to a pylist 
+                # and then back to a table with the merged schema
+                # This was done because this will automatically fill non-exisiting 
+                # fields in the current table if the update creates new fields
+                current_table = pq.read_table(current_file)
+                current_table=pa.Table.from_pylist(current_table.to_pylist(), schema=merged_schema)
+                current_table=pyarrow_utils.fill_null_nested_structs_in_table(current_table)
+                
+                # The flatten method will flatten out all nested structs, update, then rebuild the nested structs
+                updated_table=pyarrow_utils.update_table(current_table, incoming_table, flatten_method=True)
             except Exception as e:
                 logger.exception(f"exception updating {current_file}")
                 # logger.exception(f"exception updating {current_file}: {e}")
@@ -846,126 +877,13 @@ class ParquetDB:
             return os.path.join(self.dataset_dir, f'{self.dataset_name}_0.parquet')
         return os.path.join(self.dataset_dir, f'{self.dataset_name}_{n_files}.parquet')
 
-    def _process_update_data(self, data_list: List[dict], field_type_dict=None):
-        """Process and validate incoming data, return update dictionary, incoming field names, and inferred types."""
-        if field_type_dict is None:
-            field_type_dict={}
-        
-        id_data_dict_map = {}
-        incoming_field_names = set()
-        infered_types=None
-        
-        main_id_column=self._load_data(columns=['id'], 
-                                       output_format='table')['id'].to_pylist()
-        # Create id_data_dict_map, get incoming field names, and their infered types
-        for data_dict in data_list:
-            data_id = data_dict.get('id', None)
-
-            # Check if the id is in the main table
-            self._validate_id(data_id, main_id_column)
-
-            # Add data_dict to id_data_dict_map
-            id_data_dict_map[data_id] = data_dict
-
-            # Get incoming field names
-            incoming_field_names.update(data_dict.keys())
-
-            # Determine inferred types for each field (skip 'id')
-            infered_types=self._infer_pyarrow_types(data_dict)
-
-        # Get the current schema
-        current_schema = self.get_schema()
-        current_names=set(current_schema.names)
-
-        # Resolve data infered types with current schema
-        infered_types=self._resolve_infered_field_types(current_schema, infered_types)
-
-        merged_names=list(incoming_field_names.union(current_names) - set(['id']))
-        update_schema = pa.schema([(field_name, infered_types[field_name]) for field_name in merged_names])
-
-        return id_data_dict_map, update_schema
-
-    def _infer_pyarrow_types(self, data_dict: dict):
-        infered_types = {}
-        for key, value in data_dict.items():
-            if key != 'id':
-                infered_types[key] = pa.infer_type([value])
-        return infered_types
-
-    def _validate_id(self, id: List[dict], id_column: List[int]):
-        if id is None:
-            raise ValueError("Each data dict must have an 'id' key.")
-        if id not in id_column:
-            raise ValueError(f"The id {id} is not in the main table. It may have been deleted or is incorrect.")
+    def _validate_id(self, id_column):
+        logger.info(f"Validating ids")
+        current_table=self.read(columns=['id'], output_format='table').combine_chunks()
+        filtered_table = current_table.filter(~pc.field('id').isin(id_column))
+        logger.warning(f"The following ids are not in the main table", extra={'ids_do_not_exist': filtered_table['id'].to_pylist()})
         return None
     
-    def _resolve_infered_field_types(self, schema: pa.Schema, infered_types: dict):
-        logger.info(f"Checking infered field types vs original field types")
-        for field_name in schema.names:
-            type=schema.field(field_name).type
-            infered_types[field_name]=type
-
-        logger.info(f"Validating field types: {infered_types}")
-        return infered_types
-    
-    def _update_table(self, current_table: str, 
-                     id_data_dict_map: dict, 
-                     update_schema: pa.Schema):
-        """Update a single Parquet file with new data."""
-
-        # Add new columns to the current table
-        current_table=pyarrow_utils.replace_empty_structs_in_table(current_table)
-        update_schema = pyarrow_utils.merge_schemas(current_table.schema, update_schema)
-
-        logger.debug(f"Aligning table with update schema")
-        updated_table = pyarrow_utils.align_table(current_table, update_schema)
-        logger.debug(f"Aligned table with update schema")
-        # Update existing records in the current table
-        current_ids_list = current_table['id'].to_pylist()
-        id_to_index = {id: index for index, id in enumerate(current_ids_list)}
-        # Iterate over the columns in the table
-        for column_idx, column in enumerate(updated_table.itercolumns()):
-            column_name = column._name
-            if column_name == 'id':  # Skip 'id' column
-                continue
-            
-            # Get current column array
-            column_array = column.to_pylist()
-
-            # Iterate over the update entries for the current column
-            for id, data_dict in id_data_dict_map.items():
-                
-                # If the id is in the the current table 
-                # and the field_nmae is in the update dict, update the column
-                if id in id_to_index and column_name in data_dict:
-                    
-                    update_value = data_dict[column_name]
-
-                    # If the update value is None for a column, skip it. 
-                    # This can happen when a field is added to another 
-                    # file but not the current one
-
-                    if update_value is not None:  # Only update non-None values
-                        # if isinstance(update_value, dict):
-                        #     column_array[id_to_index[id]].update(update_value)
-                        # else:
-                        #     column_array[id_to_index[id]] = update_value
-
-                        index = id_to_index[id]
-                        current_value = column_array[index]
-
-                        # Perform a deep update if it's a nested structure
-                        column_array[index] = deep_update(current_value, update_value)
-
-            # Update the column in the table
-            field = updated_table.schema.field(column_name)
-
-            # Ensure the column array is of the correct type
-            column_array=pa.array(column_array, type=field.type)
-            updated_table = updated_table.set_column(column_idx, field, column_array)
-
-        return updated_table
-
     def _delete_ids_from_table(self, ids, table):
         """
         Delete specific IDs from a given PyArrow table.
