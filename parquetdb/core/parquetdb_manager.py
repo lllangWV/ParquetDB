@@ -3,7 +3,6 @@
 import logging
 import os
 import shutil
-from functools import partial
 from glob import glob
 from multiprocessing import Pool
 import traceback
@@ -12,31 +11,35 @@ from typing import List, Union
 import pandas as pd
 import pyarrow as pa
 import pyarrow.compute as pc
-import pyarrow.dataset as ds
-import pyarrow.parquet as pq
 
 from parquetdb.core.parquetdb import ParquetDB
-from parquetdb.utils.general_utils import timeit, is_directory_empty
-from parquetdb.utils.pyarrow_utils import combine_tables, merge_schemas, align_table,replace_none_with_nulls
+from parquetdb.utils.general_utils import timeit
 
 
 # Logger setup
 logger = logging.getLogger(__name__)
 
 class ParquetDBManager:
-    def __init__(self, datasets_dir='', n_cores=8):
+    def __init__(self, datasets_dir=''):
         """
-        Initializes the ParquetDatabase object.
+        Initializes the ParquetDBManager object with a specified directory for datasets.
 
-        Args:
-            db_path (str): The path to the root directory of the database.
-            n_cores (int): The number of CPU cores to be used for parallel processing.
+        Parameters
+        ----------
+        datasets_dir : str, optional
+            The path to the root directory where datasets are stored. If not provided, it defaults to the current directory.
+
+        Example
+        -------
+        >>> manager = ParquetDBManager(datasets_dir='data/parquet_files', n_cores=4)
+        datasets_dir: data/parquet_files
+        dataset_names: []
+        reserved_table_names: ['tmp']
+        output_formats: ['batch_generator', 'table', 'dataset']
         """
         self.datasets_dir=datasets_dir
 
         os.makedirs(self.datasets_dir, exist_ok=True)
-        
-        self.n_cores = n_cores
 
         self.output_formats=['batch_generator','table','dataset']
         self.reserved_table_names=['tmp']
@@ -63,18 +66,28 @@ class ParquetDBManager:
         """
         Adds new data to the database.
 
-        Args:
-            data (dict or list of dicts): The data to be added to the database. 
-                This must contain
-            dataset_name (str): The name of the table to add the data to.
-            batch_size (int): The batch size. 
-                If provided, create will return a generator that yields batches of data.
-            max_rows_per_file (int): The maximum number of rows per file.
-            min_rows_per_group (int): The minimum number of rows per group.
-            max_rows_per_group (int): The maximum number of rows per group.
-            schema (pyarrow.Schema): The schema of the incoming table.
-            metadata (dict): Metadata to be added to the table.
-            **kwargs: Additional keyword arguments to pass to the create function.
+        Parameters
+        ----------
+        data : Union[List[dict], dict, pd.DataFrame]
+            The data to be added to the database. It can be in the form of a list of dictionaries,
+            a single dictionary, or a pandas DataFrame.
+        dataset_name : str, optional
+            The name of the dataset or table to add the data to. Default is 'main'.
+        batch_size : int, optional
+            If provided, the data will be processed in batches of this size.
+        schema : pyarrow.Schema, optional
+            The schema for the data being added. If not provided, it will be inferred.
+        metadata : dict, optional
+            Additional metadata to store alongside the data.
+        normalize_dataset : bool, optional
+            If True, applies normalization to the dataset before saving. Default is True.
+        normalize_kwagrs : dict, optional
+            Keyword arguments to control dataset normalization, such as max rows per file or group.
+
+        Example
+        -------
+        >>> manager.create(data=[{'id': 1, 'name': 'Alice'}, {'id': 2, 'name': 'Bob'}],
+        ...                dataset_name='users', batch_size=100)
         """
         all_args = {k: v for k, v in locals().items() if k != 'self'}
         dataset_db=ParquetDB(dataset_name=all_args.pop('dataset_name'), dir=self.datasets_dir, n_cores=self.n_cores)
@@ -88,25 +101,39 @@ class ParquetDBManager:
         include_cols: bool = True,
         filters: List[pc.Expression] = None,
         output_format: str = 'table',
-        batch_size: int = None
-        ) -> Union[pa.Table, pa.dataset.Scanner]:
+        batch_size: int = None,
+        load_kwargs: dict = None
+        ):
         """
         Reads data from the database.
 
-        Args:
-            ids (list): A list of IDs to read. If None, reads all data.
-            dataset_name (str): The name of the table to read data from.
-            columns (list): A list of columns to include in the returned data. By default, all columns are included.
-            include_cols (bool): If True, includes the only the fields listed in columns
-                If False, includes all fields except the ones listed in columns.
-            filters (List): A list of fliters to apply to the data.
-            It should operate on a dataframe and return the modifies dataframe
-            batch_size (int): The batch size. 
-                If provided, read will return a generator that yields batches of data.
+        Parameters
+        ----------
+        dataset_name : str, optional
+            The name of the dataset or table to read data from. Default is 'main'.
+        ids : list of int, optional
+            A list of record IDs to filter the data by. If None, reads all data.
+        columns : list of str, optional
+            A list of column names to include in the result. If None, all columns are included.
+        include_cols : bool, optional
+            If True, only the columns in `columns` are returned. If False, all columns except those in `columns` are returned.
+        filters : list of pyarrow.compute.Expression, optional
+            A list of filters to apply to the data.
+        output_format : str, optional
+            The format in which to return the data. Options are 'table', 'batch_generator', or 'dataset'. Default is 'table'.
+        batch_size : int, optional
+            If provided, returns a generator that yields batches of data of this size.
+        load_kwargs : dict, optional
+            Additional arguments passed to the data loading function (default is None).
 
-        Returns:
-            pandas.DataFrame or list: The data read from the database. If deserialize_data is True,
-            returns a list of dictionaries with their 'id's. Otherwise, returns the DataFrame with serialized data.
+        Returns
+        -------
+        Union[pa.Table, generator, or dataset]
+            The data read from the database. If `batch_size` is specified, a generator is returned. Otherwise, it returns a pyarrow Table or Scanner.
+
+        Example
+        -------
+        >>> data = manager.read(dataset_name='users', columns=['id', 'name'], batch_size=100)
         """
 
         all_args = {k: v for k, v in locals().items() if k != 'self'}
@@ -114,20 +141,21 @@ class ParquetDBManager:
         return dataset_db.read(**all_args)
     
     @timeit
-    def update(self, data: Union[List[dict], dict, pd.DataFrame], dataset_name:str='main', field_type_dict=None):
+    def update(self, data: Union[List[dict], dict, pd.DataFrame], dataset_name:str='main',):
         """
-        Updates data in the database.
+        Updates existing data in the database.
 
-        Args:
-            data (dict or list of dicts or pandas.DataFrame): The data to be updated.
-                Each dict should have an 'id' key corresponding to the record to update.
-            dataset_name (str): The name of the table to update data in.
-            field_type_dict (dict): A dictionary where the keys are the field names and the values are the new field types.
+        Parameters
+        ----------
+        data : Union[List[dict], dict, pd.DataFrame]
+            The data to be updated. It can be a list of dictionaries, a single dictionary, or a pandas DataFrame.
+            Each entry should include an 'id' field corresponding to the record to update.
+        dataset_name : str, optional
+            The name of the dataset or table to update data in. Default is 'main'.
 
-            **kwargs: Additional keyword arguments.
-
-        Raises:
-            ValueError: If new fields are found in the update data that do not exist in the schema.
+        Example
+        -------
+        >>> manager.update(data={'id': 1, 'name': 'Alice'}, dataset_name='users')
         """
 
         all_args = {k: v for k, v in locals().items() if k != 'self'}
@@ -137,14 +165,22 @@ class ParquetDBManager:
     @timeit
     def delete(self, ids:List[int], dataset_name:str='main'):
         """
-        Deletes data from the database.
+        Deletes records from the database.
 
-        Args:
-            ids (list): A list of IDs to delete.
-            dataset_name (str): The name of the table to delete data from.
+        Parameters
+        ----------
+        ids : list of int
+            A list of IDs corresponding to the records to be deleted.
+        dataset_name : str, optional
+            The name of the dataset or table from which to delete records. Default is 'main'.
 
-        Returns:
-            None
+        Returns
+        -------
+        None
+
+        Example
+        -------
+        >>> manager.delete(ids=[1, 2, 3], dataset_name='users')
         """
         all_args = {k: v for k, v in locals().items() if k != 'self'}
         dataset_db=ParquetDB(dataset_name=all_args.pop('dataset_name'), dir=self.datasets_dir, n_cores=self.n_cores)
@@ -209,72 +245,146 @@ class ParquetDBManager:
     @timeit
     def update_schema(self, dataset_name:str='main', field_dict:dict=None, schema:pa.Schema=None):
         """
-        Updates the schema of the table.
+        Updates the schema of the specified dataset.
 
-        Args:
-            dataset_name (str): The name of the table to update the schema of.
-            field_dict (dict): A dictionary where the keys are the field names and the values are the new field types.
-            schema (pyarrow.Schema): The new schema for the table.
+        Parameters
+        ----------
+        dataset_name : str, optional
+            The name of the dataset whose schema will be updated. Default is 'main'.
+        field_dict : dict, optional
+            A dictionary mapping field names to their new data types.
+        schema : pyarrow.Schema, optional
+            A new schema to apply to the dataset. If provided, it will override the existing schema.
 
+        Example
+        -------
+        >>> manager.update_schema(dataset_name='users', field_dict={'age': pa.int32()})
         """
         all_args = {k: v for k, v in locals().items() if k != 'self'}
         dataset_db=ParquetDB(dataset_name=all_args.pop('dataset_name'), dir=self.datasets_dir, n_cores=self.n_cores)
         dataset_db.update_schema(**all_args)
 
     def get_datasets(self):
-        """Get a list of all tables in the database."""
+        """
+        Retrieves a list of all datasets (tables) in the database.
+
+        Returns
+        -------
+        list of str
+            A list of dataset (table) names available in the database.
+
+        Example
+        -------
+        >>> datasets = manager.get_datasets()
+        ['users', 'orders', 'transactions']
+        """
         return os.listdir(self.datasets_dir)
     
     def get_current_files(self, dataset_name:str='main'):
-        """Get a list of all files in the dataset directory."""
+        """
+        Retrieves a list of all current files in the dataset's directory.
+
+        Parameters
+        ----------
+        dataset_name : str, optional
+            The name of the dataset. Default is 'main'.
+
+        Returns
+        -------
+        list of str
+            A list of filenames in the specified dataset's directory.
+
+        Example
+        -------
+        >>> files = manager.get_current_files(dataset_name='users')
+        ['users-1.parquet', 'users-2.parquet']
+        """
         dataset_db=ParquetDB(dataset_name=dataset_name, dir=self.datasets_dir, n_cores=self.n_cores)
         return dataset_db.get_current_files()
     
     def dataset_exists(self, dataset_name:str):
-        """Checks if a table exists.
+        """
+        Checks if a dataset (table) exists in the database.
 
-        Args:
-            dataset_name (str): The name of the table.
+        Parameters
+        ----------
+        dataset_name : str
+            The name of the dataset (table) to check.
 
-        Returns:
-            bool: True if the table exists, False otherwise.
+        Returns
+        -------
+        bool
+            True if the dataset exists, False otherwise.
+
+        Example
+        -------
+        >>> exists = manager.dataset_exists('users')
+        True
         """
         all_args = {k: v for k, v in locals().items() if k != 'self'}
         dataset_db=ParquetDB(dataset_name=all_args.pop('dataset_name'), dir=self.datasets_dir, n_cores=self.n_cores)
         return dataset_db.dataset_exists()
     
     def get_schema(self, dataset_name:str='main'):
-        """Get the schema of a table.
+        """
+        Retrieves the schema of a specified dataset (table).
 
-        Args:
-            dataset_name (str): The name of the table.
+        Parameters
+        ----------
+        dataset_name : str, optional
+            The name of the dataset (table). Default is 'main'.
 
-        Returns:
-            pyarrow.Schema: The schema of the table.
+        Returns
+        -------
+        pyarrow.Schema
+            The schema of the specified dataset.
+
+        Example
+        -------
+        >>> schema = manager.get_schema(dataset_name='users')
+        Schema for 'users': {'id': 'int64', 'name': 'string', ...}
         """
         all_args = {k: v for k, v in locals().items() if k != 'self'}
         dataset_db=ParquetDB(dataset_name=all_args.pop('dataset_name'), dir=self.datasets_dir, n_cores=self.n_cores)
         return dataset_db.get_schema()
     
     def get_metadata(self, dataset_name:str='main'):
-        """Get the metadata of a table.
-        
-        Args:
-            dataset_name (str): The name of the table.
+        """
+        Retrieves the metadata of a specified dataset (table).
 
-        Returns:
-            dict: The metadata of the table.
+        Parameters
+        ----------
+        dataset_name : str, optional
+            The name of the dataset (table). Default is 'main'.
+
+        Returns
+        -------
+        dict
+            A dictionary containing the metadata of the specified dataset.
+
+        Example
+        -------
+        >>> metadata = manager.get_metadata(dataset_name='users')
+        {'created_at': '2023-10-05', 'source': 'csv_import', ...}
         """
         all_args = {k: v for k, v in locals().items() if k != 'self'}
         dataset_db=ParquetDB(dataset_name=all_args.pop('dataset_name'), dir=self.datasets_dir, n_cores=self.n_cores)
         return dataset_db.get_metadata()
     
     def set_metadata(self, dataset_name:str='main', metadata:dict=None):
-        """Set the metadata of a table.
+        """
+        Sets the metadata for a specified dataset (table).
 
-        Args:
-            dataset_name (str): The name of the table.
-            metadata (dict): The metadata to set.
+        Parameters
+        ----------
+        dataset_name : str, optional
+            The name of the dataset (table) to set metadata for. Default is 'main'.
+        metadata : dict, optional
+            A dictionary containing the metadata to set.
+
+        Example
+        -------
+        >>> manager.set_metadata(dataset_name='users', metadata={'source': 'api', 'updated_at': '2023-10-05'})
         """
         all_args = {k: v for k, v in locals().items() if k != 'self'}
         dataset_db=ParquetDB(dataset_name=all_args.pop('dataset_name'), dir=self.datasets_dir, n_cores=self.n_cores)
@@ -282,10 +392,16 @@ class ParquetDBManager:
 
     def drop_dataset(self, dataset_name:str='main'):
         """
-        Drops a table. by removing the table directory.
+        Drops (deletes) a dataset (table) by removing its directory.
 
-        Args:
-            dataset_name (str): The name of the table to drop.
+        Parameters
+        ----------
+        dataset_name : str, optional
+            The name of the dataset (table) to drop. Default is 'main'.
+
+        Example
+        -------
+        >>> manager.drop_dataset(dataset_name='users')
         """
         all_args = {k: v for k, v in locals().items() if k != 'self'}
         dataset_db=ParquetDB(dataset_name=all_args.pop('dataset_name'), dir=self.datasets_dir, n_cores=self.n_cores)
@@ -293,11 +409,18 @@ class ParquetDBManager:
     
     def rename_dataset(self, dataset_name:str='main', new_name:str=None):
         """
-        Renames a table.
+        Renames a dataset (table).
 
-        Args:
-            old_name (str): The current name of the table.
-            new_name (str): The new name of the table.
+        Parameters
+        ----------
+        dataset_name : str, optional
+            The current name of the dataset (table). Default is 'main'.
+        new_name : str
+            The new name for the dataset.
+
+        Example
+        -------
+        >>> manager.rename_dataset(dataset_name='users', new_name='clients')
         """
         all_args = {k: v for k, v in locals().items() if k != 'self'}
         dataset_db=ParquetDB(dataset_name=all_args.pop('dataset_name'), dir=self.datasets_dir, n_cores=self.n_cores)
@@ -305,11 +428,20 @@ class ParquetDBManager:
 
     def copy_dataset(self, dataset_name:str='main', dest_name:str=None, overwrite:bool=False):
         """
-        Copies a table to a new table.
+        Copies a dataset to a new location or table.
 
-        Args:
-            dataset_name (str): The name of the source table.
-            dest_name (str): The name of the destination table.
+        Parameters
+        ----------
+        dataset_name : str, optional
+            The name of the source dataset to copy. Default is 'main'.
+        dest_name : str, optional
+            The name of the destination dataset. If not provided, the source name is used with a different path.
+        overwrite : bool, optional
+            If True, overwrites the destination dataset if it already exists. Default is False.
+
+        Example
+        -------
+        >>> manager.copy_dataset(dataset_name='users', dest_name='users_copy', overwrite=True)
         """
         all_args = {k: v for k, v in locals().items() if k != 'self'}
         dataset_db=ParquetDB(dataset_name=all_args.pop('dataset_name'), dir=self.datasets_dir, n_cores=self.n_cores)
@@ -323,15 +455,26 @@ class ParquetDBManager:
                         batch_size=None,
                         **kwargs):
         """
-        Optimizes the table by merging small Parquet files.
+        Optimizes the dataset by merging smaller Parquet files into larger ones.
 
-        Args:
-            dataset_name (str): The name of the table to optimize.
-            max_rows_per_file (int): The maximum number of rows per file.
-            min_rows_per_group (int): The minimum number of rows per group.
-            max_rows_per_group (int): The maximum number of rows per group.
-            batch_size (int): The batch size.
-            **kwargs: Additional keyword arguments to pass to the pq.write_to_dataset function.
+        Parameters
+        ----------
+        dataset_name : str, optional
+            The name of the dataset to optimize. Default is 'main'.
+        max_rows_per_file : int, optional
+            The maximum number of rows per file after optimization. Default is 10,000.
+        min_rows_per_group : int, optional
+            The minimum number of rows per group. Default is 0.
+        max_rows_per_group : int, optional
+            The maximum number of rows per group. Default is 10,000.
+        batch_size : int, optional
+            If provided, the optimization will be performed in batches of this size.
+        **kwargs : dict
+            Additional keyword arguments passed to the Parquet writing function.
+
+        Example
+        -------
+        >>> manager.optimize_dataset(dataset_name='users', max_rows_per_file=5000)
         """
         all_args = {k: v for k, v in locals().items() if k != 'self'}
         dataset_db=ParquetDB(dataset_name=all_args.pop('dataset_name'), dir=self.datasets_dir, n_cores=self.n_cores)
@@ -339,12 +482,20 @@ class ParquetDBManager:
 
     def export_dataset(self, dataset_name:str='main', file_path: str=None, format: str = 'csv'):
         """
-        Exports the table to a specified file format.
+        Exports a dataset to a specified file format.
 
-        Args:
-            dataset_name (str): The name of the table to export.
-            file_path (str): The file path to export the data to.
-            format (str): The format to export ('csv', 'json').
+        Parameters
+        ----------
+        dataset_name : str, optional
+            The name of the dataset to export. Default is 'main'.
+        file_path : str, optional
+            The path where the dataset will be exported. If not provided, it will use a default location.
+        format : str, optional
+            The format to export the dataset as. Supported formats are 'csv' and 'json'. Default is 'csv'.
+
+        Example
+        -------
+        >>> manager.export_dataset(dataset_name='users', file_path='users_export.csv', format='csv')
         """
         all_args = {k: v for k, v in locals().items() if k != 'self'}
         dataset_db=ParquetDB(dataset_name=all_args.pop('dataset_name'), dir=self.datasets_dir, n_cores=self.n_cores)
@@ -358,16 +509,28 @@ class ParquetDBManager:
                                    batch_size: int = None, 
                                    **kwargs):
         """
-        This method exports a partitioned dataset to a specified file format.
+        Exports a partitioned dataset to a specified directory.
 
-        Args:
-            export_dir (str): The directory to export the data to.
-            dataset_name (str): The name of the table to export.
-            partitioning (dict): The partitioning to use for the dataset.
-            partitioning_flavor (str): The partitioning flavor to use.
-            batch_size (int): The batch size.
-            **kwargs: Additional keyword arguments to pass to the pq.write_to_dataset function.
+        Parameters
+        ----------
+        export_dir : str
+            The directory where the partitioned dataset will be exported.
+        dataset_name : str, optional
+            The name of the dataset to export. Default is 'main'.
+        partitioning : dict
+            Defines how the data should be partitioned. The keys are column names, and values are partition criteria.
+        partitioning_flavor : str, optional
+            The partitioning flavor to use (e.g., 'hive'). Default is None.
+        batch_size : int, optional
+            If provided, the export will be done in batches of this size.
+        **kwargs : dict
+            Additional keyword arguments passed to the Parquet writing function.
 
+        Example
+        -------
+        >>> manager.export_partitioned_dataset(export_dir='partitioned_data', 
+                                            partitioning={'country': 'US'},
+                                            dataset_name='sales')
         """
         all_args = {k: v for k, v in locals().items() if k != 'self'}
         dataset_db=ParquetDB(dataset_name=all_args.pop('dataset_name'), dir=self.datasets_dir, n_cores=self.n_cores)
@@ -375,14 +538,22 @@ class ParquetDBManager:
 
     def import_dataset(self, dataset_name:str='main', file_path: str=None, format: str = 'csv', **kwargs):
         """
-        Imports a table from a specified file format.
+        Imports a dataset from a file into the database.
 
-        Args:
-            
-            dataset_name (str): The name of the table to import the data into.
-            file_path (str): The file path to import the data from.
-            format (str): The format to import ('csv', 'json').
-            **kwargs: Additional keyword arguments to pass to the create function.
+        Parameters
+        ----------
+        dataset_name : str, optional
+            The name of the dataset to import into. Default is 'main'.
+        file_path : str, optional
+            The path of the file to import. If not provided, an error is raised.
+        format : str, optional
+            The format of the file to import. Supported formats are 'csv' and 'json'. Default is 'csv'.
+        **kwargs : dict
+            Additional keyword arguments passed to the dataset creation function.
+
+        Example
+        -------
+        >>> manager.import_dataset(dataset_name='users', file_path='users.csv', format='csv')
         """
         all_args = {k: v for k, v in locals().items() if k != 'self'}
         dataset_db=ParquetDB(dataset_name=all_args.pop('dataset_name'), dir=self.datasets_dir, n_cores=self.n_cores)
@@ -393,10 +564,18 @@ class ParquetDBManager:
     
     def backup_database(self, dataset_name:str='main', backup_path: str=None):
         """
-        Creates a backup of the database.
+        Creates a backup of the specified dataset.
 
-        Args:
-            backup_path (str): The path where the backup will be stored.
+        Parameters
+        ----------
+        dataset_name : str, optional
+            The name of the dataset to back up. Default is 'main'.
+        backup_path : str, optional
+            The path where the backup will be stored. If not provided, a default backup path is used.
+
+        Example
+        -------
+        >>> manager.backup_database(dataset_name='users', backup_path='backup/users_backup.parquet')
         """
         all_args = {k: v for k, v in locals().items() if k != 'self'}
         dataset_db=ParquetDB(dataset_name=all_args.pop('dataset_name'), dir=self.datasets_dir, n_cores=self.n_cores)
@@ -404,10 +583,18 @@ class ParquetDBManager:
 
     def restore_database(self, dataset_name:str='main', backup_path: str=None):
         """
-        Restores the database from a backup.
+        Restores the specified dataset from a backup.
 
-        Args:
-            backup_path (str): The path to the backup to restore from.
+        Parameters
+        ----------
+        dataset_name : str, optional
+            The name of the dataset to restore. Default is 'main'.
+        backup_path : str, optional
+            The path to the backup file to restore from.
+
+        Example
+        -------
+        >>> manager.restore_database(dataset_name='users', backup_path='backup/users_backup.parquet')
         """
         all_args = {k: v for k, v in locals().items() if k != 'self'}
         dataset_db=ParquetDB(dataset_name=all_args.pop('dataset_name'), dir=self.datasets_dir, n_cores=self.n_cores)
