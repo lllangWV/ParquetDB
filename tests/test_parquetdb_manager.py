@@ -45,16 +45,25 @@ class TestParquetDBManager(unittest.TestCase):
         ]
         self.db.create(data, dataset_name=self.dataset_name)
 
+        
+        data = [
+            {'name': 'Alice', 'age': 30},
+            {'name': 'Bob', 'age': 25}
+        ]
+        self.db.create(data,dataset_name=self.dataset_name)
+        
         # Read the data back
         result = self.db.read(dataset_name=self.dataset_name)
         df = result.to_pandas()
 
         # Assertions
-        self.assertEqual(len(df), 2)
+        self.assertEqual(len(df), 4)
+        for i in range(len(df)):
+            self.assertEqual(df.iloc[i]['id'], i)
         self.assertIn('name', df.columns)
         self.assertIn('age', df.columns)
-        self.assertEqual(df.iloc[0]['name'], 'Alice')
-        self.assertEqual(df.iloc[1]['name'], 'Bob')
+        self.assertEqual(df[df['age'] == 30].iloc[0]['name'], 'Alice')
+        self.assertEqual(df[df['age'] == 25].iloc[0]['name'], 'Bob')
 
     def test_update(self):
         # Test updating existing records
@@ -76,8 +85,8 @@ class TestParquetDBManager(unittest.TestCase):
         df = result.to_pandas()
 
         # Assertions
-        self.assertEqual(df.iloc[0]['age'], 29)
-        self.assertEqual(df.iloc[1]['age'], 32)
+        self.assertEqual(df[df['name'] == 'Charlie'].iloc[0]['age'], 29)
+        self.assertEqual(df[df['name'] == 'Diana'].iloc[0]['age'], 32)
 
     def test_delete(self):
         # Test deleting records
@@ -160,9 +169,9 @@ class TestParquetDBManager(unittest.TestCase):
 
         # Assertions
         self.assertIn('occupation', df.columns)
-        self.assertEqual(df.iloc[1]['occupation'], 'Engineer')
-        self.assertTrue(pd.isnull(df.iloc[0]['occupation']))
-        self.assertTrue(np.isnan(df.iloc[1]['age']))
+        self.assertEqual(df[df['name'] == 'Karl'].iloc[0]['occupation'], 'Engineer')
+        self.assertTrue(pd.isnull(df[df['name'] == 'Judy'].iloc[0]['occupation']))
+        self.assertTrue(np.isnan(df[df['name'] == 'Karl'].iloc[0]['age']))
 
     def test_get_schema(self):
         # Test retrieving the schema
@@ -385,3 +394,7 @@ class TestParquetDBManager(unittest.TestCase):
 
 if __name__ == '__main__':
     unittest.main()
+
+
+# if __name__ == "__main__":
+#     unittest.TextTestRunner().run(TestParquetDBManager('test_add_new_field'))

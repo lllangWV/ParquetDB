@@ -1,4 +1,5 @@
 import logging
+import time
 import unittest
 import shutil
 import os
@@ -35,8 +36,13 @@ class TestParquetDB(unittest.TestCase):
 
     def tearDown(self):
         # Remove the temporary directory after the test
-        if os.path.exists(self.temp_dir):
+        try:
             shutil.rmtree(self.temp_dir)
+        except Exception as e:
+            print(f"Error during cleanup: {e}")
+        # For some reason, there are race conditions when 
+        # deleting the directory and performaing another test
+        # time.sleep(0.01)
 
     def test_create_and_read(self):
         # Test creating data and reading it back
@@ -46,16 +52,24 @@ class TestParquetDB(unittest.TestCase):
         ]
         self.db.create(data)
 
+        data = [
+            {'name': 'Alice', 'age': 30},
+            {'name': 'Bob', 'age': 25}
+        ]
+        self.db.create(data)
+
         # Read the data back
         result = self.db.read()
         df = result.to_pandas()
-
+        
         # Assertions
-        self.assertEqual(len(df), 2)
+        self.assertEqual(len(df), 4)
+        for i in range(len(df)):
+            self.assertEqual(df.iloc[i]['id'], i)
         self.assertIn('name', df.columns)
         self.assertIn('age', df.columns)
-        self.assertEqual(df.iloc[0]['name'], 'Alice')
-        self.assertEqual(df.iloc[1]['name'], 'Bob')
+        self.assertEqual(df[df['age'] == 30].iloc[0]['name'], 'Alice')
+        self.assertEqual(df[df['age'] == 25].iloc[0]['name'], 'Bob')
 
     def test_update(self):
         # Test updating existing records
@@ -77,8 +91,8 @@ class TestParquetDB(unittest.TestCase):
         df = result.to_pandas()
 
         # Assertions
-        self.assertEqual(df.iloc[0]['age'], 29)
-        self.assertEqual(df.iloc[1]['age'], 32)
+        self.assertEqual(df[df['name'] == 'Charlie'].iloc[0]['age'], 29)
+        self.assertEqual(df[df['name'] == 'Diana'].iloc[0]['age'], 32)
 
     def test_delete(self):
         # Test deleting records
@@ -156,14 +170,14 @@ class TestParquetDB(unittest.TestCase):
         self.db.create(new_data)
 
         # Read back the data
-        result = self.db.read()
-        df = result.to_pandas()
-
+        table = self.db.read()
+        df = table.to_pandas()
+        
         # Assertions
         self.assertIn('occupation', df.columns)
-        self.assertEqual(df.iloc[1]['occupation'], 'Engineer')
-        self.assertTrue(pd.isnull(df.iloc[0]['occupation']))
-        self.assertTrue(np.isnan(df.iloc[1]['age']))
+        self.assertEqual(df[df['name'] == 'Karl'].iloc[0]['occupation'], 'Engineer')
+        self.assertTrue(pd.isnull(df[df['name'] == 'Judy'].iloc[0]['occupation']))
+        self.assertTrue(np.isnan(df[df['name'] == 'Karl'].iloc[0]['age']))
 
 
     def test_nested_empty_struct_field(self):
@@ -185,8 +199,6 @@ class TestParquetDB(unittest.TestCase):
         result = self.db.read()
         df = result.to_pandas()
         
-        print(df.columns)
-
         # Assertions
         # self.assertIn('occupation', df.columns)
         self.assertIn('dummy_field', df.iloc[0]['name'])
@@ -365,7 +377,23 @@ class TestParquetDB(unittest.TestCase):
 
 if __name__ == '__main__':
     unittest.main()
+    
+# if __name__ == '__main__':
+#     for x in range(20):
+#         print(f"Iteration {x+1}")
+        
+#         # # Create a test suite and add your test case
+#         # suite = unittest.TestLoader().run(TestParquetDB('test_add_new_field'))
+#         # Create a test suite and add your test case
+#         suite = unittest.TestLoader().loadTestsFromTestCase(TestParquetDB)
+        
+#         # Run the tests
+#         unittest.TextTestRunner().run(suite)
+#         # unittest.TextTestRunner().run(TestParquetDB('test_add_new_field'))
 
 
 # if __name__ == "__main__":
 #     unittest.TextTestRunner().run(TestParquetDB('test_nested_empty_struct_field'))
+
+# if __name__ == "__main__":
+#     unittest.TextTestRunner().run(TestParquetDB('test_add_new_field'))
