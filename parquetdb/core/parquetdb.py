@@ -58,7 +58,6 @@ class ParquetDB:
 
         logger.info(f"dir: {self.dir}")
         logger.info(f"reserved_dataset_names: {self.reserved_dataset_names}")
-        logger.info(f"n_cores: {self.n_cores}")
         logger.info(f"output_formats: {self.output_formats}")
 
     @timeit

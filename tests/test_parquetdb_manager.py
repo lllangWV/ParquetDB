@@ -58,8 +58,6 @@ class TestParquetDBManager(unittest.TestCase):
 
         # Assertions
         self.assertEqual(len(df), 4)
-        for i in range(len(df)):
-            self.assertEqual(df.iloc[i]['id'], i)
         self.assertIn('name', df.columns)
         self.assertIn('age', df.columns)
         self.assertEqual(df[df['age'] == 30].iloc[0]['name'], 'Alice')

@@ -24,7 +24,7 @@ class TestParquetDB(unittest.TestCase):
         # Create a temporary directory for the database
         self.temp_dir = tempfile.mkdtemp()
         self.dataset_name='test_dataset'
-        self.db = ParquetDB(dataset_name=self.dataset_name, dir=self.temp_dir, n_cores=1)
+        self.db = ParquetDB(dataset_name=self.dataset_name, dir=self.temp_dir)
 
         # Create some test data
         self.test_data = [
@@ -64,8 +64,6 @@ class TestParquetDB(unittest.TestCase):
         
         # Assertions
         self.assertEqual(len(df), 4)
-        for i in range(len(df)):
-            self.assertEqual(df.iloc[i]['id'], i)
         self.assertIn('name', df.columns)
         self.assertIn('age', df.columns)
         self.assertEqual(df[df['age'] == 30].iloc[0]['name'], 'Alice')

@@ -49,7 +49,6 @@ class ParquetDBManager:
         logger.info(f"datasets_dir: { self.datasets_dir}")
         logger.info(f"dataset_names: {self.get_datasets()}")
         logger.info(f"reserved_table_names: {self.reserved_table_names}")
-        logger.info(f"n_cores: {self.n_cores}")
         logger.info(f"output_formats: {self.output_formats}")
 
     @ timeit
@@ -90,7 +89,7 @@ class ParquetDBManager:
         ...                dataset_name='users', batch_size=100)
         """
         all_args = {k: v for k, v in locals().items() if k != 'self'}
-        dataset_db=ParquetDB(dataset_name=all_args.pop('dataset_name'), dir=self.datasets_dir, n_cores=self.n_cores)
+        dataset_db=ParquetDB(dataset_name=all_args.pop('dataset_name'), dir=self.datasets_dir)
         dataset_db.create(**all_args)
 
     @timeit
@@ -137,7 +136,7 @@ class ParquetDBManager:
         """
 
         all_args = {k: v for k, v in locals().items() if k != 'self'}
-        dataset_db=ParquetDB(dataset_name=all_args.pop('dataset_name'), dir=self.datasets_dir, n_cores=self.n_cores)
+        dataset_db=ParquetDB(dataset_name=all_args.pop('dataset_name'), dir=self.datasets_dir)
         return dataset_db.read(**all_args)
     
     @timeit
@@ -159,7 +158,7 @@ class ParquetDBManager:
         """
 
         all_args = {k: v for k, v in locals().items() if k != 'self'}
-        dataset_db=ParquetDB(dataset_name=all_args.pop('dataset_name'), dir=self.datasets_dir, n_cores=self.n_cores)
+        dataset_db=ParquetDB(dataset_name=all_args.pop('dataset_name'), dir=self.datasets_dir)
         dataset_db.update(**all_args)
 
     @timeit
@@ -183,7 +182,7 @@ class ParquetDBManager:
         >>> manager.delete(ids=[1, 2, 3], dataset_name='users')
         """
         all_args = {k: v for k, v in locals().items() if k != 'self'}
-        dataset_db=ParquetDB(dataset_name=all_args.pop('dataset_name'), dir=self.datasets_dir, n_cores=self.n_cores)
+        dataset_db=ParquetDB(dataset_name=all_args.pop('dataset_name'), dir=self.datasets_dir)
         dataset_db.delete(**all_args)
 
     
@@ -239,7 +238,7 @@ class ParquetDBManager:
         all_args = {k: v for k, v in locals().items() if k != 'self'}
         kwargs=all_args.pop('kwargs')
         all_args.update(kwargs)
-        dataset_db=ParquetDB(dataset_name=all_args.pop('dataset_name'), dir=self.datasets_dir, n_cores=self.n_cores)
+        dataset_db=ParquetDB(dataset_name=all_args.pop('dataset_name'), dir=self.datasets_dir)
         dataset_db.normalize(**all_args)
     
     @timeit
@@ -261,7 +260,7 @@ class ParquetDBManager:
         >>> manager.update_schema(dataset_name='users', field_dict={'age': pa.int32()})
         """
         all_args = {k: v for k, v in locals().items() if k != 'self'}
-        dataset_db=ParquetDB(dataset_name=all_args.pop('dataset_name'), dir=self.datasets_dir, n_cores=self.n_cores)
+        dataset_db=ParquetDB(dataset_name=all_args.pop('dataset_name'), dir=self.datasets_dir)
         dataset_db.update_schema(**all_args)
 
     def get_datasets(self):
@@ -299,7 +298,7 @@ class ParquetDBManager:
         >>> files = manager.get_current_files(dataset_name='users')
         ['users-1.parquet', 'users-2.parquet']
         """
-        dataset_db=ParquetDB(dataset_name=dataset_name, dir=self.datasets_dir, n_cores=self.n_cores)
+        dataset_db=ParquetDB(dataset_name=dataset_name, dir=self.datasets_dir)
         return dataset_db.get_current_files()
     
     def dataset_exists(self, dataset_name:str):
@@ -322,7 +321,7 @@ class ParquetDBManager:
         True
         """
         all_args = {k: v for k, v in locals().items() if k != 'self'}
-        dataset_db=ParquetDB(dataset_name=all_args.pop('dataset_name'), dir=self.datasets_dir, n_cores=self.n_cores)
+        dataset_db=ParquetDB(dataset_name=all_args.pop('dataset_name'), dir=self.datasets_dir)
         return dataset_db.dataset_exists()
     
     def get_schema(self, dataset_name:str='main'):
@@ -345,7 +344,7 @@ class ParquetDBManager:
         Schema for 'users': {'id': 'int64', 'name': 'string', ...}
         """
         all_args = {k: v for k, v in locals().items() if k != 'self'}
-        dataset_db=ParquetDB(dataset_name=all_args.pop('dataset_name'), dir=self.datasets_dir, n_cores=self.n_cores)
+        dataset_db=ParquetDB(dataset_name=all_args.pop('dataset_name'), dir=self.datasets_dir)
         return dataset_db.get_schema()
     
     def get_metadata(self, dataset_name:str='main'):
@@ -368,7 +367,7 @@ class ParquetDBManager:
         {'created_at': '2023-10-05', 'source': 'csv_import', ...}
         """
         all_args = {k: v for k, v in locals().items() if k != 'self'}
-        dataset_db=ParquetDB(dataset_name=all_args.pop('dataset_name'), dir=self.datasets_dir, n_cores=self.n_cores)
+        dataset_db=ParquetDB(dataset_name=all_args.pop('dataset_name'), dir=self.datasets_dir)
         return dataset_db.get_metadata()
     
     def set_metadata(self, dataset_name:str='main', metadata:dict=None):
@@ -387,7 +386,7 @@ class ParquetDBManager:
         >>> manager.set_metadata(dataset_name='users', metadata={'source': 'api', 'updated_at': '2023-10-05'})
         """
         all_args = {k: v for k, v in locals().items() if k != 'self'}
-        dataset_db=ParquetDB(dataset_name=all_args.pop('dataset_name'), dir=self.datasets_dir, n_cores=self.n_cores)
+        dataset_db=ParquetDB(dataset_name=all_args.pop('dataset_name'), dir=self.datasets_dir)
         dataset_db.set_metadata(**all_args)
 
     def drop_dataset(self, dataset_name:str='main'):
@@ -404,7 +403,7 @@ class ParquetDBManager:
         >>> manager.drop_dataset(dataset_name='users')
         """
         all_args = {k: v for k, v in locals().items() if k != 'self'}
-        dataset_db=ParquetDB(dataset_name=all_args.pop('dataset_name'), dir=self.datasets_dir, n_cores=self.n_cores)
+        dataset_db=ParquetDB(dataset_name=all_args.pop('dataset_name'), dir=self.datasets_dir)
         dataset_db.drop_dataset()
     
     def rename_dataset(self, dataset_name:str='main', new_name:str=None):
@@ -423,7 +422,7 @@ class ParquetDBManager:
         >>> manager.rename_dataset(dataset_name='users', new_name='clients')
         """
         all_args = {k: v for k, v in locals().items() if k != 'self'}
-        dataset_db=ParquetDB(dataset_name=all_args.pop('dataset_name'), dir=self.datasets_dir, n_cores=self.n_cores)
+        dataset_db=ParquetDB(dataset_name=all_args.pop('dataset_name'), dir=self.datasets_dir)
         dataset_db.rename_dataset(**all_args)
 
     def copy_dataset(self, dataset_name:str='main', dest_name:str=None, overwrite:bool=False):
@@ -444,7 +443,7 @@ class ParquetDBManager:
         >>> manager.copy_dataset(dataset_name='users', dest_name='users_copy', overwrite=True)
         """
         all_args = {k: v for k, v in locals().items() if k != 'self'}
-        dataset_db=ParquetDB(dataset_name=all_args.pop('dataset_name'), dir=self.datasets_dir, n_cores=self.n_cores)
+        dataset_db=ParquetDB(dataset_name=all_args.pop('dataset_name'), dir=self.datasets_dir)
         dataset_db.copy_dataset(**all_args)
 
     def optimize_dataset(self, 
@@ -477,7 +476,7 @@ class ParquetDBManager:
         >>> manager.optimize_dataset(dataset_name='users', max_rows_per_file=5000)
         """
         all_args = {k: v for k, v in locals().items() if k != 'self'}
-        dataset_db=ParquetDB(dataset_name=all_args.pop('dataset_name'), dir=self.datasets_dir, n_cores=self.n_cores)
+        dataset_db=ParquetDB(dataset_name=all_args.pop('dataset_name'), dir=self.datasets_dir)
         dataset_db.optimize_dataset(**all_args)
 
     def export_dataset(self, dataset_name:str='main', file_path: str=None, format: str = 'csv'):
@@ -498,7 +497,7 @@ class ParquetDBManager:
         >>> manager.export_dataset(dataset_name='users', file_path='users_export.csv', format='csv')
         """
         all_args = {k: v for k, v in locals().items() if k != 'self'}
-        dataset_db=ParquetDB(dataset_name=all_args.pop('dataset_name'), dir=self.datasets_dir, n_cores=self.n_cores)
+        dataset_db=ParquetDB(dataset_name=all_args.pop('dataset_name'), dir=self.datasets_dir)
         dataset_db.export_dataset(**all_args)
         
     def export_partitioned_dataset(self,
@@ -533,7 +532,7 @@ class ParquetDBManager:
                                             dataset_name='sales')
         """
         all_args = {k: v for k, v in locals().items() if k != 'self'}
-        dataset_db=ParquetDB(dataset_name=all_args.pop('dataset_name'), dir=self.datasets_dir, n_cores=self.n_cores)
+        dataset_db=ParquetDB(dataset_name=all_args.pop('dataset_name'), dir=self.datasets_dir)
         dataset_db.export_partitioned_dataset(**all_args)
 
     def import_dataset(self, dataset_name:str='main', file_path: str=None, format: str = 'csv', **kwargs):
@@ -556,7 +555,7 @@ class ParquetDBManager:
         >>> manager.import_dataset(dataset_name='users', file_path='users.csv', format='csv')
         """
         all_args = {k: v for k, v in locals().items() if k != 'self'}
-        dataset_db=ParquetDB(dataset_name=all_args.pop('dataset_name'), dir=self.datasets_dir, n_cores=self.n_cores)
+        dataset_db=ParquetDB(dataset_name=all_args.pop('dataset_name'), dir=self.datasets_dir)
         dataset_db.import_dataset(**all_args)
 
     def merge_datasets(self, source_tables: List[str], dest_table: str):
@@ -578,7 +577,7 @@ class ParquetDBManager:
         >>> manager.backup_database(dataset_name='users', backup_path='backup/users_backup.parquet')
         """
         all_args = {k: v for k, v in locals().items() if k != 'self'}
-        dataset_db=ParquetDB(dataset_name=all_args.pop('dataset_name'), dir=self.datasets_dir, n_cores=self.n_cores)
+        dataset_db=ParquetDB(dataset_name=all_args.pop('dataset_name'), dir=self.datasets_dir)
         dataset_db.backup_database(**all_args)
 
     def restore_database(self, dataset_name:str='main', backup_path: str=None):
@@ -597,5 +596,5 @@ class ParquetDBManager:
         >>> manager.restore_database(dataset_name='users', backup_path='backup/users_backup.parquet')
         """
         all_args = {k: v for k, v in locals().items() if k != 'self'}
-        dataset_db=ParquetDB(dataset_name=all_args.pop('dataset_name'), dir=self.datasets_dir, n_cores=self.n_cores)
+        dataset_db=ParquetDB(dataset_name=all_args.pop('dataset_name'), dir=self.datasets_dir)
         dataset_db.restore_database(**all_args)
