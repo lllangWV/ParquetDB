@@ -21,36 +21,8 @@ logger = logging.getLogger(__name__)
 
 
 #TODO: Add option to skip create aligment if the schema is the exact same
-#TODO: Need better method to check if schema is the same and identify mismatch
 #TODO: Need to remove raw reads and writes of tables in create, update, and delete methods. 
 # This can cause issue if the original table is large. I need to adapt the method to handle batches instead.
-
-def get_field_names(filepath, columns=None, include_cols=True):
-    """
-    Gets the field names from a parquet file.
-
-    Args:
-        filepath (str): The path to the parquet file.
-        columns (list): A list of column names to include.
-        include_cols (bool): If True, includes all columns except the ones listed in columns.
-
-    Returns:
-        list: A list of column names.
-    """
-    if not include_cols:
-        metadata = pq.read_metadata(filepath)
-        all_columns = []
-        for filed_schema in metadata.schema:
-            
-            # Only want top column names
-            max_defintion_level=filed_schema.max_definition_level
-            if max_defintion_level!=1:
-                continue
-
-            all_columns.append(filed_schema.name)
-
-        columns = [col for col in all_columns if col not in columns]
-    return columns
 
 class ParquetDB:
     def __init__(self, dataset_name, dir='', n_cores=8):
@@ -213,7 +185,7 @@ class ParquetDB:
         table_path=os.path.join(self.dataset_dir, f'{self.dataset_name}.parquet')
 
         if columns:
-            columns=get_field_names(table_path, columns=columns, include_cols=include_cols)
+            columns=self.get_field_names(columns=columns, include_cols=include_cols)
 
         if filters is None:
             filters = []
@@ -476,6 +448,33 @@ class ParquetDB:
         """
         schema = self._load_data(output_format='dataset', load_tmp=load_tmp).schema
         return schema
+    
+    def get_field_names(self, columns=None, include_cols=True):
+        """
+        Gets the field names from a parquet file.
+
+        Args:
+            filepath (str): The path to the parquet file.
+            columns (list): A list of column names to include.
+            include_cols (bool): If True, includes all columns except the ones listed in columns.
+
+        Returns:
+            list: A list of column names.
+        """
+        if not include_cols:
+            schema=self.get_schema()
+            all_columns = []
+            for filed_schema in schema:
+                
+                # Only want top column names
+                max_defintion_level=filed_schema.max_definition_level
+                if max_defintion_level!=1:
+                    continue
+
+                all_columns.append(filed_schema.name)
+
+            columns = [col for col in all_columns if col not in columns]
+        return columns
     
     def get_metadata(self):
         """Get the metadata of a table.
@@ -987,78 +986,3 @@ class ParquetDB:
         logger.warning(f"The following ids are not in the main table", extra={'ids_do_not_exist': filtered_table['id'].to_pylist()})
         return None
     
-
-
-
-    
-
-def add_dummy_field_to_empty_structs(table: pa.Table, dummy_field_name="dummy_field", dummy_field_type=pa.int32()) -> pa.Table:
-    """
-    Search for struct types with no child fields and add a dummy field to those structs.
-
-    Parameters:
-    - table: A PyArrow Table to check for empty struct types.
-    - dummy_field_name: Name of the dummy field to add.
-    - dummy_field_type: DataType of the dummy field (default is pa.int32).
-
-    Returns:
-    - A new PyArrow Table with the updated schema.
-    """
-    schema = table.schema
-    new_fields = []
-
-    # Traverse the schema fields
-    for field in schema:
-        if pa.types.is_struct(field.type):
-            struct_type = field.type
-            if len(struct_type) == 0:
-                # Empty struct found, add a dummy field to it
-                new_struct_type = pa.struct([pa.field(dummy_field_name, dummy_field_type)])
-                new_fields.append(pa.field(field.name, new_struct_type))
-            else:
-                # Keep the existing struct field with its children
-                new_fields.append(field)
-        else:
-            # Keep non-struct fields as is
-            new_fields.append(field)
-
-    # Create new schema with updated fields
-    new_schema = pa.schema(new_fields)
-
-    # Reconstruct the table with the updated schema
-    # Assuming you can reconstruct the data based on new schema
-    return table.cast(new_schema)
-
-def deep_update(original_value, update_value):
-    """
-    Recursively updates original_value with the corresponding values in update_value.
-    If update_value contains nested dictionaries or lists, it updates them recursively.
-    
-    Args:
-        original_value: The original value to be updated (could be a dict, list, or primitive).
-        update_value: The update value (could be a dict, list, or primitive).
-    
-    Returns:
-        Updated original_value with changes from update_value.
-    """
-    # If both are dictionaries, update recursively
-    if isinstance(original_value, dict) and isinstance(update_value, dict):
-        for key, value in update_value.items():
-            if key in original_value:
-                original_value[key] = deep_update(original_value[key], value)
-            else:
-                original_value[key] = value
-        return original_value
-    
-    # # If both are lists, update recursively by index
-    # elif isinstance(original_value, list) and isinstance(update_value, list):
-    #     # Extend the original list if update_value has more items
-    #     for i in range(len(update_value)):
-    #         if i < len(original_value):
-    #             original_value[i] = deep_update(original_value[i], update_value[i])
-    #         else:
-    #             original_value.append(update_value[i])
-    #     return original_value
-    
-    # Otherwise, just return the update value (for primitive types or if the types differ)
-    return update_value

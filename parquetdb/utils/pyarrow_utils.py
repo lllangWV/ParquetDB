@@ -579,9 +579,6 @@ def fill_null_nested_structs_in_table(table):
             table=table.set_column(column_names.index(column_name), table.field(column_name), column_array)
     return table
 
-
-
-
 @timeit
 def flatten_nested_chunked_arrays(array, parent_name):
     array_type = array.type
