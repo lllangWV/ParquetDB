@@ -2,7 +2,12 @@ import pyarrow as pa
 import logging
 
 from parquetdb.utils.general_utils import timeit
+import pyarrow.compute as pc
 
+
+import cProfile
+import pstats
+import io
 logger = logging.getLogger(__name__)
 
 # https://arrow.apache.org/docs/python/api/datatypes.html
@@ -267,8 +272,6 @@ def replace_none_with_nulls(data, schema_field):
 
     return updated_data
 
-
-
 def replace_empty_structs(struct_type, dummy_field=pa.field('dummy_field', pa.int16())):
     dummy_struct_type=pa.struct([dummy_field])
     # If the struct is empty, return the dummy struct
@@ -360,6 +363,9 @@ def add_new_null_fields_in_struct(column_array, new_struct_type):
     # Detecting if array is a struct type
     original_type = column_array.type
     if not pa.types.is_struct(original_type):
+        print(column_array.type)
+        logger.debug(f"Column is not a struct type. Returning original column array")
+        print(column_array)
         return column_array
 
     original_fields_dict = {field.name: i for i, field in enumerate(original_type)}
@@ -378,20 +384,20 @@ def add_new_null_fields_in_struct(column_array, new_struct_type):
             new_arrays.append(null_array)
     return pa.StructArray.from_arrays(new_arrays, fields=new_struct_type)
 
-def add_new_null_fields_in_column(column_array, field, new_type):    
+def add_new_null_fields_in_column(column_array, field):    
     column_type = column_array.type
     logger.debug(f"Field name:  {field.name}")
     logger.debug(f"Column type: {column_type}")
-    logger.debug(f"New type: {new_type}")
+    logger.debug(f"New type: {field.type}")
     
     if pa.types.is_struct(column_type):
         logger.debug('This column is a struct')
         # Replacing empty structs with dummy structs
-        new_type_names=[field.name for field in new_type]
+        new_type_names=[field.name for field in field.type]
         if field.name in new_type_names:
-            new_struct_type=new_type.field(field.name).type
+            new_struct_type=field.type.field(field.name).type
         else:
-            new_struct_type=new_type
+            new_struct_type=field.type
         new_struct_type = merge_structs(new_struct_type,column_type)
         logger.debug(f"New struct type: {new_struct_type}")
         new_array=add_new_null_fields_in_struct(column_array, new_struct_type)
@@ -410,7 +416,7 @@ def add_new_null_fields_in_table(table, new_schema):
             new_field=pa.field(field.name, field.type)  
         else:
             original_column = table.column(field.name)
-            new_column, new_field = add_new_null_fields_in_column(original_column, field, field.type)
+            new_column, new_field = add_new_null_fields_in_column(original_column, field)
 
         new_columns.append(new_column)
         new_columns_fields.append(new_field)
@@ -492,8 +498,7 @@ def merge_tables(current_table: pa.Table, incoming_table: pa.Table, schema=None)
     
     return combined_table
 
-
-def create_empty_table(schema: pa.Schema, columns: list = None) -> pa.Table:
+def create_empty_table(schema: pa.Schema, columns: list = None, special_fields: list = [pa.field('id', pa.int64())]) -> pa.Table:
     """
     Creates an empty PyArrow table with the same schema as the dataset or specific columns.
 
@@ -508,14 +513,20 @@ def create_empty_table(schema: pa.Schema, columns: list = None) -> pa.Table:
     if columns:
         schema = pa.schema([field for field in schema if field.name in columns])
 
+    logger.debug(f"Schema: \n{schema}\n")
+
+    if not schema.names:
+        schema=pa.schema(special_fields)
+
+    
     # Create an empty table with the derived schema
     empty_table = pa.Table.from_pydict({field.name: [] for field in schema}, schema=schema)
 
     return empty_table
 
-
-
-def create_empty_batch_generator(schema: pa.Schema, columns: list = None):
+def create_empty_batch_generator(schema: pa.Schema, 
+                                 columns: list = None, 
+                                 special_fields: list = [pa.field('id', pa.int64())]):
     """
     Returns an empty generator that yields nothing.
 
@@ -527,6 +538,352 @@ def create_empty_batch_generator(schema: pa.Schema, columns: list = None):
     """
     if columns:
         schema = pa.schema([field for field in schema if field.name in columns])
+        
+    if not schema.names:
+        schema=pa.schema(special_fields)    
+        
     yield pa.RecordBatch.from_pydict({field.name: [] for field in schema}, schema=schema)
 
+def fill_null_nested_structs(array):
+    array_type = array.type
+    child_field_names=[field.name for field in array_type]
 
+    child_chunked_array_list = array.flatten()
+    
+    arrays=[]
+    fields=[]
+    for child_array, child_field_name in zip(child_chunked_array_list, child_field_names):
+        child_field_type=child_array.type
+        if pa.types.is_struct(child_field_type):
+            child_array=fill_null_nested_structs(child_array)
+        else:
+            child_array=child_array.combine_chunks()
+            
+        arrays.append(child_array)
+        fields.append(pa.field(child_field_name, child_field_type))
+        
+    return pa.StructArray.from_arrays(arrays, fields=fields)
+
+def fill_null_nested_structs_in_table(table):
+    column_names=table.column_names
+    for column_name in column_names:
+        column_array=table.column(column_name)
+        
+        if not pa.types.is_struct(column_array.type):
+            continue
+        
+        column_array=fill_null_nested_structs(column_array)
+        
+        # This skips empty structs/dicts
+        if len(column_array)!=0:
+            table=table.set_column(column_names.index(column_name), table.field(column_name), column_array)
+    return table
+
+
+
+
+@timeit
+def flatten_nested_chunked_arrays(array, parent_name):
+    array_type = array.type
+    child_field_names=[field.name for field in array_type]
+
+    child_chunked_array_list = array.flatten()
+    flattened_arrays=[]
+    for child_array, child_field_name in zip(child_chunked_array_list, child_field_names):
+        child_field_type=child_array.type
+
+        name = f"{parent_name}.{child_field_name}"
+        if pa.types.is_struct(child_field_type):
+            flattened_array=flatten_nested_chunked_arrays(child_array, name)
+            flattened_arrays.extend(flatten_nested_chunked_arrays(child_array, name))
+        else:
+            flattened_arrays.append((child_array, pa.field(name, child_field_type)))
+            
+    return flattened_arrays
+
+@timeit
+def flatten_table(table):
+    flattened_columns = []
+    flattened_fields = []
+
+    for i, column in enumerate(table.columns):
+        column_name = table.field(i).name
+        if pa.types.is_struct(column.type):
+            flattened_arrays_and_fields = flatten_nested_chunked_arrays(column, column_name)
+            
+            # This is to handle empty structs
+            if len(flattened_arrays_and_fields)==0:
+                flattened_columns.append(column)
+                flattened_fields.append(pa.field(column_name, column.type))
+                continue
+            
+            flattened_column, flattend_fields = zip(*flattened_arrays_and_fields)
+            
+   
+            flattened_columns.extend(flattened_column)
+            flattened_fields.extend(flattend_fields)
+
+        else:
+            flattened_columns.append(column)
+            flattened_fields.append(pa.field(column_name, column.type))
+    
+    return pa.Table.from_arrays(flattened_columns, schema=pa.schema(flattened_fields))
+
+def struct_from_dict(type_dict):
+    fields=[]
+    for name, value in type_dict.items():
+        if isinstance(value, dict):
+            field=pa.field(name, struct_from_dict(value))
+        else:
+            field=pa.field(name, value)
+            
+        fields.append(field)
+    return pa.struct(fields)
+
+@timeit
+def struct_arrays_from_dict(nested_dict):
+    arrays=[]
+    fields=[]
+    field_names=[]
+    for name, value in nested_dict.items():
+        if isinstance(value, dict):
+            array, struct = struct_arrays_from_dict(value)
+            field=pa.field(name, struct)
+        else:
+            array=value
+            array=array.combine_chunks()
+            field=pa.field(name,value.type)
+        
+        arrays.append(array)
+        fields.append(field)
+        field_names.append(name)
+    return pa.StructArray.from_arrays(arrays, fields=fields), pa.struct(fields)
+
+@timeit
+def get_nested_type_dict_from_flattened_table(table):
+    # Get the column names
+    columns = table.column_names
+
+    # Create a dictionary to store the nested structure
+    nested_fields = {}
+    nested_arrays={}
+    for col in columns:
+        parts = col.split('.')
+        current = nested_fields
+        current_arrays = nested_arrays
+        for i, part in enumerate(parts):
+            if i == len(parts) - 1:
+                current[part] = table.field(col).type
+                current_arrays[part] = table.column(col)
+            else:
+                if part not in current:
+                    current[part] = {}
+                    current_arrays[part] = {}
+                current = current[part]
+                current_arrays = current_arrays[part]
+                
+    return nested_fields, nested_arrays
+
+@timeit
+def rebuild_nested_table(table):
+    type_dict, nested_arrays_dict = get_nested_type_dict_from_flattened_table(table)
+    nested_arrays, new_struct = struct_arrays_from_dict(nested_arrays_dict)
+    new_schema=pa.schema(new_struct)
+    return pa.Table.from_arrays(nested_arrays.flatten(), schema=new_schema)
+
+def update_table_column(current_table, incoming_table, column_name):
+    """Update a the current table column with the values from the incoming table. 
+    First it will check if the incoming ids are in the current table. 
+    Then it it will filter the incoming table for only the ids and non-null values
+
+    This function updates assumes the incoming and current tables have the same schema.
+    It also assumes that the incoming and current tables have a fully flattened schema.
+
+    """
+    profiler = cProfile.Profile()
+    profiler.enable()
+
+    logger.debug(f"Updating column: {column_name}")
+
+    # Start profiling this section
+    profiler.enable()
+    incoming_filter = pc.field('id').isin(current_table['id']) & ~pc.field(column_name).is_null(incoming_table[column_name])
+    filtered_incoming_table = incoming_table.filter(incoming_filter)
+    updates_are_present_and_not_null = filtered_incoming_table.num_rows != 0
+
+    profiler.disable()
+    if not updates_are_present_and_not_null:
+        logger.debug("No updates are present or non-null")
+        return None
+    
+    profiler.enable()
+    # Creating a boolean mask
+    current_mask = pc.is_in(current_table['id'], value_set=filtered_incoming_table['id']).combine_chunks()
+    
+    profiler.disable()
+    profiler.enable()
+    current_array = current_table[column_name].combine_chunks()
+    incoming_array = filtered_incoming_table[column_name].combine_chunks()
+    
+    profiler.disable()
+    profiler.enable()
+    updated_array = pc.replace_with_mask(current_array, current_mask, incoming_array)
+    
+    profiler.disable()
+    
+    # Log and output profiling results
+    s = io.StringIO()
+    ps = pstats.Stats(profiler, stream=s).sort_stats('tottime')
+    ps.print_stats()
+
+    with open('data/profile_results.log', 'w') as f:
+        f.write(s.getvalue())
+    
+    return updated_array
+
+def update_table_flatten_method(current_table, incoming_table):
+    """
+    This method will update the current table with the values from the incoming table.
+    It will update the current table by flattening the both the current and incoming tables, 
+    applying the update, then rebuilding the nested structure
+    """
+    
+    logger.debug("Updating table with the flatten method")
+    current_table=flatten_table(current_table)
+    incoming_table=flatten_table(incoming_table)
+    
+    for column_name in current_table.column_names:
+        logger.debug(f"Looking for updates in field: {column_name}")
+        update_array=update_table_column(current_table, incoming_table, column_name=column_name)
+        field_index=current_table.schema.get_field_index(column_name)
+        if update_array and len(update_array)!=0:
+            logger.info(f"Updating column: {column_name}")
+            current_table=current_table.set_column(field_index, current_table.field(column_name), update_array)
+    current_table=rebuild_nested_table(current_table)
+
+    return current_table
+
+def update_struct_field(current_table, incoming_table, field_path):
+    logger.debug(f"field_path: {field_path}")
+
+    parent_name=field_path[0]
+    sub_path=field_path[1:]
+    
+    logger.debug(f"parent_name: {parent_name}")
+    logger.debug(f"sub_path: {sub_path}")
+    
+    
+    incoming_filter=pc.field('id').isin(current_table['id']) & ~pc.field(*field_path).is_null(incoming_table[parent_name])
+    
+    filtered_incoming_table = incoming_table.filter(incoming_filter)
+
+    updates_are_present_and_not_null = filtered_incoming_table.num_rows != 0
+    
+    
+    if not updates_are_present_and_not_null:
+        logger.debug("Updates are not present and null")
+        return None
+    
+    # Creating boolean mask
+    current_mask = pc.is_in(current_table['id'], value_set=filtered_incoming_table['id']).combine_chunks()
+    
+    current_array = pc.struct_field(current_table[parent_name], sub_path).combine_chunks()
+    incoming_array = pc.struct_field(filtered_incoming_table[parent_name], sub_path).combine_chunks()
+    
+    # filtered_array = pc.filter(mask, mask)
+    # logger.debug(f"Values where the array is True: {len(filtered_array)}")
+    logger.debug(f"Mask shape: {len(current_mask)}")
+    logger.debug(f"Incoming array shape: {len(incoming_array)}")
+    logger.debug(f"Current array shape: {len(current_array)}")
+    
+    new_array= pc.replace_with_mask(current_array, current_mask, incoming_array)
+    return new_array
+
+def update_field(current_table, incoming_table, field_name):
+    logger.debug(f"field_name: {field_name}")
+    
+    incoming_filter=pc.field('id').isin(current_table['id']) & ~pc.field(field_name).is_null(incoming_table[field_name])
+   
+    filtered_incoming_table = incoming_table.filter(incoming_filter)
+
+    updates_are_present_and_not_null = filtered_incoming_table.num_rows != 0
+    if not updates_are_present_and_not_null:
+        logger.debug("Updates are not present and not null")
+        return None
+    
+    # Creating boolean mask
+    current_mask = pc.is_in(current_table['id'], value_set=filtered_incoming_table['id']).combine_chunks()
+    
+    current_array=current_table[field_name].combine_chunks()
+    incoming_array = filtered_incoming_table[field_name].combine_chunks()
+    
+    # filtered_array = pc.filter(mask, mask)
+    # logger.debug(f"Values where the array is True: {len(filtered_array)}")
+    logger.debug(f"Mask shape: {len(current_mask)}")
+    logger.debug(f"Incoming array shape: {len(incoming_array)}")
+    logger.debug(f"Current array shape: {len(current_array)}")
+    
+    new_array = pc.replace_with_mask(current_array,current_mask,incoming_array)
+    return new_array
+
+def update_nested_field(current_table, incoming_table, field_path, current_array=None):
+    if current_array is None:
+        logger.debug("This is the first call to update_nested_field")
+        current_array=current_table[field_path[0]]
+        
+    child_field_names=[field.name for field in current_array.type]
+    
+    logger.debug(f"child_field_names: {child_field_names}")
+    
+
+    child_chunked_array_list = current_array.flatten()
+    child_arrays=[]
+    for child_array, child_field_name in zip(child_chunked_array_list, child_field_names):
+        child_field_type=child_array.type
+        
+        sub_path=field_path.copy()
+        sub_path.append(child_field_name)
+
+        if pa.types.is_struct(child_field_type):
+            update_array=update_nested_field(current_table, incoming_table, sub_path, current_array=child_array)
+        else:
+            update_array=update_struct_field(current_table, incoming_table, sub_path)
+        
+        if update_array:
+            logger.debug(f"update_array is None for field: {child_field_name}")
+            
+            child_arrays.append(update_array)
+        else:
+            logger.debug(f"update_array is not None for field: {child_field_name}")
+            child_arrays.append(child_array.combine_chunks())
+
+    return pc.make_struct(*child_arrays, field_names=child_field_names)
+
+def update_table_nested_method(current_table, incoming_table):
+    logger.debug("Updating table with nested method")
+    for field_name in current_table.column_names:
+        logger.debug(f"Looking for updates in field: {field_name}")
+        if pa.types.is_struct(current_table.schema.field(field_name).type):
+            
+            # Process nestedstruct fields
+            updated_array=update_nested_field(current_table, incoming_table, [field_name])
+        else:
+            # Process non-struct fields
+            updated_array=update_field(current_table, incoming_table, field_name)
+        
+        if updated_array and len(updated_array)!=0:
+            logger.info(f"Updating field: {field_name}")
+            current_table=current_table.set_column(current_table.schema.get_field_index(field_name), 
+                                                current_table.schema.field(field_name), 
+                                                updated_array)
+    return current_table
+
+@timeit
+def update_table(current_table, incoming_table, flatten_method=False):
+    logger.info("Updating table")
+    if flatten_method:
+        current_table=update_table_flatten_method(current_table, incoming_table)
+    else:
+        current_table=update_table_nested_method(current_table, incoming_table)
+        
+    return current_table
