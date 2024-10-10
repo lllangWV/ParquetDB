@@ -445,16 +445,19 @@ class ParquetDB:
         # Dataset directory
         current_files=self.get_current_files()
 
+        current_schema=self.get_schema()
+        updated_schema=pyarrow_utils.update_schema(current_schema, schema, field_dict)
+        
         # Backup current files in case of failure
         self._write_tmp_files()
 
         for current_file in current_files:
             filename=os.path.basename(current_file)
-            current_table=pq.read_table(current_file)
-
-            updated_table=self._update_dataset_schema(current_table, schema, field_dict)
-
+            
             try:
+                current_table=pq.read_table(current_file)
+                pylist=current_table.to_pylist()
+                updated_table=pa.Table.from_pylist(pylist, schema=updated_schema)
                 pq.write_table(updated_table, current_file)
             except Exception as e:
                 logger.exception(f"exception processing {current_file}: {e}")
@@ -828,106 +831,6 @@ class ParquetDB:
             table=pyarrow_utils.create_empty_table(schema=dataset.schema, columns=columns)
         return table
     
-    def _get_new_ids(self, data_list:List[dict]):
-  
-        if is_directory_empty(self.dataset_dir):
-            start_id = 0
-        else:
-            table = self._load_data(columns=['id'],output_format='table')
-            max_val=pc.max(table.column('id')).as_py()
-            start_id = max_val + 1  # Start from the next available ID
-    
-        # Create a list of new IDs
-        new_ids = list(range(start_id, start_id + len(data_list)))
-        return new_ids
-    
-    def _build_filter_expression(self, ids: List[int], filters: List[pc.Expression]):
-        """Helper function to build the filter expression."""
-        final_filters = []
-        
-        # Add ID filter if provided
-        if ids:
-            id_filter = pc.field('id').isin(ids)
-            final_filters.append(id_filter)
-
-        # Append custom filters
-        final_filters.extend(filters)
-
-        # Combine filters into a single filter expression
-        if not final_filters:
-            return None
-        
-        filter_expression = final_filters[0]
-        for filter_expr in final_filters[1:]:
-            filter_expression = filter_expression & filter_expr
-
-        return filter_expression
-
-    def _get_save_path(self):
-        """Determine the path to save the incoming table."""
-
-        n_files = len(glob(os.path.join(self.dataset_dir, f'{self.dataset_name}_*.parquet')))
-        
-        if n_files == 0:
-            return os.path.join(self.dataset_dir, f'{self.dataset_name}_0.parquet')
-        return os.path.join(self.dataset_dir, f'{self.dataset_name}_{n_files}.parquet')
-
-    def _validate_id(self, id_column):
-        logger.info(f"Validating ids")
-        current_table=self.read(columns=['id'], output_format='table').combine_chunks()
-        filtered_table = current_table.filter(~pc.field('id').isin(id_column))
-        logger.warning(f"The following ids are not in the main table", extra={'ids_do_not_exist': filtered_table['id'].to_pylist()})
-        return None
-    
-    def _update_dataset_schema(self, current_table, schema=None, field_dict=None):
-        """
-        Update the schema of a given table based on a provided schema or field modifications.
-
-        This function allows updating the schema of a PyArrow table by either replacing the entire schema 
-        or modifying individual fields within the existing schema. It can take a dictionary of field 
-        names and their corresponding new field definitions to update specific fields in the schema.
-        Alternatively, a completely new schema can be provided to replace the current one.
-
-        Parameters
-        ----------
-        current_table : pa.Table
-            The PyArrow table whose schema is to be updated.
-        
-        schema : pa.Schema, optional
-            A new schema to replace the existing schema of the table. If provided, this will
-            completely override the current schema.
-        
-        field_dict : dict, optional
-            A dictionary where the keys are existing field names and the values are the new
-            PyArrow field definitions to replace the old ones. This is used for selectively 
-            updating specific fields within the current schema.
-
-        Returns
-        -------
-        pa.Table
-            A new PyArrow table with the updated schema.
-        """
-        # Check if the table name is in the list of table names
-
-        current_schema=current_table.schema
-        current_field_names=current_table.column_names
-
-        if field_dict:
-            updated_schema=current_schema
-            for field_name, new_field in field_dict.items():
-                field_index=current_schema.get_field_index(field_name)
-
-                if field_name in current_field_names:
-                    updated_schema=updated_schema.set(field_index, new_field)
-
-        if schema:
-            updated_schema=schema
-
-        pylist=current_table.to_pylist()
-        new_table=pa.Table.from_pylist(pylist, schema=updated_schema)
-
-        return new_table
-
     @timeit
     def _write_tmp_files(self, tmp_dir=None):
         """
@@ -1033,6 +936,61 @@ class ParquetDB:
         struct=pa.array(data_list)
         schema=pa.schema(struct.type)
         return data_list, schema
+    
+    def _get_new_ids(self, data_list:List[dict]):
+  
+        if is_directory_empty(self.dataset_dir):
+            start_id = 0
+        else:
+            table = self._load_data(columns=['id'],output_format='table')
+            max_val=pc.max(table.column('id')).as_py()
+            start_id = max_val + 1  # Start from the next available ID
+    
+        # Create a list of new IDs
+        new_ids = list(range(start_id, start_id + len(data_list)))
+        return new_ids
+    
+    def _build_filter_expression(self, ids: List[int], filters: List[pc.Expression]):
+        """Helper function to build the filter expression."""
+        final_filters = []
+        
+        # Add ID filter if provided
+        if ids:
+            id_filter = pc.field('id').isin(ids)
+            final_filters.append(id_filter)
+
+        # Append custom filters
+        final_filters.extend(filters)
+
+        # Combine filters into a single filter expression
+        if not final_filters:
+            return None
+        
+        filter_expression = final_filters[0]
+        for filter_expr in final_filters[1:]:
+            filter_expression = filter_expression & filter_expr
+
+        return filter_expression
+
+    def _get_save_path(self):
+        """Determine the path to save the incoming table."""
+
+        n_files = len(glob(os.path.join(self.dataset_dir, f'{self.dataset_name}_*.parquet')))
+        
+        if n_files == 0:
+            return os.path.join(self.dataset_dir, f'{self.dataset_name}_0.parquet')
+        return os.path.join(self.dataset_dir, f'{self.dataset_name}_{n_files}.parquet')
+
+    def _validate_id(self, id_column):
+        logger.info(f"Validating ids")
+        current_table=self.read(columns=['id'], output_format='table').combine_chunks()
+        filtered_table = current_table.filter(~pc.field('id').isin(id_column))
+        logger.warning(f"The following ids are not in the main table", extra={'ids_do_not_exist': filtered_table['id'].to_pylist()})
+        return None
+    
+
+
+
     
 
 def add_dummy_field_to_empty_structs(table: pa.Table, dummy_field_name="dummy_field", dummy_field_type=pa.int32()) -> pa.Table:
