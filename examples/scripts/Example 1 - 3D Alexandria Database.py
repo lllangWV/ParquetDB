@@ -3,6 +3,7 @@ import os
 import logging
 from glob import glob
 import shutil
+import time
 
 from pyarrow import compute as pc
 
@@ -10,7 +11,7 @@ from parquetdb.utils.general_utils import timeit
 from parquetdb import ParquetDB, config
 from parquetdb.utils.external_utils import download_alexandria_3d_database
 
-config.logging_config.loggers.parquetdb.level='DEBUG'
+config.logging_config.loggers.parquetdb.level='ERROR'
 config.apply()
 
 @timeit
@@ -32,7 +33,7 @@ def normalize_dataset(db, **kwargs):
     return db.normalize(**kwargs)
 
 if __name__ == "__main__":
-    normalize=False
+    normalize=True
     from_scratch=False
     base_dir=os.path.join('data','external', 'alexandria', 'AlexandriaDB')
     
@@ -50,9 +51,10 @@ if __name__ == "__main__":
     # Here we create a ParquetDatasetDB object to interact with the database
     db=ParquetDB(dataset_name='alexandria_3D',dir=base_dir)
 
-
+    print(f"Dataset dir: {db.dataset_dir}")
     # Here, we create the dataset inside the database
     if not os.path.exists(db.dataset_dir):
+        start_time = time.time()
         print("The dataset does not exist. Creating it.")
         print('-'*200)
         json_files=glob(os.path.join(alexandria_dir,'*.json'))
@@ -67,11 +69,12 @@ if __name__ == "__main__":
             try:
                 # Since we are importing alot of data it is best
                 # to normalize the database afterwards
-                create_dataset(data['entries'], normalize_dataset=False)
+                create_dataset(db,data['entries'], normalize_dataset=False)
             except Exception as e:
                 print(e)
             
             print('-'*200)
+        print(f"Time taken to create dataset: {time.time() - start_time}")
 
     # Now that the data is in the database, we can normalize it. 
     # This means we enfore our parquet files have a certain number of rows. 
