@@ -1,6 +1,29 @@
 
 ___
 
+# 0.2.1 (10-10-2024)
+
+##### Bugs
+- Fixed issue with database row order inconsistency in tests.
+- Corrected incorrect input provided during schema alignment in the create statement.
+
+##### New Features
+- Introduced a new utility function for table manipulation and empty table generation.
+- Added methods for merging schemas with built-in functions.
+
+##### Documentation updates
+- Enhanced documentation with detailed docstrings for several functions.
+- Updated the README with relevant information.
+
+##### Maintenance
+- Refactored multiple methods for optimization, including `create`, `update`, and `delete`.
+- Improved developer scripts and added new scripts for schema merging.
+- Updated `.gitignore` and revision files like `_version.py` and `CHANGELOG.md`.
+
+___
+
+___
+
 # 0.1.2 (10-08-2024)
 
 ##### Bugs
