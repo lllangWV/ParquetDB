@@ -53,27 +53,26 @@ if __name__ == "__main__":
 
     print(f"Dataset dir: {db.dataset_dir}")
     # Here, we create the dataset inside the database
-    if not os.path.exists(db.dataset_dir):
-        start_time = time.time()
-        print("The dataset does not exist. Creating it.")
+    start_time = time.time()
+    print("The dataset does not exist. Creating it.")
+    print('-'*200)
+    json_files=glob(os.path.join(alexandria_dir,'*.json'))
+    for json_file in json_files:
+        data = read_json(json_file)
+        
+        base_name=os.path.basename(json_file)
+        n_materials=len(data['entries'])
+        print(f"Processing file: {base_name}")
+        print(f"Number of materials: {n_materials}")
+        
+        try:
+            # Since we are importing alot of data it is best
+            # to normalize the database afterwards
+            create_dataset(db,data['entries'], normalize_dataset=False)
+        except Exception as e:
+            print(e)
+        
         print('-'*200)
-        json_files=glob(os.path.join(alexandria_dir,'*.json'))
-        for json_file in json_files:
-            data = read_json(json_file)
-            
-            base_name=os.path.basename(json_file)
-            n_materials=len(data['entries'])
-            print(f"Processing file: {base_name}")
-            print(f"Number of materials: {n_materials}")
-            
-            try:
-                # Since we are importing alot of data it is best
-                # to normalize the database afterwards
-                create_dataset(db,data['entries'], normalize_dataset=False)
-            except Exception as e:
-                print(e)
-            
-            print('-'*200)
         print(f"Time taken to create dataset: {time.time() - start_time}")
 
     # Now that the data is in the database, we can normalize it. 
