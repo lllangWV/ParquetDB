@@ -195,7 +195,6 @@ def download_alexandria_3d_database(output_dir, n_cores=8, from_scratch=False):
     -------
     >>> destination_dir = download_alexandria_3d_database(output_dir='data/alexandria', n_cores=4, from_scratch=True)
     """
-    n_cores=8
     # Create a folder to save the downloaded files
     if from_scratch and os.path.exists(output_dir):
         print(f"Removing existing directory: {output_dir}")
@@ -205,6 +204,8 @@ def download_alexandria_3d_database(output_dir, n_cores=8, from_scratch=False):
     source_directory = os.path.join(output_dir, 'compressed')
     destination_directory = os.path.join(output_dir, 'uncompressed')
     
+    os.makedirs(destination_directory, exist_ok=True)
+    os.makedirs(source_directory, exist_ok=True)
     
     if len(os.listdir(destination_directory))>0:
         print("Database downloaded already. Skipping download.")
