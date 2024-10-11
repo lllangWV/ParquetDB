@@ -1,6 +1,26 @@
 
 ___
 
+# 0.2.5 (10-11-2024)
+
+##### Bugs
+- None identified
+
+##### New features
+- Introduced a new storage method that flattens all nested structures into a single table and sorts columns alphabetically, enhancing performance.
+
+##### Documentation updates
+- Updated `_version.py` and `CHANGELOG.md` to reflect the new release.
+
+##### Maintenance
+- Improved `.gitignore` to exclude `dev_scripts`.
+- Refined tests.
+- Revised example script for clarity.
+
+___
+
+___
+
 # 0.2.4 (10-11-2024)
 
 ##### Bugs
