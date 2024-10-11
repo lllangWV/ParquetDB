@@ -10,6 +10,25 @@ ___
 - None identified
 
 ##### Documentation updates
+- Updated `_version.py` and `CHANGELOG.md` for the new release
+
+##### Maintenance
+- Improved workflow scripts 
+- Merged latest changes from the main branch of the repository
+
+___
+
+___
+
+# 0.2.7 (10-11-2024)
+
+##### Bugs
+- None identified
+
+##### New features
+- None identified
+
+##### Documentation updates
 - Updated the workflow script
 
 ##### Maintenance
