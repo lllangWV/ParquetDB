@@ -1,6 +1,29 @@
 
 ___
 
+# 0.2.6 (10-11-2024)
+
+##### Bugs
+- None identified
+
+##### New Features
+- Enhanced the logging mechanism in tests with separate loggers.
+- Improved methods for creating, updating, and deleting schemas to support batch operations.
+
+##### Documentation updates
+- Updated example for clarity.
+
+##### Maintenance
+- Merged changes from the main branch of the repository.
+- Removed unnecessary development scripts.
+- Deleted obsolete file.
+- Excluded `dev_scripts` from `.gitignore`.
+- Updated `_version.py` and `CHANGELOG.md` for the new release.
+
+___
+
+___
+
 # 0.2.5 (10-11-2024)
 
 ##### Bugs
