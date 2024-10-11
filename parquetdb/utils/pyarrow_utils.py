@@ -1069,7 +1069,7 @@ def update_schema(current_schema, schema=None, field_dict=None):
         A new PyArrow table with the updated schema.
     """
     # Check if the table name is in the list of table names
-    current_field_names=current_schema.names
+    current_field_names=sorted(current_schema.names)
     if field_dict:
         updated_schema=current_schema
         for field_name, new_field in field_dict.items():
@@ -1080,6 +1080,11 @@ def update_schema(current_schema, schema=None, field_dict=None):
 
     if schema:
         updated_schema=schema
+        
+    field_names=[]
+    for field in current_field_names:
+        field_names.append(updated_schema.field(field))
+    updated_schema=pa.schema(field_names, metadata=current_schema.metadata)
 
     return updated_schema
 
@@ -1178,10 +1183,17 @@ def table_schema_cast(current_table, new_schema):
     all_names_sorted=sorted(all_names)
 
     new_minus_current = new_names - current_names
+    current_intersection_new = current_names.intersection(new_names)
+    
+    for name in current_intersection_new:
+        current_table=current_table.set_column(current_table.schema.get_field_index(name), 
+                                               new_schema.field(name), 
+                                               current_table.column(name).cast(new_schema.field(name).type))
 
     for name in new_minus_current:
         current_table=current_table.append_column(new_schema.field(name), pa.nulls(len(current_table), type=new_schema.field(name).type))
 
+    
     current_table=current_table.select(all_names_sorted)
     return current_table
 

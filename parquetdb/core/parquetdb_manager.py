@@ -12,12 +12,17 @@ import pandas as pd
 import pyarrow as pa
 import pyarrow.compute as pc
 
-from parquetdb.core.parquetdb import ParquetDB
+from parquetdb.core.parquetdb import ParquetDB, config
 from parquetdb.utils.general_utils import timeit
 
 
 # Logger setup
-logger = logging.getLogger(__name__)
+logger=logging.getLogger('tests')
+
+config.logging_config.loggers.timing.level='ERROR'
+config.logging_config.loggers.parquetdb.level='ERROR'
+config.logging_config.loggers.tests.level='DEBUG'
+config.apply()
 
 class ParquetDBManager:
     def __init__(self, datasets_dir=''):
@@ -59,7 +64,7 @@ class ParquetDBManager:
                schema=None,
                metadata=None,
                normalize_dataset:bool=False,
-               normalize_kwagrs:dict=dict(max_rows_per_file=100000,
+               normalize_kwargs:dict=dict(max_rows_per_file=100000,
                                         min_rows_per_group=0,
                                         max_rows_per_group=100000)):
         """
@@ -80,7 +85,7 @@ class ParquetDBManager:
             Additional metadata to store alongside the data.
         normalize_dataset : bool, optional
             If True, applies normalization to the dataset before saving. Default is True.
-        normalize_kwagrs : dict, optional
+        normalize_kwargs : dict, optional
             Keyword arguments to control dataset normalization, such as max rows per file or group.
 
         Example
@@ -140,7 +145,11 @@ class ParquetDBManager:
         return dataset_db.read(**all_args)
     
     @timeit
-    def update(self, data: Union[List[dict], dict, pd.DataFrame], dataset_name:str='main',):
+    def update(self, data: Union[List[dict], dict, pd.DataFrame], 
+               dataset_name:str='main',
+               normalize_kwargs:dict=dict(max_rows_per_file=100000,
+                                        min_rows_per_group=0,
+                                        max_rows_per_group=100000)):
         """
         Updates existing data in the database.
 
@@ -151,6 +160,8 @@ class ParquetDBManager:
             Each entry should include an 'id' field corresponding to the record to update.
         dataset_name : str, optional
             The name of the dataset or table to update data in. Default is 'main'.
+        normalize_kwargs : dict, optional
+            Additional keyword arguments passed to the normalization process (default is a dictionary with row group settings).
 
         Example
         -------
@@ -162,7 +173,11 @@ class ParquetDBManager:
         dataset_db.update(**all_args)
 
     @timeit
-    def delete(self, ids:List[int], dataset_name:str='main'):
+    def delete(self, ids:List[int], 
+               dataset_name:str='main',
+               normalize_kwargs:dict=dict(max_rows_per_file=100000,
+                                        min_rows_per_group=0,
+                                        max_rows_per_group=100000)):
         """
         Deletes records from the database.
 
@@ -172,6 +187,8 @@ class ParquetDBManager:
             A list of IDs corresponding to the records to be deleted.
         dataset_name : str, optional
             The name of the dataset or table from which to delete records. Default is 'main'.
+        normalize_kwargs : dict, optional
+            Additional keyword arguments passed to the normalization process (default is a dictionary with row group settings).
 
         Returns
         -------
@@ -242,7 +259,12 @@ class ParquetDBManager:
         dataset_db.normalize(**all_args)
     
     @timeit
-    def update_schema(self, dataset_name:str='main', field_dict:dict=None, schema:pa.Schema=None):
+    def update_schema(self, dataset_name:str='main', 
+                      field_dict:dict=None, 
+                      schema:pa.Schema=None,
+                      normalize_kwargs:dict=dict(max_rows_per_file=100000,
+                                        min_rows_per_group=0,
+                                        max_rows_per_group=100000)):
         """
         Updates the schema of the specified dataset.
 
@@ -254,6 +276,8 @@ class ParquetDBManager:
             A dictionary mapping field names to their new data types.
         schema : pyarrow.Schema, optional
             A new schema to apply to the dataset. If provided, it will override the existing schema.
+        normalize_kwargs : dict, optional
+            Additional keyword arguments passed to the normalization process (default is a dictionary with row group settings).
 
         Example
         -------
