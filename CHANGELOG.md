@@ -1,6 +1,26 @@
 
 ___
 
+# 0.2.3 (10-11-2024)
+
+##### Bugs
+- Fixed a bug in external_utils that prevented automatic creation of source and destination directories.
+
+##### New features
+- Added a development script to handle ordering of nested fields.
+- Updated dependencies to include 'requests'.
+
+##### Documentation updates
+- Updated _version.py and CHANGELOG.md for the new release.
+
+##### Maintenance
+- Improved the workflow script to include test building of the package before pushing the version and changelog.
+- Updated the workflow script for better branch management after pushing changes.
+
+___
+
+___
+
 # 0.2.2 (10-10-2024)
 
 ##### Bugs
