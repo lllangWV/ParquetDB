@@ -39,49 +39,49 @@ jobs:
         SETUPTOOLS_SCM_PRETEND_VERSION: ${{ github.event.release.tag_name }} 
       run: python -m build
 
-    # - name: This will processes the commit messages and write to the CHANGELOG.md file
-    #   if: success() 
-    #   env:
-    #     OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}  # Pass the secret as an environment variable
-    #     TAG: ${{ github.event.release.tag_name }} 
-    #     REPO_NAME: ${{ github.repository }}
-    #     GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-    #   run: |
+    - name: This will processes the commit messages and write to the CHANGELOG.md file
+      if: success() 
+      env:
+        OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}  # Pass the secret as an environment variable
+        TAG: ${{ github.event.release.tag_name }} 
+        REPO_NAME: ${{ github.repository }}
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      run: |
 
-    #     CHANGELOG=$(python scripts/github_workflow/workflow_generate_changlog_on_recent_tag.py)
-    #     echo "CHANGELOG<<EOF" >> $GITHUB_ENV
-    #     echo "$CHANGELOG" >> $GITHUB_ENV
-    #     echo "EOF" >> $GITHUB_ENV
+        CHANGELOG=$(python scripts/github_workflow/workflow_generate_changlog_on_recent_tag.py)
+        echo "CHANGELOG<<EOF" >> $GITHUB_ENV
+        echo "$CHANGELOG" >> $GITHUB_ENV
+        echo "EOF" >> $GITHUB_ENV
 
-    # - name: Configure git for committing
-    #   if: success() 
-    #   run: |
-    #     git config --global user.name "GitHub Action"
-    #     git config --global user.email "action@github.com"
+    - name: Configure git for committing
+      if: success() 
+      run: |
+        git config --global user.name "GitHub Action"
+        git config --global user.email "action@github.com"
 
-    # - name: Commiting new version of the changelog and the version file
-    #   if: success() 
-    #   run: |
-    #     PACKAGE_NAME=$(basename $(dirname $(find . -name '_version.py' | head -n 1)))
-    #     git add $PACKAGE_NAME/_version.py
-    #     git add CHANGELOG.md
-    #     git commit -m "Update _version.py and CHANGELOG.md due to new release"
+    - name: Commiting new version of the changelog and the version file
+      if: success() 
+      run: |
+        PACKAGE_NAME=$(basename $(dirname $(find . -name '_version.py' | head -n 1)))
+        git add $PACKAGE_NAME/_version.py
+        git add CHANGELOG.md
+        git commit -m "Update _version.py and CHANGELOG.md due to new release"
 
-    # - name: Push changes
-    #   if: success()
-    #   run: |
-    #     git push origin HEAD:main
+    - name: Push changes
+      if: success()
+      run: |
+        git push origin HEAD:main
 
-    # - name: Get the current release body
-    #   if: success() 
-    #   env:
-    #     GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-    #     RELEASE_ID: ${{ github.event.release.id }}
-    #     REPO_NAME: ${{ github.repository }}
-    #     CHANGELOG: ${{ env.CHANGELOG }}
-    #   run: |
+    - name: Get the current release body
+      if: success() 
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        RELEASE_ID: ${{ github.event.release.id }}
+        REPO_NAME: ${{ github.repository }}
+        CHANGELOG: ${{ env.CHANGELOG }}
+      run: |
         
-    #     python scripts/github_workflow/workflow_update_release_body.py
+        python scripts/github_workflow/workflow_update_release_body.py
     
     - uses: actions/checkout@v3
       with:
@@ -92,15 +92,14 @@ jobs:
         SETUPTOOLS_SCM_PRETEND_VERSION: ${{ github.event.release.tag_name }} 
       run: | 
         
-        ls -a
         python -m build
 
-    # - name: Publish package
-    #   if: success()
-    #   uses: pypa/gh-action-pypi-publish@27b31702a0e7fc50959f5ad993c78deac1bdfc29
-    #   with:
-    #     user: __token__
-    #     password: ${{ secrets.PYPI_API_TOKEN }}
+    - name: Publish package
+      if: success()
+      uses: pypa/gh-action-pypi-publish@27b31702a0e7fc50959f5ad993c78deac1bdfc29
+      with:
+        user: __token__
+        password: ${{ secrets.PYPI_API_TOKEN }}
     
 
     # Add a failure cleanup step to delete the release if the workflow fails
