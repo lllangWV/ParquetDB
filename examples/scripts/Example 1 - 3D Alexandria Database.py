@@ -105,7 +105,7 @@ if __name__ == "__main__":
     print(df.head())
     print(df.shape)
     
-    print(f"Data : {df.iloc[0]['data']}")
+    print(f"Data : {df.iloc[0]['data.spg']}")
     print(list(df.columns))
     print('-'*200)
 
@@ -146,8 +146,8 @@ if __name__ == "__main__":
     # Here we filter for rows havea nested subfield we would like to filter by. 
     # In this case I want to filter the 204 space groups
     table=read_dataset(db,
-                       columns=['id', 'data'],
-                       filters=[pc.field('data', 'spg') == 204],
+                       columns=['id', 'data.spg'],
+                       filters=[pc.field('data.spg') == 204],
                        output_format='table')
     df=table.to_pandas() # Converts the table to a pandas dataframe
     print(df.head())
@@ -164,15 +164,15 @@ if __name__ == "__main__":
                        load_kwargs={'batch_readahead': 10,
                                     'fragment_readahead': 2,
                                     },
-                       columns=['id', 'data'],
-                       filters=[pc.field('data', 'spg') == 204])
+                       columns=['id', 'data.spg'],
+                       filters=[pc.field('data.spg') == 204])
     batch_count=0
     num_rows=0
     for table in generator:
         df=table.to_pandas()
         num_rows+=table.num_rows
         batch_count+=1
-        print(f"Batch: {batch_count}, Number of rows: {df.shape[0]}")
+        # print(f"Batch: {batch_count}, Number of rows: {df.shape[0]}")
         
     print(f"Total number of rows: {num_rows}, Batches: {batch_count}")
     print('-'*200)
