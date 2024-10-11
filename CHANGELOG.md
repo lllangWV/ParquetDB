@@ -1,6 +1,24 @@
 
 ___
 
+# 0.2.4 (10-11-2024)
+
+##### Bugs
+- None identified
+
+##### New Features
+- Added `__version__` import to the Parquet module
+
+##### Documentation
+- Updated `_version.py` and `CHANGELOG.md` for the new release
+
+##### Maintenance
+- Merged changes from the main branch of the repository
+
+___
+
+___
+
 # 0.2.3 (10-11-2024)
 
 ##### Bugs
