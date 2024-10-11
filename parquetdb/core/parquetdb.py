@@ -16,7 +16,6 @@ from parquetdb.utils import pyarrow_utils
 # Logger setup
 logger = logging.getLogger(__name__)
 
-
 class ParquetDB:
     def __init__(self, dataset_name, dir=''):
         """

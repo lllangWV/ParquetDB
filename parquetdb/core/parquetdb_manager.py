@@ -12,17 +12,13 @@ import pandas as pd
 import pyarrow as pa
 import pyarrow.compute as pc
 
-from parquetdb.core.parquetdb import ParquetDB, config
+from parquetdb.core.parquetdb import ParquetDB
 from parquetdb.utils.general_utils import timeit
 
 
 # Logger setup
-logger=logging.getLogger('tests')
+logger=logging.getLogger(__name__)
 
-config.logging_config.loggers.timing.level='ERROR'
-config.logging_config.loggers.parquetdb.level='ERROR'
-config.logging_config.loggers.tests.level='DEBUG'
-config.apply()
 
 class ParquetDBManager:
     def __init__(self, datasets_dir=''):

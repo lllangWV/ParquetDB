@@ -41,6 +41,10 @@ logging_config:
       level: DEBUG
       handlers: [console]
       propagate: no
+    tests:
+      level: DEBUG
+      handlers: [console]
+      propagate: no
 
 
 

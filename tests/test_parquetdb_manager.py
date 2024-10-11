@@ -10,12 +10,12 @@ import pyarrow as pa
 import pyarrow.compute as pc
 import pandas as pd
 
+logger=logging.getLogger('tests')
+
 config.logging_config.loggers.timing.level='ERROR'
 config.logging_config.loggers.parquetdb.level='ERROR'
+config.logging_config.loggers.tests.level='DEBUG'
 config.apply()
-
-# TODO: Create tests for nested structure updates
-# TODO: Create tests for 
 
 class TestParquetDBManager(unittest.TestCase):
     def setUp(self):

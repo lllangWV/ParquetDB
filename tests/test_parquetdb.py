@@ -11,13 +11,13 @@ import pyarrow as pa
 import pyarrow.compute as pc
 import pandas as pd
 
+logger=logging.getLogger('tests')
 
 config.logging_config.loggers.timing.level='ERROR'
 config.logging_config.loggers.parquetdb.level='ERROR'
+config.logging_config.loggers.tests.level='DEBUG'
 config.apply()
 
-# TODO: Create tests for nested structure updates
-# TODO: Create tests for 
 
 class TestParquetDB(unittest.TestCase):
     def setUp(self):
@@ -32,26 +32,32 @@ class TestParquetDB(unittest.TestCase):
             {'name': 'Bob', 'age': 25},
             {'name': 'Charlie', 'age': 35}
         ]
+        logger.debug(f"Test data: {self.test_data}")
         self.test_df = pd.DataFrame(self.test_data)
+
 
     def tearDown(self):
         # Remove the temporary directory after the test
         try:
             shutil.rmtree(self.temp_dir)
         except Exception as e:
-            print(f"Error during cleanup: {e}")
+            logger.error(f"Error during cleanup: {e}")
         # For some reason, there are race conditions when 
         # deleting the directory and performaing another test
         # time.sleep(0.01)
 
     def test_create_and_read(self):
+        logger.info("Testing create and read")
         # Test creating data and reading it back
         data = [
             {'name': 'Alice', 'age': 30},
             {'name': 'Bob', 'age': 25}
         ]
         self.db.create(data)
-
+        
+        table=self.db.read()
+        df=table.to_pandas()
+        logger.debug(f"DataFrame:\n{df}")
         data = [
             {'name': 'Alice', 'age': 30},
             {'name': 'Bob', 'age': 25}
@@ -59,8 +65,9 @@ class TestParquetDB(unittest.TestCase):
         self.db.create(data)
 
         # Read the data back
-        result = self.db.read()
-        df = result.to_pandas()
+        table=self.db.read()
+        df=table.to_pandas()
+        logger.debug(f"DataFrame:\n{df}")
         
         # Assertions
         self.assertEqual(len(df), 4)
@@ -68,8 +75,11 @@ class TestParquetDB(unittest.TestCase):
         self.assertIn('age', df.columns)
         self.assertEqual(df[df['age'] == 30].iloc[0]['name'], 'Alice')
         self.assertEqual(df[df['age'] == 25].iloc[0]['name'], 'Bob')
+        
+        logger.info("Test create and read passed")
 
     def test_update(self):
+        logger.info("Testing update")
         # Test updating existing records
 
         data = [
@@ -77,6 +87,11 @@ class TestParquetDB(unittest.TestCase):
             {'name': 'Diana', 'age': 32}
         ]
         self.db.create(data)
+        
+        # Read the data back
+        result = self.db.read()
+        df = result.to_pandas()
+        logger.debug(f"DataFrame:\n{df}")
 
         # Update the age of 'Charlie'
         update_data = [
@@ -87,10 +102,13 @@ class TestParquetDB(unittest.TestCase):
         # Read the data back
         result = self.db.read()
         df = result.to_pandas()
-
+        logger.debug(f"DataFrame:\n{df}")
+        
+        
         # Assertions
         self.assertEqual(df[df['name'] == 'Charlie'].iloc[0]['age'], 29)
         self.assertEqual(df[df['name'] == 'Diana'].iloc[0]['age'], 32)
+        logger.info("Test update passed")
 
     def test_delete(self):
         # Test deleting records
@@ -262,6 +280,12 @@ class TestParquetDB(unittest.TestCase):
         ]
         self.db.create(data)
         
+        # Read back the data
+        result = self.db.read()
+        df = result.to_pandas()
+        
+        logger.debug(f"DataFrame:\n{df}")
+        
         # Update the 'age' field to be a float instead of int
         new_field = pa.field('age', pa.float64())
         field_dict = {'age': new_field}
@@ -270,6 +294,8 @@ class TestParquetDB(unittest.TestCase):
         # Read back the data
         result = self.db.read()
         df = result.to_pandas()
+        
+        logger.debug(f"DataFrame:\n{df}")
 
         # Assertions
         self.assertEqual(df['age'].dtype, 'float64')
@@ -291,7 +317,6 @@ class TestParquetDB(unittest.TestCase):
         df = result.to_pandas()
 
         # Assertions
-        # print(df.head())
         self.assertEqual(df.iloc[0]['state'], 'NY')
         self.assertEqual(df.iloc[1]['state'], None)
         self.assertEqual(df.iloc[0]['age'], 60)
@@ -392,7 +417,7 @@ if __name__ == '__main__':
 
 
 # if __name__ == "__main__":
-#     unittest.TextTestRunner().run(TestParquetDB('test_nested_empty_struct_field'))
+#     unittest.TextTestRunner().run(TestParquetDB('test_update_schema'))
 
 # if __name__ == "__main__":
 #     unittest.TextTestRunner().run(TestParquetDB('test_add_new_field'))
