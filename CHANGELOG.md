@@ -1,6 +1,24 @@
 
 ___
 
+# 0.2.7 (10-11-2024)
+
+##### Bugs
+- None identified
+
+##### New features
+- None identified
+
+##### Documentation updates
+- Updated the workflow script
+
+##### Maintenance
+- Updated `_version.py` and `CHANGELOG.md` for the new release
+
+___
+
+___
+
 # 0.2.6 (10-11-2024)
 
 ##### Bugs
