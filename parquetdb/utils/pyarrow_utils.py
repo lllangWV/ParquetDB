@@ -535,6 +535,7 @@ def flatten_table(table):
     >>> flatten_table(table)
     pyarrow.Table
     """
+
     flattened_columns = []
     flattened_fields = []
 
@@ -558,8 +559,9 @@ def flatten_table(table):
         else:
             flattened_columns.append(column)
             flattened_fields.append(pa.field(column_name, column.type))
-    
-    return pa.Table.from_arrays(flattened_columns, schema=pa.schema(flattened_fields))
+    table=pa.Table.from_arrays(flattened_columns, schema=pa.schema(flattened_fields, metadata=table.schema.metadata))
+    # table=table.select(sorted(table.column_names))
+    return table
 
 
 @timeit
@@ -650,6 +652,42 @@ def rebuild_nested_table(table):
     nested_arrays, new_struct = create_struct_arrays_from_dict(nested_arrays_dict)
     new_schema=pa.schema(new_struct)
     return pa.Table.from_arrays(nested_arrays.flatten(), schema=new_schema)
+
+def update_flattend_table(current_table, incoming_table):
+    """
+    Updates the current table using the values from the incoming table by flattening both 
+    tables, applying the updates, and then rebuilding the nested structure.
+
+    Parameters
+    ----------
+    current_table : pa.Table
+        The current PyArrow table to update.
+    incoming_table : pa.Table
+        The incoming PyArrow table containing updated values.
+
+    Returns
+    -------
+    pa.Table
+        The updated PyArrow table with flattened and rebuilt structure.
+
+    Examples
+    --------
+    >>> updated_table = update_table_flatten_method(current_table, incoming_table)
+    pyarrow.Table
+    """
+    
+    logger.debug("Updating table with the flatten method")
+
+    for column_name in current_table.column_names:
+        logger.debug(f"Looking for updates in field: {column_name}")
+        update_array=update_table_column(current_table, incoming_table, column_name=column_name)
+        field_index=current_table.schema.get_field_index(column_name)
+        if update_array and len(update_array)!=0:
+            logger.info(f"Updating column: {column_name}")
+            current_table=current_table.set_column(field_index, current_table.field(column_name), update_array)
+    return current_table
+
+
 
 def update_table_column(current_table, incoming_table, column_name):
     """
@@ -1071,7 +1109,7 @@ def add_new_null_fields_in_column(column_array, field, new_type):
     logger.debug(f"Column type: {column_type}")
     logger.debug(f"New type: {new_type}")
     
-    if pa.types.is_struct(column_type):
+    if pa.types.is_struct(new_type):
         logger.debug('This column is a struct')
         # Replacing empty structs with dummy structs
         new_type_names=[field.name for field in new_type]
@@ -1101,11 +1139,11 @@ def add_new_null_fields_in_table(table, new_schema):
 
         new_columns.append(new_column)
         new_columns_fields.append(new_field)
-    table = pa.Table.from_arrays(new_columns, schema=pa.schema(new_columns_fields))
-    return table
 
+    return pa.Table.from_arrays(new_columns, schema=new_schema)
 
 def add_new_null_fields_in_struct(column_array, new_struct_type):
+    
     # Combine chunks if necessary
     if isinstance(column_array, pa.ChunkedArray):
         column_array = column_array.combine_chunks()
@@ -1130,3 +1168,22 @@ def add_new_null_fields_in_struct(column_array, new_struct_type):
             null_array = pa.nulls(len(column_array), field.type)
             new_arrays.append(null_array)
     return pa.StructArray.from_arrays(new_arrays, fields=new_struct_type)
+
+
+def table_schema_cast(current_table, new_schema):
+    current_names=set(current_table.column_names)
+    new_names=set(new_schema.names)
+
+    all_names=current_names.union(new_names)
+    all_names_sorted=sorted(all_names)
+
+    new_minus_current = new_names - current_names
+
+    for name in new_minus_current:
+        current_table=current_table.append_column(new_schema.field(name), pa.nulls(len(current_table), type=new_schema.field(name).type))
+
+    current_table=current_table.select(all_names_sorted)
+    return current_table
+
+
+

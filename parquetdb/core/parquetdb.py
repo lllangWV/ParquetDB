@@ -102,13 +102,17 @@ class ParquetDB:
         if schema is None:
             schema=incoming_schema
         schema=schema.with_metadata(metadata)
+        
         # Create the incoming table
         incoming_table=pa.Table.from_pylist(data_list, schema=schema)
         incoming_table=incoming_table.append_column(pa.field('id', pa.int64()), [new_ids])
-        # Sometimes records have a  nested dictionaries and some do not. 
-        # This ensures all records have the same nested structes
-        incoming_table=pyarrow_utils.fill_null_nested_structs_in_table(incoming_table)
+        
+        # Sometimes records have a nested dictionaries and some do not. 
+        # This ensures all records have the same nested structs
         incoming_table=pyarrow_utils.replace_empty_structs_in_table(incoming_table)
+        
+        # We store the flatten table because it is easier to process
+        incoming_table=pyarrow_utils.flatten_table(incoming_table)
         
         # If this is the first table, save it directly
         if is_directory_empty(self.dataset_dir):
@@ -123,35 +127,30 @@ class ParquetDB:
 
         # Align the incoming and original schemas
         try:
+            # Merge Schems
             current_schema = self.get_schema()
-            
-            # merged_schema=pyarrow_utils.merge_schemas(current_schema, incoming_schema)
+            incoming_schema=incoming_table.schema
             merged_schema = pa.unify_schemas([current_schema, incoming_schema],promote_options='permissive')
-            are_schemas_equal=current_schema.equals(incoming_schema)
-        
+            
+            # Algin Incoming Table with Merged Schema
+            modified_incoming_table=pyarrow_utils.table_schema_cast(incoming_table, merged_schema)
+            
+            are_schemas_equal=current_schema.equals(modified_incoming_table.schema)
+            
             logger.info(f"Schemas are equal: {are_schemas_equal}. Skiping schema alignment.")
             if not are_schemas_equal:
                 logger.debug(f"\n\n{merged_schema}\n\n")
+                
                 # Align file schemas with merged schema
                 current_files = glob(os.path.join(self.dataset_dir, f'{self.dataset_name}_*.parquet'))
+                
                 for current_file in current_files:
-                    # This might inefficient because I convert the table to a pylist 
-                    # and then back to a table with the merged schema
-                    # This was done because this will automatically fill non-exisiting 
-                    # fields in the current table if the update creates new fields
                     current_table = pq.read_table(current_file)
-                    current_table=pyarrow_utils.align_table(current_table, merged_schema)
                     
-                    # current_table=pa.Table.from_pylist(current_table.to_pylist(), schema=merged_schema)
-                    # Sometimes records have a  nested dictionaries and some do not. 
-                    # This ensures all records have the same nested structes
-                    # current_table=pyarrow_utils.fill_null_nested_structs_in_table(current_table)
-
+                    # Algin Current Table with Merged Schema
+                    current_table = pyarrow_utils.table_schema_cast(current_table, merged_schema)
                     pq.write_table(current_table, current_file)
-
-                incoming_table=pyarrow_utils.align_table(incoming_table, merged_schema)
-                # incoming_table=pa.Table.from_pylist(incoming_table.to_pylist(), schema=merged_schema)
-
+                    
         except Exception as e:
             logger.exception(f"exception aligning schemas: {e}")
             logger.info("Restoring original files")
@@ -242,48 +241,42 @@ class ParquetDB:
         >>> db.update(data=[{'id': 1, 'name': 'John', 'age': 30}, {'id': 2, 'name': 'Jane', 'age': 25}])
         """
 
-        # Data processing and validation.
+        # Data validation.
         data_list, incoming_schema = self._validate_data(data)
-
+        incoming_table = pa.Table.from_pylist(data_list, schema=incoming_schema)
         
-        # Schema validation steps
+        # Incoming table processing
+        incoming_table=pyarrow_utils.replace_empty_structs_in_table(incoming_table)
+        incoming_table=pyarrow_utils.flatten_table(incoming_table)
+        incoming_table=pyarrow_utils.table_schema_cast(incoming_table, incoming_table.schema)
+        
+        incoming_schema=incoming_table.schema
+        
+        # Merging Schema
         current_schema=self.get_schema()
         merged_schema = pa.unify_schemas([current_schema, incoming_schema],promote_options='default')
         
-        incoming_table=pa.Table.from_pylist(data_list, schema=merged_schema)
+        # Aligning incoming table with merged schema
+        incoming_table=pyarrow_utils.table_schema_cast(incoming_table, merged_schema)
         
         # Non-exisiting id warning step. THis is not really necessary but might be nice for user to check
         self._validate_id(incoming_table['id'].combine_chunks())
-        
-        # Sometimes records have a  nested dictionaries and some do not. 
-        # This ensures all records have the same nested structes
-        incoming_table=pyarrow_utils.fill_null_nested_structs_in_table(incoming_table)
-        
-        # This ensures empty structs/dicts are not empty, it fills it with dummy varaible. 
-        # This is important because saving will raise an issue if they are empty
-        incoming_table=pyarrow_utils.replace_empty_structs_in_table(incoming_table)
         
         # Iterate over the original files
         self._write_tmp_files()
         current_files=self.get_current_files()
         for i_file, current_file in enumerate(current_files):
-            # Opening a table with a merged schema will add missing values to the table
-            
             try:
-                # This might inefficient because I convert the table to a pylist 
-                # and then back to a table with the merged schema
-                # This was done because this will automatically fill non-exisiting 
-                # fields in the current table if the update creates new fields
                 current_table = pq.read_table(current_file)
-                current_table=pyarrow_utils.align_table(current_table, merged_schema)
-                # current_table=pa.Table.from_pylist(current_table.to_pylist(), schema=merged_schema)
-                # current_table=pyarrow_utils.fill_null_nested_structs_in_table(current_table)
                 
-                # The flatten method will flatten out all nested structs, update, then rebuild the nested structs
-                updated_table=pyarrow_utils.update_table(current_table, incoming_table, flatten_method=True)
+                # Algin Current Table with Merged Schema
+                current_table = pyarrow_utils.table_schema_cast(current_table, merged_schema)
+
+                # Update current table with values from the incoming table.
+                # Here we onl update if incoming table has non-null value
+                updated_table = pyarrow_utils.update_flattend_table(current_table, incoming_table)
             except Exception as e:
                 logger.exception(f"exception updating {current_file}")
-                # logger.exception(f"exception updating {current_file}: {e}")
                 # If something goes wrong, restore the original file
                 self._restore_tmp_files()
                 break
