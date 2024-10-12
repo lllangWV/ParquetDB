@@ -149,6 +149,8 @@ class ParquetDB:
         filters: List[pc.Expression] = None,
         output_format: str = 'table',
         batch_size: int = None,
+        rebuild_nested_struct: bool = False,
+        rebuild_nested_from_scratch: bool = False,
         load_kwargs: dict = None
         ):
         """
@@ -168,6 +170,10 @@ class ParquetDB:
             The format of the returned data: 'table' or 'batch_generator' (default is 'table').
         batch_size : int, optional
             The batch size. If provided, returns a generator yielding batches of data (default is None).
+        rebuild_nested_struct : bool, optional
+            If True, rebuilds the nested structure (default is False).
+        rebuild_nested_from_scratch : bool, optional
+            If True, rebuilds the nested structure from scratch (default is False).
         load_kwargs : dict, optional
             Additional arguments passed to the data loading function (default is None).
         
@@ -197,6 +203,18 @@ class ParquetDB:
         data = self._load_data(columns=columns, filter=filter_expression, 
                                batch_size=batch_size, output_format=output_format, load_kwargs=load_kwargs)
         logger.info("Reading data passed")
+
+        dataset_dir=None
+        if rebuild_nested_struct:
+            dataset_dir=self.dataset_dir + '_nested'
+            if (not os.path.exists(dataset_dir) or rebuild_nested_from_scratch):
+                self.to_nested(rebuild_nested_from_scratch=rebuild_nested_from_scratch)
+                
+        data = self._load_data(columns=columns, filter=filter_expression, 
+                               batch_size=batch_size, 
+                               output_format=output_format, 
+                               dataset_dir=dataset_dir,
+                               load_kwargs=load_kwargs)
         return data
     
     @timeit
@@ -283,7 +301,7 @@ class ParquetDB:
         logger.info(f"Deleted data from {self.dataset_name} dataset.")
 
     @timeit
-    def normalize(self, incoming_table=None, schema=None, ids=None, batch_size: int = None, load_kwargs: dict = None, output_format: str = 'table',
+    def normalize(self, nested_dataset_dir=None, incoming_table=None, schema=None, ids=None, batch_size: int = None, delete_existing: bool = True, load_kwargs: dict = None, output_format: str = 'table',
               max_rows_per_file: int = 100000, min_rows_per_group: int = 0, max_rows_per_group: int = 100000,
               existing_data_behavior: str = 'overwrite_or_ignore', **kwargs):
         """
@@ -296,6 +314,8 @@ class ParquetDB:
 
         Parameters
         ----------
+        nested_dataset_dir : str, optional
+            The directory where the nested dataset will be saved. If not provided, it will be inferred from the existing data (default: None).
         incoming_table : pa.Table, optional
             The table to use for the update normalization. If not provided, it will be inferred from the existing data (default: None).
         schema : Schema, optional
@@ -338,9 +358,12 @@ class ParquetDB:
         if output_format=='batch_generator' and batch_size is None:
             raise ValueError("batch_size must be provided when output_format is batch_generator")
         
+        delete_existing=True
+        if nested_dataset_dir:
+            delete_existing=False
         # Create tmp files. 
         # This is done because write dataset will overwrite everything in the main dataset dir
-        self._write_tmp_files()
+        self._write_tmp_files(delete_existing=delete_existing)
         
         if batch_size:
             logger.debug(f"Writing data in batches")
@@ -349,10 +372,12 @@ class ParquetDB:
             update_func=generator_update
             delete_func=generator_delete
             schema_cast_func=generator_schema_cast
+            rebuild_nested_func=generator_rebuild_nested_struct
         elif output_format=='table':
             update_func=table_update
             delete_func=table_delete
             schema_cast_func=table_schema_cast
+            rebuild_nested_func=table_rebuild_nested_struct
 
         try:
             retrieved_data = self._load_data(batch_size=batch_size, 
@@ -378,14 +403,20 @@ class ParquetDB:
             logger.info("This normalization is a schema update. Applying schema cast function, then normalizing.")
             retrieved_data=schema_cast_func(retrieved_data, schema)
             
+        dataset_dir=self.dataset_dir
+        if nested_dataset_dir:
+            logger.info("This normalization is a nested rebuild. Applying rebuild function, then normalizing.")
+            dataset_dir=nested_dataset_dir
+            retrieved_data=rebuild_nested_func(retrieved_data)
+            
         if isinstance(retrieved_data, pa.lib.Table):
             schema=None
-
+            
         try:
-            logger.info(f"Writing dataset to {self.dataset_dir}")
+            logger.info(f"Writing dataset to {dataset_dir}")
             
             ds.write_dataset(retrieved_data, 
-                            self.dataset_dir,
+                            dataset_dir,
                             basename_template=self.basename_template, 
                             schema=schema,
                             format="parquet", 
@@ -878,10 +909,45 @@ class ParquetDB:
         shutil.copytree(backup_path, self.dataset_dir)
         logger.info(f"Database restored from {backup_path}.")
 
+    @timeit
+    def to_nested(self, normalize_kwargs:dict=dict(max_rows_per_file=100000,
+                                        min_rows_per_group=0,
+                                        max_rows_per_group=100000),
+                  rebuild_nested_from_scratch: bool = False):
+        """
+        Converts the current dataset to a nested dataset.
+
+        Parameters
+        ----------
+        normalize_kwargs : dict, optional
+            Additional keyword arguments passed to the normalization process (default is a dictionary with row group settings).
+        rebuild_nested_from_scratch : bool, optional
+            If True, rebuilds the nested structure from scratch (default is False).
+
+        Returns
+        -------
+        None
+            This function does not return anything but modifies the dataset directory in place.
+
+        Examples
+        --------
+        >>> db.to_nested()
+        """
+        dataset_name=self.dataset_name
+        nested_dataset_name=f'{dataset_name}_nested'
+        nested_dataset_dir=os.path.join(self.dir,nested_dataset_name)
+        
+        if os.path.exists(nested_dataset_dir) or rebuild_nested_from_scratch:
+            shutil.rmtree(nested_dataset_dir)
+        os.makedirs(nested_dataset_dir, exist_ok=True)
+        
+        self.normalize(nested_dataset_dir=nested_dataset_dir,  **normalize_kwargs)
+
     def _load_data(self, columns:List[str]=None, 
                    filter:List[pc.Expression]=None, 
                    batch_size:int=None, 
                    output_format:str='table',
+                   dataset_dir:str=None,
                    load_tmp:bool=False,
                    load_kwargs:dict=None):
         """
@@ -897,6 +963,8 @@ class ParquetDB:
             The batch size to use for loading data in batches. If None, data is loaded as a whole (default is None).
         output_format : str, optional
             The format for loading the data: 'table', 'batch_generator', or 'dataset' (default is 'table').
+        dataset_dir : str, optional
+            The directory where the dataset is stored (default is None).
         load_tmp : bool, optional
             If True, loads data from the temporary directory (default is False).
         load_kwargs : dict, optional
@@ -913,11 +981,12 @@ class ParquetDB:
         """
         if load_kwargs is None:
             load_kwargs={}
-            
-        dataset_dir=self.dataset_dir
+        
+        if dataset_dir is None:
+            dataset_dir=self.dataset_dir
         if load_tmp:
             dataset_dir=self.tmp_dir
-            
+        
         logger.info(f"Loading data from {dataset_dir}")
         logger.info(f"Loading only columns: {columns}")
         logger.info(f"Using filter: {filter}")
@@ -1002,7 +1071,7 @@ class ParquetDB:
         return table
     
     @timeit
-    def _write_tmp_files(self, tmp_dir=None):
+    def _write_tmp_files(self, tmp_dir=None, delete_existing=True):
         """
         Copy current dataset files to a temporary directory.
 
@@ -1015,6 +1084,8 @@ class ParquetDB:
         tmp_dir : str, optional
             The path to the temporary directory where the dataset files will be copied. 
             If not provided, it defaults to `self.tmp_dir`.
+        delete_existing : bool, optional
+            If True, deletes existing temporary files (default is True).
 
         Returns
         -------
@@ -1035,7 +1106,7 @@ class ParquetDB:
             tmp_filepath = os.path.join(self.tmp_dir, basename)
             shutil.copyfile(current_filepath, tmp_filepath)
         
-        if os.path.exists(self.dataset_dir):
+        if os.path.exists(self.dataset_dir) and delete_existing:
             shutil.rmtree(self.dataset_dir)
         os.makedirs(self.dataset_dir, exist_ok=True)
         logger.info("Temporary files written")
@@ -1268,4 +1339,13 @@ def table_delete(current_table, ids):
 def generator_delete(generator, ids):
     for record_batch in generator:
         updated_record_batch = record_batch.filter( ~pc.field('id').isin(ids) )
+        yield updated_record_batch
+        
+        
+def table_rebuild_nested_struct(current_table):
+    return pyarrow_utils.rebuild_nested_table(current_table)
+
+def generator_rebuild_nested_struct(generator):
+    for record_batch in generator:
+        updated_record_batch=pyarrow_utils.rebuild_nested_table(record_batch)
         yield updated_record_batch

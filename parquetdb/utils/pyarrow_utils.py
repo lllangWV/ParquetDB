@@ -650,7 +650,7 @@ def create_nested_arrays_dict_from_flattened_table(table):
 def rebuild_nested_table(table):
     nested_arrays_dict = create_nested_arrays_dict_from_flattened_table(table)
     nested_arrays, new_struct = create_struct_arrays_from_dict(nested_arrays_dict)
-    new_schema=pa.schema(new_struct)
+    new_schema=pa.schema(new_struct, metadata=table.schema.metadata)
     return pa.Table.from_arrays(nested_arrays.flatten(), schema=new_schema)
 
 def update_flattend_table(current_table, incoming_table):
@@ -1173,7 +1173,6 @@ def add_new_null_fields_in_struct(column_array, new_struct_type):
             null_array = pa.nulls(len(column_array), field.type)
             new_arrays.append(null_array)
     return pa.StructArray.from_arrays(new_arrays, fields=new_struct_type)
-
 
 def table_schema_cast(current_table, new_schema):
     current_names=set(current_table.column_names)

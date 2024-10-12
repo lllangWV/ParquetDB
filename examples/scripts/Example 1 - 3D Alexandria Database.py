@@ -48,32 +48,33 @@ if __name__ == "__main__":
     alexandria_dir = download_alexandria_3d_database(output_dir, n_cores=8)
     
     
-    # Here we create a ParquetDatasetDB object to interact with the database
+    # # Here we create a ParquetDatasetDB object to interact with the database
     db=ParquetDB(dataset_name='alexandria_3D',dir=base_dir)
 
     print(f"Dataset dir: {db.dataset_dir}")
     # Here, we create the dataset inside the database
     start_time = time.time()
-    print("The dataset does not exist. Creating it.")
     print('-'*200)
-    json_files=glob(os.path.join(alexandria_dir,'*.json'))
-    for json_file in json_files:
-        data = read_json(json_file)
-        
-        base_name=os.path.basename(json_file)
-        n_materials=len(data['entries'])
-        print(f"Processing file: {base_name}")
-        print(f"Number of materials: {n_materials}")
-        
-        try:
-            # Since we are importing alot of data it is best
-            # to normalize the database afterwards
-            create_dataset(db,data['entries'], normalize_dataset=False)
-        except Exception as e:
-            print(e)
-        
-        print('-'*200)
-        print(f"Time taken to create dataset: {time.time() - start_time}")
+    if len(os.listdir(db.dataset_dir))==0:
+        print("The dataset does not exist. Creating it.")
+        json_files=glob(os.path.join(alexandria_dir,'*.json'))
+        for json_file in json_files:
+            data = read_json(json_file)
+            
+            base_name=os.path.basename(json_file)
+            n_materials=len(data['entries'])
+            print(f"Processing file: {base_name}")
+            print(f"Number of materials: {n_materials}")
+            
+            try:
+                # Since we are importing alot of data it is best
+                # to normalize the database afterwards
+                create_dataset(db,data['entries'], normalize_dataset=False)
+            except Exception as e:
+                print(e)
+            
+            print('-'*200)
+            print(f"Time taken to create dataset: {time.time() - start_time}")
 
     # Now that the data is in the database, we can normalize it. 
     # This means we enfore our parquet files have a certain number of rows. 
@@ -177,6 +178,37 @@ if __name__ == "__main__":
     print(f"Total number of rows: {num_rows}, Batches: {batch_count}")
     print('-'*200)
     
+    
+    # Here we filter for rows havea nested subfield we would like to filter by. 
+    # In this case I want to filter the 204 space groups
+    table=read_dataset(db,
+                       columns=['id', 'structure.sites'],
+                       output_format='table')
+    print(table.shape)
+    print(table['structure.sites'].type)
+    print(table['structure.sites'].combine_chunks().type)
+    
+
+    # By default the database flattens nested structure for storage. 
+    # However, we provide an option to rebuild the nested structure. This will create a new dataset in {dataset_name}_nested.
+    # After the creation of the new dataset, the query parameters are applied to the new dataset.
+    table=read_dataset(db,
+                    columns=['id', 'structure','data'], # Instead of using the flatten syntax, we can use the nested syntax
+                    ids=[0],
+                    rebuild_nested_struct=True,     # When set to True to rebuild the nested structure
+                    rebuild_nested_from_scratch=False,  # When set to True, the nested structure will be rebuilt from scratch
+                    output_format='table')
+    print(table.shape)
+    print(table['data'].type)
+    
+    try:
+        from pymatgen.core.structure import Structure
+        
+        structure=Structure.from_dict(table['structure'].combine_chunks().to_pylist()[0])
+        
+        print(structure)
+    except Exception as e:
+        print(e)
     
     
     

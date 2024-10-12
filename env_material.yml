@@ -1,0 +1,9 @@
+name: parquetdb_pymatgen
+channels:
+- defaults
+dependencies:
+- python==3.9.*
+- pip
+- pip:
+  - pymatgen
+  - -e .[dev] --config-settings editable_mode=strict
