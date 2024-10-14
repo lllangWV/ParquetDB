@@ -39,8 +39,12 @@ dependencies = [
 [project.optional-dependencies]
 
 
-dev = ["sphinx", 
-"sphinx_rtd_theme"]
+dev = [
+    "sphinx", 
+    "sphinx_rtd_theme",
+    "pymongo",
+    "pymatgen"
+]
 
 
 [project.urls]
