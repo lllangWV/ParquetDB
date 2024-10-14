@@ -3,6 +3,18 @@
 ParquetDB is a lightweight database-like system built on top of Apache Parquet files using PyArrow. It offers a simple and efficient way to store, manage, and retrieve complex data types without the overhead of serialization, which is often a bottleneck in machine learning pipelines. By leveraging Parquet's columnar storage format and PyArrow's computational capabilities, ParquetDB provides high performance for data-intensive applications. 
 
 
+## Benchmark
+
+A benchmark was performed to compare the performance of ParquetDB, SQLite, and MongoDB. In this benchmark, we compare the read and write times of 100 integer columns over varying number of records. The results are shown below:
+
+![Benchmark Create and Read Times for Different Databases](benchmarking/benchmark_create_read_times.pdf)
+
+<object data="https://github.com/lllangWV/ParquetDB/benchmarks/benchmark_create_read_times.pdf" type="application/pdf" width="700px" height="700px">
+    <embed src="benchmarking/benchmark_create_read_times.pdf">
+        <p>This browser does not support PDFs. Please download the PDF to view it: <a href="https://github.com/lllangWV/ParquetDB/benchmarks/benchmark_create_read_times.pdf">Download PDF</a>.</p>
+    </embed>
+</object>
+
 ## Table of Contents
 
 - [Features](#features)
@@ -31,7 +43,6 @@ ParquetDB is a lightweight database-like system built on top of Apache Parquet f
 
 - Support foriegn keys use
 - Multiprocessing for reading and writing
-- Increase support for nested structures
 
 ## Why ParquetDB?
 
