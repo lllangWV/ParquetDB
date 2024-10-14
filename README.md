@@ -9,9 +9,9 @@ A benchmark was performed to compare the performance of ParquetDB, SQLite, and M
 
 ![Benchmark Create and Read Times for Different Databases](benchmarking/benchmark_create_read_times.pdf)
 
-<object data="https://github.com/lllangWV/ParquetDB/benchmarks/benchmark_create_read_times.pdf" type="application/pdf" width="700px" height="700px">
+<object data="https://github.com/lllangWV/ParquetDB/blob/main/benchmarks/benchmark_create_read_times.pdf" type="application/pdf" width="700px" height="700px">
     <embed src="benchmarking/benchmark_create_read_times.pdf">
-        <p>This browser does not support PDFs. Please download the PDF to view it: <a href="https://github.com/lllangWV/ParquetDB/benchmarks/benchmark_create_read_times.pdf">Download PDF</a>.</p>
+        <p>This browser does not support PDFs. Please download the PDF to view it: <a href="https://github.com/lllangWV/ParquetDB/blob/main/benchmarks/benchmark_create_read_times.pdf">Download PDF</a>.</p>
     </embed>
 </object>
 
