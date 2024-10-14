@@ -724,10 +724,19 @@ def update_table_column(current_table, incoming_table, column_name):
         logger.debug("No updates are present or non-null")
         return None
     
+    
+    current_mask = pc.is_in(current_table['id'], value_set=filtered_incoming_table['id'])
+    current_array = current_table[column_name]
+    incoming_array = filtered_incoming_table[column_name]
+    
     # Creating a boolean mask
-    current_mask = pc.is_in(current_table['id'], value_set=filtered_incoming_table['id']).combine_chunks()
-    current_array = current_table[column_name].combine_chunks()
-    incoming_array = filtered_incoming_table[column_name].combine_chunks()
+    # When the incoming table is from a generator there are no chunked arrays
+    if isinstance(current_mask, pa.ChunkedArray):
+        current_mask = current_mask.combine_chunks()
+    if isinstance(current_array, pa.ChunkedArray):
+        current_array = current_array.combine_chunks()
+    if isinstance(incoming_array, pa.ChunkedArray):
+        incoming_array = incoming_array.combine_chunks()
     
     updated_array = pc.replace_with_mask(current_array, current_mask, incoming_array)
 
@@ -816,10 +825,14 @@ def update_struct_child_field(current_table, incoming_table, field_path):
         return None
     
     # Creating boolean mask
-    current_mask = pc.is_in(current_table['id'], value_set=filtered_incoming_table['id']).combine_chunks()
-    
-    current_array = pc.struct_field(current_table[parent_name], sub_path).combine_chunks()
-    incoming_array = pc.struct_field(filtered_incoming_table[parent_name], sub_path).combine_chunks()
+    current_mask = pc.is_in(current_table['id'], value_set=filtered_incoming_table['id'])
+    current_array =  pc.struct_field(current_table[parent_name], sub_path)
+    incoming_array = pc.struct_field(filtered_incoming_table[parent_name], sub_path)
+    # Creating a boolean mask
+    if isinstance(current_table['id'], pa.ChunkedArray):
+        current_mask = current_mask.combine_chunks()
+        current_array = current_array.combine_chunks()
+        incoming_array = incoming_array.combine_chunks()
     
     # filtered_array = pc.filter(mask, mask)
     # logger.debug(f"Values where the array is True: {len(filtered_array)}")
@@ -866,10 +879,14 @@ def update_field(current_table, incoming_table, field_name):
         return None
     
     # Creating boolean mask
-    current_mask = pc.is_in(current_table['id'], value_set=filtered_incoming_table['id']).combine_chunks()
-    
-    current_array=current_table[field_name].combine_chunks()
-    incoming_array = filtered_incoming_table[field_name].combine_chunks()
+    current_mask = pc.is_in(current_table['id'], value_set=filtered_incoming_table['id'])
+    current_array = current_table[field_name]
+    incoming_array = filtered_incoming_table[field_name]
+    # Creating a boolean mask
+    if isinstance(current_table['id'], pa.ChunkedArray):
+        current_mask = current_mask.combine_chunks()
+        current_array = current_array.combine_chunks()
+        incoming_array = incoming_array.combine_chunks()
     
     # filtered_array = pc.filter(mask, mask)
     # logger.debug(f"Values where the array is True: {len(filtered_array)}")

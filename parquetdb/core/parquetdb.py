@@ -99,7 +99,8 @@ class ParquetDB:
         schema=schema.with_metadata(metadata)
 
         incoming_table=pa.Table.from_arrays(incoming_array.flatten(),schema=schema)
-
+        if 'id' in incoming_table.column_names:
+            raise ValueError("When create is called, the data cannot contain an 'id' column.")
         new_ids = self._get_new_ids(incoming_table)
         incoming_table=incoming_table.append_column(pa.field('id', pa.int64()), [new_ids])
 
@@ -264,7 +265,6 @@ class ParquetDB:
         
         # Aligning incoming table with merged schema
         incoming_table=pyarrow_utils.table_schema_cast(incoming_table, merged_schema)
-        
         # Non-exisiting id warning step. THis is not really necessary but might be nice for user to check
         self._validate_id(incoming_table['id'].combine_chunks())
         
@@ -513,12 +513,12 @@ class ParquetDB:
             schema=incoming_table.schema
         
         # If ids are provided this is a delete
-        if ids:
+        elif ids:
             logger.info("This normalization is a delete. Applying delete function, then normalizing.")
             retrieved_data=delete_func(retrieved_data, ids)
         
         # If schema is provided this is a schema update
-        if schema:
+        elif schema:
             logger.info("This normalization is a schema update. Applying schema cast function, then normalizing.")
             retrieved_data=schema_cast_func(retrieved_data, schema)
             
@@ -1456,6 +1456,7 @@ def table_update(current_table, incoming_table):
         
 def generator_update(generator, incoming_table):
     for record_batch in generator:
+        record_batch = pyarrow_utils.table_schema_cast(record_batch, incoming_table.schema)
         updated_record_batch=pyarrow_utils.update_flattend_table(record_batch, incoming_table)
         yield updated_record_batch
         
