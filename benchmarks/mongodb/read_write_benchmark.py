@@ -5,10 +5,10 @@ from pymongo import MongoClient
 import pandas as pd
 from parquetdb import config
 
-def generate_data(num_rows):
+def generate_data(num_rows, n_columns=100):
     data = []
     for _ in range(num_rows):
-        doc = {f'col{i}': random.randint(0, 1000000) for i in range(1, 101)}
+        doc = {f'col{i}': random.randint(0, 1000000) for i in range(n_columns)}
         data.append(doc)
     return data
 

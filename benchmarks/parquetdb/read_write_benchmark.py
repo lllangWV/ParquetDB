@@ -23,21 +23,10 @@ from parquetdb import ParquetDB, config
 config.logging_config.loggers.timing.level='ERROR'
 config.apply()
 
-def generate_data(n_rows=100, n_columns=100, data_type=int, n_char=100):
-    
-    if data_type == int:
-        value = random.randint(0, 100000)
-    elif data_type == float:
-        value = random.uniform(0, 100000)
-    elif data_type == str:
-        value = ''.join(random.choices(string.ascii_letters, k=n_char))
-    elif data_type == bool:
-        value = random.choice([True, False])
-        
-    val=1000000
+def generate_data(n_rows=100, n_columns=100):
     data=[]
     for _ in range(n_rows):
-        data.append({f'col_{i}':value for i in range(0,n_columns)})
+        data.append({f'col_{i}':random.randint(0, 100000) for i in range(0,n_columns)})
     return data
 
 def benchmark_read_write(num_rows):

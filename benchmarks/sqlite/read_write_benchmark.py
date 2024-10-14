@@ -7,10 +7,10 @@ import time
 import pandas as pd
 from parquetdb import config
 
-def generate_data(num_rows):
+def generate_data(num_rows, n_columns=100):
     data = []
     for _ in range(num_rows):
-        row = tuple(random.randint(0, 1000000) for _ in range(100))
+        row = tuple(random.randint(0, 1000000) for _ in range(n_columns))
         data.append(row)
     return data
 
@@ -83,7 +83,7 @@ if __name__ == '__main__':
     for num_rows in row_counts:
         print(f'Benchmarking {num_rows} rows...')
         
-        insert_time,read_time = benchmark_read_write(num_rows)
+        insert_time,read_time = benchmark_read_write(num_rows, db_name=db_name)
         insertion_times.append(insert_time)
         reading_times.append(read_time)
         print(f'Insertion Time for {num_rows} rows: {insert_time:.4f} seconds')
