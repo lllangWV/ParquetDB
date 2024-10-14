@@ -3,13 +3,7 @@
 ParquetDB is a lightweight database-like system built on top of Apache Parquet files using PyArrow. It offers a simple and efficient way to store, manage, and retrieve complex data types without the overhead of serialization, which is often a bottleneck in machine learning pipelines. By leveraging Parquet's columnar storage format and PyArrow's computational capabilities, ParquetDB provides high performance for data-intensive applications. 
 
 
-## Benchmark
-
-A benchmark was performed to compare the performance of ParquetDB, SQLite, and MongoDB. In this benchmark, we compare the read and write times of 100 integer columns over varying number of records. The results are shown below:
-
 ![Benchmark Create and Read Times for Different Databases](benchmarks/benchmark_create_read_times.png)
-
-
 
 ## Table of Contents
 
@@ -23,7 +17,7 @@ A benchmark was performed to compare the performance of ParquetDB, SQLite, and M
   - [Reading Data](#reading-data)
   - [Updating Data](#updating-data)
   - [Deleting Data](#deleting-data)
-- [API Reference](#api-reference)
+- [Benchmark Overview](#benchmark-overview)
 - [Contributing](#contributing)
 - [License](#license)
 
@@ -194,6 +188,29 @@ Delete records from the database by specifying their IDs.
 ```python
 db.delete(ids=[2, 4])
 ```
+
+
+## Benchmark Overview
+
+A benchmark was conducted to evaluate the performance of ParquetDB, SQLite, and MongoDB. The benchmark measures the read and write times for datasets consisting of 100 integer columns across varying record sizes.
+
+#### Write Performance
+For write operations, we tested the time required to insert records into each database and close the connections. Bulk inserts were used for SQLite and MongoDB, but only serial inserts were tested. Specifically for SQLite, `PRAGMA synchronous = OFF` and `PRAGMA journal_mode = MEMORY` were applied to optimize write performance.
+
+#### Read Performance
+For read operations, we measured the time taken to load the entire dataset into an array-like structure. Leaving the data in a cursor was not counted as a completed read.
+
+#### Test Environment
+The benchmark was executed on the following system:
+- **Processor**: AMD Ryzen 7 3700X 8-Core, 3600 MHz
+- **Logical Processors**: 16
+- **Memory**: 32 GB RAM
+
+The scripts used to generate these benchmark results can be found in the `benchmarks` directory.
+
+### Results Summary
+- **Read Times**: ParquetDB is the fastest for large datasets, followed by SQLite, with MongoDB trailing.
+- **Write Times**: For large datasets, SQLite achieves the fastest write times, followed by ParquetDB and MongoDB.
 
 
 ## Contributing
