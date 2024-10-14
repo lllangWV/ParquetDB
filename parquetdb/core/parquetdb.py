@@ -2,6 +2,7 @@ import logging
 import os
 import shutil
 from glob import glob
+import time
 from typing import Callable, List, Union
 
 import pandas as pd
@@ -90,21 +91,22 @@ class ParquetDB:
         os.makedirs(self.dataset_dir, exist_ok=True)
         
         # Prepare the data and field data
-        data_list, incoming_schema=self._validate_data(data)
-        new_ids = self._get_new_ids(data_list)
-
+        incoming_array=self._validate_data(data)
+        
+        incoming_schema=pa.schema(incoming_array.type)
         if schema is None:
             schema=incoming_schema
         schema=schema.with_metadata(metadata)
-        
-        # Create the incoming table
-        incoming_table=pa.Table.from_pylist(data_list, schema=schema)
+
+        incoming_table=pa.Table.from_arrays(incoming_array.flatten(),schema=schema)
+
+        new_ids = self._get_new_ids(incoming_table)
         incoming_table=incoming_table.append_column(pa.field('id', pa.int64()), [new_ids])
-        
+
         # Sometimes records have a nested dictionaries and some do not. 
         # This ensures all records have the same nested structs
         incoming_table=pyarrow_utils.replace_empty_structs_in_table(incoming_table)
-        
+
         # We store the flatten table because it is easier to process
         incoming_table=pyarrow_utils.flatten_table(incoming_table)
 
@@ -244,9 +246,11 @@ class ParquetDB:
         if normalize_kwargs is None:
             normalize_kwargs=config.parquetdb_config.normalize_kwargs.to_dict()
         logger.info("Updating data")
+        
         # Data validation.
-        data_list, incoming_schema = self._validate_data(data)
-        incoming_table = pa.Table.from_pylist(data_list, schema=incoming_schema)
+        incoming_array = self._validate_data(data)
+        incoming_schema=pa.schema(incoming_array.type)
+        incoming_table=pa.Table.from_arrays(incoming_array.flatten(),schema=incoming_schema)
         
         # Incoming table processing
         incoming_table=pyarrow_utils.replace_empty_structs_in_table(incoming_table)
@@ -1290,8 +1294,8 @@ class ParquetDB:
 
         Returns
         -------
-        list or None
-            A list of dictionaries if valid data is provided, otherwise `None` if `data` is None.
+        pa.Array
+            A pyarrow array
         """
         logger.info("Validating data")
         if isinstance(data, dict):
@@ -1305,13 +1309,13 @@ class ParquetDB:
         else:
             raise TypeError("Data must be a dictionary or a list of dictionaries.")
         
-        # Convert to pyarrow array to get the schema
-        struct=pa.array(data_list)
-        schema=pa.schema(struct.type)
+        # Convert to pyarrow array to get the schema. This method is faster than .from_pylist
+        # As from_pylist iterates through record in a python loop, but pa.array handles this in C++/cython
+        incoming_array=pa.array(data_list)
         logger.info("Data validated")
-        return data_list, schema
+        return incoming_array
     
-    def _get_new_ids(self, data_list:List[dict]):
+    def _get_new_ids(self, incoming_table):
         """
         Generates a list of new IDs for the incoming data, starting from the next available ID.
 
@@ -1341,7 +1345,7 @@ class ParquetDB:
             logger.debug(f"Directory is not empty. Starting id from {start_id}")
     
         # Create a list of new IDs
-        new_ids = list(range(start_id, start_id + len(data_list)))
+        new_ids = list(range(start_id, start_id + incoming_table.num_rows))
         logger.info("New ids generated")
         return new_ids
     
