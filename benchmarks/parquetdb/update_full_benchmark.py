@@ -39,38 +39,40 @@ def generate_update_data(n_rows=100, n_columns=100):
         data.append(row)
     return data
 
-def generate_pyarrow_data(num_columns=100, num_rows=1000, min_value=0, max_value=100000):
-    data = {}
-    ids=[]
-    for i in range(num_columns):
-        column_name = f"column_{i+1}"
-        data[column_name] = [random.randint(min_value, max_value) for _ in range(num_rows)]
-        ids.append(i)
-    return data
-
-
-def generate_pyarrow_update_data(num_columns=100, num_rows=1000, min_value=0, max_value=100):
-    data = {}
-    ids=[]
-    for i in range(num_columns):
-        column_name = f"column_{i+1}"
-        data[column_name] = [random.randint(min_value, max_value) for _ in range(num_rows)]
-        ids.append(i)
-    data['id'] = ids
-    return data
-
-
 def benchmark_read_write_update(num_rows):
+    db = ParquetDB(dataset_name='parquetdb', dir=benchmark_dir)
+    if db.dataset_exists():
+        db.drop_dataset()  # Assuming there's a method to clear the database
+    data=generate_data(n_rows=num_rows)
+    
+    start_time=time.time()
+    db.create(data)
+    insert_time = time.time() - start_time
+    
+    del data
+    
+    start_time=time.time()
+    data = db.read()
+    read_time = time.time() - start_time
+    
+    del data
     
     update_data=generate_update_data(n_rows=num_rows)
-    update_data=db._construct_table(update_data)
+    
     start_time = time.time()
     db.update(update_data,
-              )
+              normalize_kwargs={
+                  'batch_size': 50000,
+                  'load_kwargs':{
+                      'batch_readahead': 16,
+                      'fragment_readahead': 4
+                  }
+              }
+            )
     update_time = time.time() - start_time
     
-    del update_data
-    return update_time
+    update_data=None
+    return insert_time, read_time, update_time
 
 
 
@@ -87,19 +89,6 @@ if __name__ == '__main__':
 
 
     db = ParquetDB(dataset_name='parquetdb', dir=benchmark_dir)
-    if db.dataset_exists():
-        db.drop_dataset()  # Assuming there's a method to clear the database
-    data=generate_data(n_rows=1000000)
-    
-    start_time=time.time()
-    db.create(data)
-    insert_time = time.time() - start_time
-    del data
-    
-    start_time=time.time()
-    data = db.read()
-    read_time = time.time() - start_time
-    del data
 
 
     row_counts = [1, 10, 100, 1000, 10000, 100000, 1000000]
@@ -117,7 +106,7 @@ if __name__ == '__main__':
     for num_rows in row_counts:
         print(f'Benchmarking {num_rows} rows...')
         
-        update_time = benchmark_read_write_update(num_rows)
+        insert_time,read_time,update_time = benchmark_read_write_update(num_rows)
         insertion_times.append(insert_time)
         reading_times.append(read_time)
         update_times.append(update_time)
@@ -133,4 +122,4 @@ if __name__ == '__main__':
     results['n_rows']=row_counts
 
     df=pd.DataFrame(results)
-    df.to_csv(os.path.join(save_dir, 'parquetdb_update_into_constant_rows_table_input_benchmark.csv'), index=False)
+    df.to_csv(os.path.join(save_dir, 'parquetdb_update_full_benchmark.csv'), index=False)

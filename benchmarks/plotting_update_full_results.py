@@ -28,9 +28,9 @@ benchmark_type='update'
 
 
 benchmark_files_dict={
-    'sqlite':['sqlite_update_benchmark.csv'],
-    'mongodb':['mongodb_update_benchmark.csv'],
-    'parquetdb':['parquetdb_update_benchmark.csv']
+    'sqlite':['sqlite_update_full_benchmark.csv'],
+    'mongodb':['mongodb_update_full_benchmark.csv'],
+    'parquetdb':['parquetdb_update_full_benchmark.csv']
 }
 
 line_styles={
@@ -178,7 +178,7 @@ if __name__ == '__main__':
     from parquetdb.utils import matplotlib_utils
     matplotlib_utils.set_palette('Zissou1')
 
-    color_diff_log_inset_plot()
-    # color_diff_log_inset_plot(savefig=os.path.join(benchmark_dir, 'benchmark_update_times.pdf'))
-    # color_diff_log_inset_plot(savefig=os.path.join(benchmark_dir, 'benchmark_update_times.png'))
+    # color_diff_log_inset_plot()
+    color_diff_log_inset_plot(savefig=os.path.join(benchmark_dir, 'benchmark_update_full_times.pdf'))
+    color_diff_log_inset_plot(savefig=os.path.join(benchmark_dir, 'benchmark_update_full_times.png'))
     
