@@ -90,18 +90,10 @@ class ParquetDB:
         logger.info("Creating data")
         os.makedirs(self.dataset_dir, exist_ok=True)
         
-        # Prepare the data and field data
-        incoming_array=self._validate_data(data)
-        
-        incoming_schema=pa.schema(incoming_array.type)
-        if schema is None:
-            schema=incoming_schema
-        schema=schema.with_metadata(metadata)
-
-        incoming_table=pa.Table.from_arrays(incoming_array.flatten(),schema=schema)
+        # Construct incoming table from the data
+        incoming_table = self._construct_table(data, schema=schema, metadata=metadata)
         
         del data
-        del incoming_array
         
         if 'id' in incoming_table.column_names:
             raise ValueError("When create is called, the data cannot contain an 'id' column.")
@@ -234,7 +226,9 @@ class ParquetDB:
     
     @timeit
     def update(self, data: Union[List[dict], dict, pd.DataFrame], 
-                    normalize_kwargs=None):
+                    normalize_kwargs=None,
+                    metadata=None,
+                    schema=None):
         """
         Updates existing records in the database.
 
@@ -243,6 +237,12 @@ class ParquetDB:
         data : dict, list of dicts, or pandas.DataFrame
             The data to be updated in the database. Each record must contain an 'id' key 
             corresponding to the record to be updated.
+        normalize_kwargs : dict, optional
+            Additional keyword arguments passed to the normalization process (default is None).
+        metadata : dict, optional
+            Additional metadata to store alongside the data.
+        schema : pyarrow.Schema, optional
+            The schema for the data being added. If not provided, it will be inferred.
 
         Example
         -------
@@ -252,15 +252,11 @@ class ParquetDB:
             normalize_kwargs=config.parquetdb_config.normalize_kwargs.to_dict()
         logger.info("Updating data")
         
-        # Data validation.
-        incoming_array = self._validate_data(data)
-        
-        incoming_schema=pa.schema(incoming_array.type)
-        incoming_table=pa.Table.from_arrays(incoming_array.flatten(),schema=incoming_schema)
+        # Construct incoming table from the data
+        incoming_table = self._construct_table(data, schema=schema, metadata=metadata)
         
         # Free up memory
         del data
-        del incoming_array
         
         # Incoming table processing
         incoming_table=pyarrow_utils.replace_empty_structs_in_table(incoming_table)
@@ -1440,6 +1436,48 @@ class ParquetDB:
             logger.warning(f"The following ids are not in the main table", extra={'ids_do_not_exist': filtered_table['id'].combine_chunks()})
         return None
 
+
+    def _construct_table(self, data, schema=None, metadata=None):
+            logger.info("Validating data")
+            if isinstance(data, dict):
+                logger.info("The incoming data is a dictonary of arrays")
+                for key, value in data.items():
+                    if not isinstance(value, List):
+                        data[key]=[value]
+                table=pa.Table.from_pydict(data)
+                incoming_array=table.to_struct_array()
+                incoming_array=incoming_array.flatten()
+                incoming_schema=table.schema
+                
+            elif isinstance(data, list):
+                logger.info("Incoming data is a list of dictionaries")
+                # Convert to pyarrow array to get the schema. This method is faster than .from_pylist
+                # As from_pylist iterates through record in a python loop, but pa.array handles this in C++/cython
+                incoming_array=pa.array(data)
+                incoming_schema=pa.schema(incoming_array.type)
+                incoming_array=incoming_array.flatten()
+                
+            elif isinstance(data, pd.DataFrame):
+                logger.info("Incoming data is a pandas dataframe")
+                table=pa.Table.from_pandas(data)
+                incoming_array=table.to_struct_array()
+                incoming_array=incoming_array.flatten()
+                incoming_schema=table.schema
+                
+            elif isinstance(data, pa.lib.Table):
+                incoming_schema=data.schema
+                incoming_array=data.to_struct_array()
+                incoming_array=incoming_array.flatten()
+                
+            else:
+                raise TypeError("Data must be a dictionary or a list of dictionaries.")
+            
+            if schema is None:
+                schema=incoming_schema
+            schema=schema.with_metadata(metadata)
+
+            incoming_table=pa.Table.from_arrays(incoming_array,schema=schema)
+            return incoming_table
 
 def generator_schema_cast(generator, new_schema):
     for record_batch in generator:
