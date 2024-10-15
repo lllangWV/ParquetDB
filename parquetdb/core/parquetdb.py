@@ -99,6 +99,10 @@ class ParquetDB:
         schema=schema.with_metadata(metadata)
 
         incoming_table=pa.Table.from_arrays(incoming_array.flatten(),schema=schema)
+        
+        del data
+        del incoming_array
+        
         if 'id' in incoming_table.column_names:
             raise ValueError("When create is called, the data cannot contain an 'id' column.")
         new_ids = self._get_new_ids(incoming_table)
@@ -250,23 +254,22 @@ class ParquetDB:
         
         # Data validation.
         incoming_array = self._validate_data(data)
+        
         incoming_schema=pa.schema(incoming_array.type)
         incoming_table=pa.Table.from_arrays(incoming_array.flatten(),schema=incoming_schema)
+        
+        # Free up memory
+        del data
+        del incoming_array
         
         # Incoming table processing
         incoming_table=pyarrow_utils.replace_empty_structs_in_table(incoming_table)
         incoming_table=pyarrow_utils.flatten_table(incoming_table)
         incoming_table=pyarrow_utils.table_schema_cast(incoming_table, incoming_table.schema)
-        
-        # Merging Schema
-        incoming_schema=incoming_table.schema
-        current_schema=self.get_schema()
-        merged_schema = pa.unify_schemas([current_schema, incoming_schema],promote_options='default')
-        
-        # Aligning incoming table with merged schema
-        incoming_table=pyarrow_utils.table_schema_cast(incoming_table, merged_schema)
-        # Non-exisiting id warning step. THis is not really necessary but might be nice for user to check
-        self._validate_id(incoming_table['id'].combine_chunks())
+
+        # Non-exisiting id warning step. This is not really necessary but might be nice for user to check
+        # self._validate_id(incoming_table['id'].combine_chunks())
+
         
         # Apply update normalization
         self._normalize(incoming_table=incoming_table, **normalize_kwargs)
@@ -530,7 +533,7 @@ class ParquetDB:
             
         if isinstance(retrieved_data, pa.lib.Table):
             schema=None
-            
+
         try:
             logger.info(f"Writing dataset to {dataset_dir}")
             
@@ -553,7 +556,6 @@ class ParquetDB:
                             existing_data_behavior=existing_data_behavior,
                             create_dir=create_dir,
                             )
-            
         except Exception as e:
             logger.exception(f"exception writing final table to {self.dataset_dir}: {e}")
             logger.info("Restoring original files")
@@ -1450,13 +1452,29 @@ def table_schema_cast(current_table, new_schema):
         
         
 def table_update(current_table, incoming_table):
-    current_table = pyarrow_utils.table_schema_cast(current_table, incoming_table.schema)
+    # Merging Schema
+    incoming_schema=incoming_table.schema
+    current_schema=current_table.schema
+    merged_schema = pa.unify_schemas([current_schema, incoming_schema],promote_options='default')
+    
+    # Aligning current and incoming tables with merged schema
+    incoming_table=pyarrow_utils.table_schema_cast(incoming_table, merged_schema)
+    current_table = pyarrow_utils.table_schema_cast(current_table, merged_schema)
+    
     updated_record_batch=pyarrow_utils.update_flattend_table(current_table, incoming_table)
     return updated_record_batch
         
 def generator_update(generator, incoming_table):
+    
+    incoming_schema=incoming_table.schema
+    merged_schema=None
     for record_batch in generator:
-        record_batch = pyarrow_utils.table_schema_cast(record_batch, incoming_table.schema)
+        if merged_schema is None:
+            current_schema=record_batch.schema
+            merged_schema = pa.unify_schemas([current_schema, incoming_schema],promote_options='default')
+            incoming_table=pyarrow_utils.table_schema_cast(incoming_table, merged_schema)
+            
+        record_batch = pyarrow_utils.table_schema_cast(record_batch, merged_schema)
         updated_record_batch=pyarrow_utils.update_flattend_table(record_batch, incoming_table)
         yield updated_record_batch
         

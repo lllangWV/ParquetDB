@@ -3,6 +3,7 @@ import logging
 
 from parquetdb.utils.general_utils import timeit
 import pyarrow.compute as pc
+import time
 
 logger = logging.getLogger(__name__)
 
@@ -653,11 +654,12 @@ def rebuild_nested_table(table):
     new_schema=pa.schema(new_struct, metadata=table.schema.metadata)
     return pa.Table.from_arrays(nested_arrays.flatten(), schema=new_schema)
 
+
 def update_flattend_table(current_table, incoming_table):
     """
     Updates the current table using the values from the incoming table by flattening both 
     tables, applying the updates, and then rebuilding the nested structure.
-
+    
     Parameters
     ----------
     current_table : pa.Table
@@ -669,116 +671,48 @@ def update_flattend_table(current_table, incoming_table):
     -------
     pa.Table
         The updated PyArrow table with flattened and rebuilt structure.
-
-    Examples
-    --------
-    >>> updated_table = update_table_flatten_method(current_table, incoming_table)
-    pyarrow.Table
     """
-    
+
     logger.debug("Updating table with the flatten method")
+    logger.debug(f"Current table shape: {current_table.shape}")
+    logger.debug(f"Incoming table shape: {incoming_table.shape}")
+
+    # Generate an index mask for the current table, identifying the positions of matching 'id' values in the incoming table.
+    # The index_mask will align with the number of rows in the current table, marking where matching ids exist in the incoming table.
+
+    index_mask = pc.index_in(current_table['id'], incoming_table['id'])
+    
+    # Create an update table by selecting rows from the incoming table using the index mask.
+    update_table=pc.take(incoming_table, index_mask)
+
+    logger.debug(f"update_table shape: {update_table.shape}")
+    updated_table=current_table
 
     for column_name in current_table.column_names:
-        logger.debug(f"Looking for updates in field: {column_name}")
-        update_array=update_table_column(current_table, incoming_table, column_name=column_name)
-        field_index=current_table.schema.get_field_index(column_name)
-        if update_array and len(update_array)!=0:
-            logger.info(f"Updating column: {column_name}")
-            current_table=current_table.set_column(field_index, current_table.field(column_name), update_array)
-    return current_table
+        if column_name == 'id':
+            continue
 
+        current_array=current_table[column_name]
+        update_array=update_table[column_name]
+        if isinstance(current_array, pa.ChunkedArray):
+            current_array = current_array.combine_chunks()
+        if isinstance(update_array, pa.ChunkedArray):
+            update_array = update_array.combine_chunks()
+            
+        is_valid_mask=update_array.is_valid()
+        update_array=update_array.filter(is_valid_mask)
+        
+        # sum_is_valid_mask=pc.sum(is_valid_mask)
+        # if pc.sum(is_valid_mask) == pa.scalar(0, type=sum_is_valid_mask.type):
+        #     logger.debug(f"No updates are present or non-null for column: {column_name}")
+        #     continue
 
+        updated_array=pc.replace_with_mask(current_array, is_valid_mask, update_array)
+        updated_table = updated_table.set_column(current_table.column_names.index(column_name), 
+                                                  current_table.field(column_name),
+                                                  updated_array)
+    return updated_table
 
-def update_table_column(current_table, incoming_table, column_name):
-    """
-    Updates a specific column in the current table with values from the incoming table, 
-    based on matching 'id' fields. Non-null values in the incoming table will replace 
-    corresponding values in the current table.
-
-    Parameters
-    ----------
-    current_table : pa.Table
-        The current PyArrow table to update.
-    incoming_table : pa.Table
-        The incoming PyArrow table containing updated values.
-    column_name : str
-        The name of the column to update in the current table.
-
-    Returns
-    -------
-    pa.Array or None
-        The updated column array if updates are present and non-null; otherwise, returns None.
-
-    Examples
-    --------
-    >>> update_table_column(current_table, incoming_table, 'column1')
-    <pyarrow.Array object at 0x...>
-    """
-    logger.debug(f"Updating column: {column_name}")
-
-    incoming_filter = pc.field('id').isin(current_table['id']) & ~pc.field(column_name).is_null(incoming_table[column_name])
-    filtered_incoming_table = incoming_table.filter(incoming_filter)
-    updates_are_present_and_not_null = filtered_incoming_table.num_rows != 0
-
-    if not updates_are_present_and_not_null:
-        logger.debug("No updates are present or non-null")
-        return None
-    
-    
-    current_mask = pc.is_in(current_table['id'], value_set=filtered_incoming_table['id'])
-    current_array = current_table[column_name]
-    incoming_array = filtered_incoming_table[column_name]
-    
-    # Creating a boolean mask
-    # When the incoming table is from a generator there are no chunked arrays
-    if isinstance(current_mask, pa.ChunkedArray):
-        current_mask = current_mask.combine_chunks()
-    if isinstance(current_array, pa.ChunkedArray):
-        current_array = current_array.combine_chunks()
-    if isinstance(incoming_array, pa.ChunkedArray):
-        incoming_array = incoming_array.combine_chunks()
-    
-    updated_array = pc.replace_with_mask(current_array, current_mask, incoming_array)
-
-    return updated_array
-
-def update_table_flatten_method(current_table, incoming_table):
-    """
-    Updates the current table using the values from the incoming table by flattening both 
-    tables, applying the updates, and then rebuilding the nested structure.
-
-    Parameters
-    ----------
-    current_table : pa.Table
-        The current PyArrow table to update.
-    incoming_table : pa.Table
-        The incoming PyArrow table containing updated values.
-
-    Returns
-    -------
-    pa.Table
-        The updated PyArrow table with flattened and rebuilt structure.
-
-    Examples
-    --------
-    >>> updated_table = update_table_flatten_method(current_table, incoming_table)
-    pyarrow.Table
-    """
-    
-    logger.debug("Updating table with the flatten method")
-    current_table=flatten_table(current_table)
-    incoming_table=flatten_table(incoming_table)
-    
-    for column_name in current_table.column_names:
-        logger.debug(f"Looking for updates in field: {column_name}")
-        update_array=update_table_column(current_table, incoming_table, column_name=column_name)
-        field_index=current_table.schema.get_field_index(column_name)
-        if update_array and len(update_array)!=0:
-            logger.info(f"Updating column: {column_name}")
-            current_table=current_table.set_column(field_index, current_table.field(column_name), update_array)
-    current_table=rebuild_nested_table(current_table)
-
-    return current_table
 
 def update_struct_child_field(current_table, incoming_table, field_path):
     """
@@ -868,9 +802,7 @@ def update_field(current_table, incoming_table, field_name):
     <pyarrow.Array object at 0x...>
     """
     logger.debug(f"field_name: {field_name}")
-    
     incoming_filter=pc.field('id').isin(current_table['id']) & ~pc.field(field_name).is_null(incoming_table[field_name])
-   
     filtered_incoming_table = incoming_table.filter(incoming_filter)
 
     updates_are_present_and_not_null = filtered_incoming_table.num_rows != 0
@@ -887,13 +819,11 @@ def update_field(current_table, incoming_table, field_name):
         current_mask = current_mask.combine_chunks()
         current_array = current_array.combine_chunks()
         incoming_array = incoming_array.combine_chunks()
-    
     # filtered_array = pc.filter(mask, mask)
     # logger.debug(f"Values where the array is True: {len(filtered_array)}")
     logger.debug(f"Mask shape: {len(current_mask)}")
     logger.debug(f"Incoming array shape: {len(incoming_array)}")
     logger.debug(f"Current array shape: {len(current_array)}")
-    
     new_array = pc.replace_with_mask(current_array,current_mask,incoming_array)
     return new_array
 
@@ -1029,7 +959,7 @@ def update_table(current_table, incoming_table, flatten_method=False):
     return current_table
 
 
-def infer_pyarrow_types(self, data_dict: dict):
+def infer_pyarrow_types(data_dict: dict):
     """
     Infers PyArrow types for the given dictionary of data. The function skips the 'id' field and infers
     the data types for all other keys.
