@@ -1271,47 +1271,6 @@ class ParquetDB:
             os.remove(tmp_filepath)
         logger.info("Temporary files restored")
     
-    def _validate_data(self, data):
-        """
-        Validate and convert input data into a list of dictionaries.
-
-        This function checks the type of input data and converts it into a list of dictionaries
-        if necessary. It supports input data as a dictionary, list of dictionaries, or a 
-        pandas DataFrame. If the input is a dictionary, it is wrapped in a list. If the input
-        is a pandas DataFrame, it is converted into a list of dictionaries. If the input is
-        already a list, it is returned as-is. Raises a `TypeError` for unsupported data types.
-
-        Parameters
-        ----------
-        data : dict, list, pd.DataFrame, or None
-            The input data to validate and convert. Supported types are:
-            - dict: A single dictionary will be wrapped in a list.
-            - list: A list of dictionaries will be returned as-is.
-            - pd.DataFrame: Converted to a list of dictionaries.
-            - None: Returns `None`.
-
-        Returns
-        -------
-        pa.Array
-            A pyarrow array
-        """
-        logger.info("Validating data")
-        if isinstance(data, dict):
-            data_list = [data]
-        elif isinstance(data, list):
-            data_list = data
-        elif isinstance(data, pd.DataFrame):
-            data_list = data.to_dict(orient='records')
-        elif data is None:
-            data_list = None
-        else:
-            raise TypeError("Data must be a dictionary or a list of dictionaries.")
-        
-        # Convert to pyarrow array to get the schema. This method is faster than .from_pylist
-        # As from_pylist iterates through record in a python loop, but pa.array handles this in C++/cython
-        incoming_array=pa.array(data_list)
-        logger.info("Data validated")
-        return incoming_array
     
     def _get_new_ids(self, incoming_table):
         """
@@ -1435,7 +1394,6 @@ class ParquetDB:
         if filtered_table.num_rows==0:
             logger.warning(f"The following ids are not in the main table", extra={'ids_do_not_exist': filtered_table['id'].combine_chunks()})
         return None
-
 
     def _construct_table(self, data, schema=None, metadata=None):
             logger.info("Validating data")
