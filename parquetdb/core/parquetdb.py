@@ -273,7 +273,7 @@ class ParquetDB:
         logger.info(f"Updated {self.dataset_name} table.")
 
     @timeit
-    def delete(self, ids:List[int],
+    def delete(self, ids:List[int]=None, columns:List[str]=None,
                normalize_kwargs=None):
         """
         Deletes records from the database.
@@ -293,20 +293,39 @@ class ParquetDB:
         -------
         >>> db.delete(ids=[1, 2, 3])
         """
+        if ids is not None and columns is not None:
+            raise ValueError("Cannot provide both ids and columns to delete.")
+        if ids is None and columns is None:
+            raise ValueError("Must provide either ids or columns to delete.")
+        
         if normalize_kwargs is None:
             normalize_kwargs=config.parquetdb_config.normalize_kwargs.to_dict()
         logger.info("Deleting data from the database")
-        ids=set(ids)
-
-        # Check if any of the IDs to delete exist in the table. If not, return None
-        current_id_table=self._load_data(columns=['id'], output_format='table')
-        filtered_id_table = current_id_table.filter( pc.field('id').isin(ids) )
-        if filtered_id_table.num_rows==0:
-            logger.info(f"No data found to delete.")
-            return None
         
+
+        if ids:
+            ids=set(ids)
+            # Check if any of the IDs to delete exist in the table. If not, return None
+            current_id_table=self._load_data(columns=['id'], output_format='table')
+            filtered_id_table = current_id_table.filter( pc.field('id').isin(ids) )
+            if filtered_id_table.num_rows==0:
+                logger.info(f"No data found to delete.")
+                return None
+            
+        if columns:
+            if 'id' in columns:
+                raise ValueError("Cannot delete the 'id' column.")
+            # Check if any of the columns to delete exist in the table. If not, return None
+            schema=self.get_schema()
+            incoming_columns=set(columns)
+            current_columns=set(schema.names)
+            intersection=current_columns.intersection(incoming_columns)
+            if len(intersection)==0:
+                logger.info(f"No data found to delete.")
+                return None
+            
         # Apply delete normalization
-        self._normalize(ids=ids, **normalize_kwargs)
+        self._normalize(ids=ids,columns=columns, **normalize_kwargs)
         
         logger.info(f"Deleted data from {self.dataset_name} dataset.")
 
@@ -388,7 +407,8 @@ class ParquetDB:
                 nested_dataset_dir=None, 
                 incoming_table=None, 
                 schema=None, 
-                ids=None, 
+                ids=None,
+                columns=None,
                 batch_size: int = None, 
                 delete_existing: bool = True, 
                 load_kwargs: dict = None, 
@@ -422,6 +442,10 @@ class ParquetDB:
             The table to use for the update normalization. If not provided, it will be inferred from the existing data (default: None).
         schema : Schema, optional
             The schema to use for the dataset. If not provided, it will be inferred from the existing data (default: None).
+        ids : list of int, optional
+            A list of IDs to delete from the dataset. If not provided, it will be inferred from the existing data (default: None).
+        columns : list of str, optional
+            A list of column names to delete from the dataset. If not provided, it will be inferred from the existing data (default: None).
         batch_size : int, optional
             The number of rows to process in each batch. Required if `output_format` is set to 'batch_generator' (default: None).
         load_kwargs : dict, optional
@@ -491,9 +515,11 @@ class ParquetDB:
             delete_func=generator_delete
             schema_cast_func=generator_schema_cast
             rebuild_nested_func=generator_rebuild_nested_struct
+            delete_columns_func=generator_delete_columns
         elif output_format=='table':
             update_func=table_update
             delete_func=table_delete
+            delete_columns_func=table_delete_columns
             schema_cast_func=table_schema_cast
             rebuild_nested_func=table_rebuild_nested_struct
 
@@ -513,8 +539,12 @@ class ParquetDB:
         
         # If ids are provided this is a delete
         elif ids:
-            logger.info("This normalization is a delete. Applying delete function, then normalizing.")
+            logger.info("This normalization is an id delete. Applying delete function, then normalizing.")
             retrieved_data=delete_func(retrieved_data, ids)
+            
+        elif columns:
+            logger.info("This normalization is a column delete. Applying delete function, then normalizing.")
+            retrieved_data=delete_columns_func(retrieved_data, columns)
         
         # If schema is provided this is a schema update
         elif schema:
@@ -1482,6 +1512,17 @@ def generator_delete(generator, ids):
     for record_batch in generator:
         updated_record_batch = record_batch.filter( ~pc.field('id').isin(ids) )
         yield updated_record_batch
+        
+        
+def table_delete_columns(current_table, columns):
+    updated_table = current_table.drop_columns(columns)
+    return updated_table
+
+def generator_delete_columns(generator, columns):
+    for record_batch in generator:
+        updated_record_batch = record_batch.drop_columns(columns)
+        yield updated_record_batch
+        
         
         
 def table_rebuild_nested_struct(current_table):
