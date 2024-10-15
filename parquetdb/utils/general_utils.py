@@ -8,6 +8,8 @@ import time
 logger = logging.getLogger(__name__)
 time_logger = logging.getLogger('timing')
 
+import numpy as np
+import pandas as pd
 import pyarrow as pa
 
 def timeit(func):
@@ -141,3 +143,53 @@ def generate_similar_data(template_data, num_entries):
         generated_data.append(new_entry)
 
     return generated_data
+
+
+
+def generate_pydict_data(n_rows=100, n_columns=100, min_value=0, max_value=100000):
+    data = {}
+    for i in range(n_columns):
+        column_name = f"column_{i}"
+        data[column_name] = [random.randint(min_value, max_value) for _ in range(n_rows)]
+
+    return data
+
+def generate_pydict_update_data(n_rows=100, n_columns=100, min_value=0, max_value=100):
+    data = {}
+    for i in range(n_columns):
+        column_name = f"column_{i}"
+        data[column_name] = [random.randint(min_value, max_value) for _ in range(n_rows)]
+    data['id'] = [i for i in range(n_rows)]
+    return data
+
+def generate_pylist_data(n_rows=100, n_columns=100):
+    data=[]
+    for _ in range(n_rows):
+        data.append({f'column_{i}':random.randint(0, 100000) for i in range(n_columns)})
+    return data
+
+def generate_pylist_update_data(n_rows=100, n_columns=100):
+    data = []
+    for i in range(n_rows):
+        row = {'id': i}  # Unique identifier for each row
+        row.update({f'column_{j}': random.randint(0, 100000) for j in range(n_columns)})
+        data.append(row)
+    return data
+
+def generate_pandas_data(n_rows=100, n_columns=100):
+    df=pd.DataFrame(generate_pydict_data(n_rows=n_rows, n_columns=n_columns))
+    return df
+    
+def generate_pandas_update_data(n_rows=100, n_columns=100):
+    df=pd.DataFrame(generate_pydict_update_data(n_rows=n_rows, n_columns=n_columns))
+    return df
+
+def generate_table_data(n_rows=100, n_columns=100):
+    data=generate_pydict_data(n_rows=n_rows, n_columns=n_columns)
+    table=pa.Table.from_pydict(data)
+    return table
+
+def generate_table_update_data(n_rows=100, n_columns=100):
+    data=generate_pydict_update_data(n_rows=n_rows, n_columns=n_columns)
+    table=pa.Table.from_pydict(data)
+    return table
