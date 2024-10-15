@@ -36,13 +36,13 @@ class ParquetDBManager:
         datasets_dir: data/parquet_files
         dataset_names: []
         reserved_table_names: ['tmp']
-        output_formats: ['batch_generator', 'table', 'dataset']
+        load_formats: ['batch_generator', 'table', 'dataset']
         """
         self.datasets_dir=datasets_dir
 
         os.makedirs(self.datasets_dir, exist_ok=True)
 
-        self.output_formats=['batch_generator','table','dataset']
+        self.load_formats=['batch_generator','table','dataset']
         self.reserved_table_names=['tmp']
         
 
@@ -50,13 +50,12 @@ class ParquetDBManager:
         logger.info(f"datasets_dir: { self.datasets_dir}")
         logger.info(f"dataset_names: {self.get_datasets()}")
         logger.info(f"reserved_table_names: {self.reserved_table_names}")
-        logger.info(f"output_formats: {self.output_formats}")
+        logger.info(f"load_formats: {self.load_formats}")
 
     @ timeit
     def create(self, 
                data:Union[List[dict],dict,pd.DataFrame],  
                dataset_name:str='main',
-               batch_size:int=None,
                schema=None,
                metadata=None,
                normalize_dataset:bool=False,
@@ -71,8 +70,6 @@ class ParquetDBManager:
             a single dictionary, or a pandas DataFrame.
         dataset_name : str, optional
             The name of the dataset or table to add the data to. Default is 'main'.
-        batch_size : int, optional
-            If provided, the data will be processed in batches of this size.
         schema : pyarrow.Schema, optional
             The schema for the data being added. If not provided, it will be inferred.
         metadata : dict, optional
@@ -92,13 +89,13 @@ class ParquetDBManager:
         dataset_db.create(**all_args)
 
     @timeit
-    def read(
-        self, dataset_name:str='main',
+    def read(self, 
+        dataset_name:str='main',
         ids: List[int] = None,
         columns: List[str] = None,
         include_cols: bool = True,
         filters: List[pc.Expression] = None,
-        output_format: str = 'table',
+        load_format: str = 'table',
         batch_size: int = None,
         load_kwargs: dict = None
         ):
@@ -117,7 +114,7 @@ class ParquetDBManager:
             If True, only the columns in `columns` are returned. If False, all columns except those in `columns` are returned.
         filters : list of pyarrow.compute.Expression, optional
             A list of filters to apply to the data.
-        output_format : str, optional
+        load_format : str, optional
             The format in which to return the data. Options are 'table', 'batch_generator', or 'dataset'. Default is 'table'.
         batch_size : int, optional
             If provided, returns a generator that yields batches of data of this size.
@@ -195,7 +192,7 @@ class ParquetDBManager:
     
     def normalize(self, dataset_name:str='main', 
                 batch_size: int = None, 
-                output_format: str = 'table',
+                load_format: str = 'table',
                 filesystem:fs.FileSystem=None,
                 file_options:ds.FileWriteOptions=None,
                 use_threads:bool=config.parquetdb_config.normalize_kwargs.use_threads,
@@ -220,8 +217,8 @@ class ParquetDBManager:
         schema : Schema, optional
             The schema to use for the dataset. If not provided, it will be inferred from the existing data (default: None).
         batch_size : int, optional
-            The number of rows to process in each batch. Required if `output_format` is set to 'batch_generator' (default: None).
-        output_format : str, optional
+            The number of rows to process in each batch. Required if `load_format` is set to 'batch_generator' (default: None).
+        load_format : str, optional
             The format of the output dataset. Supported formats are 'table' and 'batch_generator' (default: 'table').
         filesystem : pyarrow.fs.FileSystem, optional
             The filesystem to use for writing the dataset (default is None).
@@ -254,7 +251,7 @@ class ParquetDBManager:
         --------
         >>> dataset.normalize(
         ...     batch_size=1000,
-        ...     output_format='batch_generator',
+        ...     load_format='batch_generator',
         ...     max_rows_per_file=5000,
         ...     min_rows_per_group=500,
         ...     max_rows_per_group=5000,

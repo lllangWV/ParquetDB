@@ -208,7 +208,7 @@ class TestParquetDBManager(unittest.TestCase):
         self.db.create(data, dataset_name=self.dataset_name)
 
         # Read data in batches of 20
-        batches = self.db.read(dataset_name=self.dataset_name, batch_size=20, output_format='batch_generator')
+        batches = self.db.read(dataset_name=self.dataset_name, batch_size=20, load_format='batches')
 
         # Assertions
         batch_count = 0

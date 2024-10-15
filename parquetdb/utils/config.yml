@@ -27,6 +27,7 @@ parquetdb_config:
   load_kwargs:
     batch_readahead: 16
     fragment_readahead: 4
+    batch_size: 131072
   
     
 
