@@ -3,7 +3,7 @@ data_dir: "{{ root_dir }}/data"
 external_data_dir: "{{ data_dir }}/external"
 log_dir: "{{ root_dir }}/logs"
 tests_dir: "{{ root_dir }}/tests"
-db_name: 'VariConfig'
+db_name: 'ParquetDB'
 n_cores: 
 
 numpy_config:
@@ -50,7 +50,7 @@ logging_config:
     file:
       class: logging.FileHandler
       formatter: simple
-      filename: "{{ log_dir }}/variconfig.log"
+      filename: "{{ log_dir }}/parquetdb.log"
       mode: a
 
   loggers:
