@@ -1,6 +1,63 @@
 
 ___
 
+# 0.3.1 (10-16-2024)
+
+##### Bugs
+- Fixed bug in batch updates resulting in incorrect chunked arrays from columns. Updated record batches to ensure casting to the incoming schema is applied correctly.
+
+##### New Features
+- Introduced capability to delete columns.
+- Added new data generation methods.
+- Implemented new benchmarks for performance evaluation.
+- Added utility functions for matplotlib.
+- Included benchmark scripts for SQLite, MongoDB, and ParquetDB.
+- Enabled rebuilding of nested tables from a flattened structure in the read method.
+
+##### Documentation Updates
+- Updated the README to include a section for benchmark overview.
+- Improved HTML for embedding PDFs in the README.
+- Updated CHANGELOG.md and _version.py for the new release.
+
+##### Maintenance
+- Corrected default `normalize_kwargs`.
+- Optimized the update table method for a 5x speed increase.
+- Moved default normalization parameters to config.yml.
+- Renamed directory to benchmarks and changed PDF files to PNG format.
+- Updated development dependencies.
+
+___
+
+___
+
+# 0.3.0 (10-16-2024)
+
+##### Bugs
+- Fixed bug in batch updates where generated column data did not produce chunked arrays. Ensured record batches are cast to the incoming schema properly.
+
+##### New Features
+- Introduced new benchmarks for performance evaluation.
+- Added new data generation methods.
+- Implemented column deletion functionality.
+- Enhanced create and update methods to efficiently handle various input types (pylists, pydicts, pd.DataFrame, and pa.lib.Table).
+- Added an option to rebuild nested tables from a flattened structure in the read method.
+- Developed benchmark scripts for databases including SQLite, MongoDB, and ParquetDB.
+- Added matplotlib utilities for visualization.
+
+##### Documentation
+- Updated README.md to include a benchmark overview and embedded PDF section.
+- Revised dev dependencies information.
+
+##### Maintenance
+- Improved update table method, enhancing performance by five times.
+- Reorganized the directory structure for benchmarks.
+- Moved default normalization parameters to config.yml.
+- Updated _version.py and CHANGELOG.md for the latest release.
+
+___
+
+___
+
 # 0.2.7 (10-11-2024)
 
 ##### Bugs
