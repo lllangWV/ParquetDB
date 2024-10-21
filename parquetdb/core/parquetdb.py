@@ -161,6 +161,8 @@ class ParquetDB:
             The format of the returned data: 'table' or 'batches' (default is 'table').
         batch_size : int, optional
             The batch size to use for loading data in batches. If None, data is loaded as a whole (default is None).
+        load_kwargs : dict, optional
+            Additional keyword arguments passed to the pyarrow.dataset.Dataset.to_table or pyarrow.dataset.Dataset.to_batches (default is None).
         ids : list of int, optional
             A list of IDs to read. If None, all data is read (default is None).
         columns : list of str, optional
@@ -567,8 +569,7 @@ class ParquetDB:
             self._restore_tmp_files()
 
     @timeit
-    def update_schema(self, field_dict:dict=None, schema:pa.Schema=None, normalize_kwargs=None):
-                                            
+    def update_schema(self, field_dict:dict=None, schema:pa.Schema=None, normalize_kwargs=None):                      
         """
         Updates the schema of the table in the dataset.
 
