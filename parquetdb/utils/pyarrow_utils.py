@@ -699,18 +699,31 @@ def update_flattend_table(current_table, incoming_table):
         if isinstance(update_array, pa.ChunkedArray):
             update_array = update_array.combine_chunks()
             
-        is_valid_mask=update_array.is_valid()
-        update_array=update_array.filter(is_valid_mask)
+        
+        
+        # logger.debug(f"Update array before shape: {update_array}")
+        # is_valid_mask=update_array.is_valid()
+        # valid_update_array=update_array.filter(is_valid_mask)
         
         # sum_is_valid_mask=pc.sum(is_valid_mask)
         # if pc.sum(is_valid_mask) == pa.scalar(0, type=sum_is_valid_mask.type):
         #     logger.debug(f"No updates are present or non-null for column: {column_name}")
         #     continue
 
-        updated_array=pc.replace_with_mask(current_array, is_valid_mask, update_array)
+        # if pa.types.is_list(current_array.type):
+        #     # updated_array = update_array.filter(update_array)
+        #     updated_array = update_array.fill_null(current_array)
+        #     # updated_array = pc.fill_null(update_array, current_array)
+        # else:
+        #     updated_array=pc.replace_with_mask(current_array, is_valid_mask, valid_update_array)
+        # updated_array = update_array.fill_null(current_array)
+        # updated_array=pc.replace_with_mask(current_array, is_valid_mask, valid_update_array)
+        
+        
+        updated_array = update_array.fill_null(current_array)
         updated_table = updated_table.set_column(current_table.column_names.index(column_name), 
-                                                  current_table.field(column_name),
-                                                  updated_array)
+                                                current_table.field(column_name),
+                                                updated_array)
     return updated_table
 
 

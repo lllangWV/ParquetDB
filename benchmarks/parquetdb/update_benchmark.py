@@ -18,60 +18,22 @@ import pyarrow.parquet as pq
 import pyarrow.fs as fs
 
 from parquetdb import ParquetDB, config
+from parquetdb.utils import general_utils
 
 
 config.logging_config.loggers.timing.level='ERROR'
 config.apply()
 
-def generate_data(n_rows=100, n_columns=100):
-    data=[]
-    for _ in range(n_rows):
-        data.append({f'col_{i}':random.randint(0, 100000) for i in range(0,n_columns)})
-    
-    return data
-
-
-def generate_update_data(n_rows=100, n_columns=100):
-    data = []
-    for i in range(n_rows):
-        row = {'id': i}  # Unique identifier for each row
-        row.update({f'col_{j}': random.randint(0, 100000) for j in range(n_columns)})
-        data.append(row)
-    return data
-
-def generate_pyarrow_data(num_columns=100, num_rows=1000, min_value=0, max_value=100000):
-    data = {}
-    ids=[]
-    for i in range(num_columns):
-        column_name = f"column_{i+1}"
-        data[column_name] = [random.randint(min_value, max_value) for _ in range(num_rows)]
-        ids.append(i)
-    return data
-
-
-def generate_pyarrow_update_data(num_columns=100, num_rows=1000, min_value=0, max_value=100):
-    data = {}
-    ids=[]
-    for i in range(num_columns):
-        column_name = f"column_{i+1}"
-        data[column_name] = [random.randint(min_value, max_value) for _ in range(num_rows)]
-        ids.append(i)
-    data['id'] = ids
-    return data
-
 
 def benchmark_read_write_update(num_rows):
-    
-    update_data=generate_update_data(n_rows=num_rows)
+    update_data=general_utils.generate_pylist_update_data(n_rows=num_rows)
     update_data=db._construct_table(update_data)
     start_time = time.time()
-    db.update(update_data,
-              )
+    db.update(update_data)
     update_time = time.time() - start_time
     
     del update_data
     return update_time
-
 
 
 
@@ -89,7 +51,7 @@ if __name__ == '__main__':
     db = ParquetDB(dataset_name='parquetdb', dir=benchmark_dir)
     if db.dataset_exists():
         db.drop_dataset()  # Assuming there's a method to clear the database
-    data=generate_data(n_rows=1000000)
+    data=general_utils.generate_pydict_data(n_rows=1000000)
     
     start_time=time.time()
     db.create(data)
@@ -133,4 +95,4 @@ if __name__ == '__main__':
     results['n_rows']=row_counts
 
     df=pd.DataFrame(results)
-    df.to_csv(os.path.join(save_dir, 'parquetdb_update_into_constant_rows_table_input_benchmark.csv'), index=False)
+    df.to_csv(os.path.join(save_dir, 'parquetdb_update_into_constant_rows_table_input_benchmark_new_update_method.csv'), index=False)
