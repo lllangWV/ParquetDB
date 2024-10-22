@@ -1156,5 +1156,14 @@ def table_schema_cast(current_table, new_schema):
     current_table=current_table.select(all_names_sorted)
     return current_table
 
+def sort_schema(schema):
+
+    names=set(schema.names)
+    names_sorted=sorted(names)
+
+    field_names=[]
+    for name in names_sorted:
+        field_names.append(schema.field(name))
+    return pa.schema(field_names)
 
 

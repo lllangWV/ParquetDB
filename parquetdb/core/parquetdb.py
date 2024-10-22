@@ -398,7 +398,6 @@ class ParquetDB:
                 schema=None, 
                 ids=None,
                 columns=None,
-                delete_existing: bool = True,
                 batch_size: int = None,
                 load_kwargs: dict = None, 
                 load_format: str = 'table',
@@ -488,8 +487,7 @@ class ParquetDB:
         
         if load_format=='batches':
             logger.debug(f"Writing data in batches")
-            load_format='batches'
-            schema= self.get_schema(load_tmp=True) if schema is None else schema
+            schema= self.get_schema() if schema is None else schema
             update_func=generator_update
             delete_func=generator_delete
             schema_cast_func=generator_schema_cast
@@ -503,14 +501,17 @@ class ParquetDB:
             rebuild_nested_func=table_rebuild_nested_struct
 
         try:
-            retrieved_data = self._load_data(load_format=load_format, load_tmp=False, load_kwargs=load_kwargs)        
+            retrieved_data = self._load_data(load_format=load_format, load_kwargs=load_kwargs)        
         except pa.lib.ArrowNotImplementedError as e:
             raise ValueError("The incoming data does not match the schema of the existing data.") from e
         # If incoming data is provided this is an update
         if incoming_table:
             logger.info("This normalization is an update. Applying update function, then normalizing.")
             retrieved_data=update_func(retrieved_data, incoming_table)
-            schema=incoming_table.schema
+            
+            if schema:
+                schema = pa.unify_schemas([schema, incoming_table.schema],promote_options='default')
+                schema=pyarrow_utils.sort_schema(schema)
         
         # If ids are provided this is a delete
         elif ids:
@@ -563,10 +564,13 @@ class ParquetDB:
                             )
             
             # Remove main files to replace with tmp files
-            main_files=glob(os.path.join(dataset_dir, f'{self.dataset_name}_*.parquet'))
-            for file_path in main_files:
-                if os.path.isfile(file_path):
-                    os.remove(file_path)
+            tmp_files=glob(os.path.join(dataset_dir, f'tmp_{self.dataset_name}_*.parquet'))
+            
+            if len(tmp_files)!=0:
+                main_files=glob(os.path.join(dataset_dir, f'{self.dataset_name}_*.parquet'))
+                for file_path in main_files:
+                    if os.path.isfile(file_path):
+                        os.remove(file_path)
                     
         except Exception as e:
             logger.exception(f"exception writing final table to {self.dataset_dir}: {e}")
@@ -577,10 +581,6 @@ class ParquetDB:
             file_name=os.path.basename(file_path).replace('tmp_', '')
             new_file_path=os.path.join(dataset_dir, file_name)
             os.rename(file_path, new_file_path)
-        
-            
-            
-            
 
     @timeit
     def update_schema(self, field_dict:dict=None, schema:pa.Schema=None, normalize_kwargs=None):                      
@@ -614,15 +614,10 @@ class ParquetDB:
 
         logger.info(f"Updated Fields in {self.dataset_name} table.")
 
-    def get_schema(self, load_tmp=False):
+    def get_schema(self):
         """
         Retrieves the schema of the dataset table.
-
-        Parameters
-        ----------
-        load_tmp : bool, optional
-            Whether to load from temporary files if available (default is False).
-
+        
         Returns
         -------
         pyarrow.Schema
@@ -632,7 +627,7 @@ class ParquetDB:
         -------
         >>> schema = db.get_schema()
         """
-        schema = self._load_data(load_format='dataset', load_tmp=load_tmp).schema
+        schema = self._load_data(load_format='dataset').schema
         return schema
     
     def get_field_names(self, columns=None, include_cols=True):
@@ -1033,7 +1028,6 @@ class ParquetDB:
                    columns:List[str]=None, 
                    filter:List[pc.Expression]=None, 
                    dataset_dir:str=None,
-                   load_tmp:bool=False,
                    load_kwargs:dict=None):
         """
         Loads data from the dataset, supporting various output formats such as PyArrow Table, Dataset, or a batch generator.
@@ -1048,8 +1042,6 @@ class ParquetDB:
             The format for loading the data: 'table', 'batches', or 'dataset' (default is 'table').
         dataset_dir : str, optional
             The directory where the dataset is stored (default is None).
-        load_tmp : bool, optional
-            If True, loads data from the temporary directory (default is False).
         load_kwargs : dict, optional
             Additional keyword arguments passed to `Dataset.to_table` or `Dataset.to_batches` (default is None).
 
@@ -1067,8 +1059,6 @@ class ParquetDB:
         
         if dataset_dir is None:
             dataset_dir=self.dataset_dir
-        if load_tmp:
-            dataset_dir=self.tmp_dir
         
         logger.info(f"Loading data from {dataset_dir}")
         logger.info(f"Loading only columns: {columns}")
@@ -1225,7 +1215,6 @@ class ParquetDB:
             shutil.copyfile(tmp_filepath, current_filepath)
             os.remove(tmp_filepath)
         logger.info("Temporary files restored")
-    
     
     def _get_new_ids(self, incoming_table):
         """
