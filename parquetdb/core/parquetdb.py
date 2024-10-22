@@ -485,12 +485,6 @@ class ParquetDB:
             load_kwargs=config.parquetdb_config.load_kwargs.to_dict()
         if batch_size:
             load_kwargs['batch_size']=batch_size
-        delete_existing=True
-        if nested_dataset_dir:
-            delete_existing=False
-        # Create tmp files. 
-        # This is done because write dataset will overwrite everything in the main dataset dir
-        self._write_tmp_files(delete_existing=delete_existing)
         
         if load_format=='batches':
             logger.debug(f"Writing data in batches")
@@ -509,7 +503,7 @@ class ParquetDB:
             rebuild_nested_func=table_rebuild_nested_struct
 
         try:
-            retrieved_data = self._load_data(load_format=load_format, load_tmp=True, load_kwargs=load_kwargs)        
+            retrieved_data = self._load_data(load_format=load_format, load_tmp=False, load_kwargs=load_kwargs)        
         except pa.lib.ArrowNotImplementedError as e:
             raise ValueError("The incoming data does not match the schema of the existing data.") from e
         # If incoming data is provided this is an update
@@ -533,20 +527,24 @@ class ParquetDB:
             retrieved_data=schema_cast_func(retrieved_data, schema)
             
         dataset_dir=self.dataset_dir
+        basename_template=f'tmp_{self.dataset_name}_{{i}}.parquet'
         if nested_dataset_dir:
             logger.info("This normalization is a nested rebuild. Applying rebuild function, then normalizing.")
             dataset_dir=nested_dataset_dir
+            basename_template=f'{self.dataset_name}_{{i}}.parquet'
             retrieved_data=rebuild_nested_func(retrieved_data)
             
         if isinstance(retrieved_data, pa.lib.Table):
             schema=None
-
+            
         try:
             logger.info(f"Writing dataset to {dataset_dir}")
+            logger.info(f"Basename template: {basename_template}")
+            
             
             ds.write_dataset(retrieved_data, 
                             dataset_dir,
-                            basename_template=self.basename_template, 
+                            basename_template=basename_template, 
                             schema=schema,
                             format="parquet", 
                             partitioning=partitioning,
@@ -563,10 +561,26 @@ class ParquetDB:
                             existing_data_behavior=existing_data_behavior,
                             create_dir=create_dir,
                             )
+            
+            # Remove main files to replace with tmp files
+            main_files=glob(os.path.join(dataset_dir, f'{self.dataset_name}_*.parquet'))
+            for file_path in main_files:
+                if os.path.isfile(file_path):
+                    os.remove(file_path)
+                    
         except Exception as e:
             logger.exception(f"exception writing final table to {self.dataset_dir}: {e}")
-            logger.info("Restoring original files")
-            self._restore_tmp_files()
+
+        tmp_files=glob(os.path.join(dataset_dir, f'tmp_{self.dataset_name}_*.parquet'))
+        for file_path in tmp_files:
+            # new_file_path=file_path.replace('tmp_', '')
+            file_name=os.path.basename(file_path).replace('tmp_', '')
+            new_file_path=os.path.join(dataset_dir, file_name)
+            os.rename(file_path, new_file_path)
+        
+            
+            
+            
 
     @timeit
     def update_schema(self, field_dict:dict=None, schema:pa.Schema=None, normalize_kwargs=None):                      
@@ -1137,7 +1151,7 @@ class ParquetDB:
         return table
     
     @timeit
-    def _write_tmp_files(self, tmp_dir=None, delete_existing=True):
+    def _write_tmp_files(self, tmp_dir=None, delete_existing=False):
         """
         Copy current dataset files to a temporary directory.
 
@@ -1172,9 +1186,9 @@ class ParquetDB:
             tmp_filepath = os.path.join(self.tmp_dir, basename)
             shutil.copyfile(current_filepath, tmp_filepath)
         
-        if os.path.exists(self.dataset_dir) and delete_existing:
-            shutil.rmtree(self.dataset_dir)
-        os.makedirs(self.dataset_dir, exist_ok=True)
+        # if os.path.exists(self.dataset_dir) and delete_existing:
+        #     shutil.rmtree(self.dataset_dir)
+        # os.makedirs(self.dataset_dir, exist_ok=True)
         logger.info("Temporary files written")
             
     @timeit

@@ -44,7 +44,7 @@ class TestParquetDB(unittest.TestCase):
             logger.error(f"Error during cleanup: {e}")
         # For some reason, there are race conditions when 
         # deleting the directory and performaing another test
-        # time.sleep(0.01)
+        # time.sleep(0.1)
 
     def test_create_and_read(self):
         logger.info("Testing create and read")
@@ -403,7 +403,7 @@ if __name__ == '__main__':
     unittest.main()
     
 # if __name__ == '__main__':
-#     for x in range(20):
+#     for x in range(50):
 #         print(f"Iteration {x+1}")
         
 #         # # Create a test suite and add your test case
