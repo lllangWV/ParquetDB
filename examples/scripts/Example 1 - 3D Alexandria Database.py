@@ -48,9 +48,7 @@ if __name__ == "__main__":
     # # Here we create a ParquetDatasetDB object to interact with the database
     db=ParquetDB(dataset_name='alexandria_3D',dir=base_dir)
 
-    print(f"Dataset dir: {db.dataset_dir}")
-    
-    
+    # print(f"Dataset dir: {db.dataset_dir}")
     
     benchmark_dict={
         'create_times':[],
@@ -63,7 +61,7 @@ if __name__ == "__main__":
     if len(os.listdir(db.dataset_dir))==0:
         print("The dataset does not exist. Creating it.")
         json_files=glob(os.path.join(alexandria_dir,'*.json'))
-        for json_file in json_files:
+        for json_file in json_files[:2]:
             
             start_time = time.time()
             data = read_json(json_file)
@@ -112,25 +110,6 @@ if __name__ == "__main__":
     print('-'*200)
     
     
-    
-
-    # Here we read a record from the database with id of 0
-    start_time = time.time()
-    table=read_dataset(db, 
-                       ids=[0,10,100,1000,10000,100000,1000000], # Controls which rows we want to read
-                       load_format='table' # Controls the output format. The options are 'table', 'batches', `dataset`.
-                       )
-    read_time = time.time() - start_time
-    benchmark_dict['read_ids_time']=read_time
-    df=table.to_pandas() # Converts the table to a pandas dataframe
-    print(df.head())
-    print(df.shape)
-    
-    print(f"Data : {df.iloc[0]['data.spg']}")
-    print(list(df.columns))
-    print('-'*200)
-
-    
     # Here we read all the records from the database, but only read the 'id' column
     start_time = time.time()
     table=read_dataset(db,
@@ -140,6 +119,27 @@ if __name__ == "__main__":
     benchmark_dict['read_single_column_time']=end_time
     print(table.shape)
     print('-'*200)
+    
+
+    # Here we read a record from the database with id of 0
+    start_time = time.time()
+    table=read_dataset(db, 
+                       ids=[0,10,100,1000,10000,100000,1000000], # Controls which rows we want to read
+                       load_format='table' # Controls the output format. The options are 'table', 'batches', `dataset`.
+                       )
+    
+    read_time = time.time() - start_time
+    benchmark_dict['read_ids_time']=read_time
+    df=table.to_pandas() # Converts the table to a pandas dataframe\
+    print(df['id'])
+    print(df.head())
+    print(df.shape)
+    
+    print(f"Data : {df.iloc[0]['data.spg']}")
+    print(list(df.columns))
+    print('-'*200)
+
+    
     
     # With only some subset of columns, we can use built in pyarrow functions to calculate statistics of our column
     start_time = time.time()
@@ -250,5 +250,23 @@ if __name__ == "__main__":
         json.dump(benchmark_dict, f, indent=4)
     
     
+    table=db.read(ids=[0])
+    df=table.to_pandas()
+    print(df['data.spg'])
+    
+    db.update([{'id':0, 'data.spg':204}], 
+              normalize_kwargs={
+            "load_format":'batches',      # Uses the batch generator to normalize
+            "load_kwargs":{'batch_readahead': 10,   # Controls the number of batches to load in memory a head of time. This will have impacts on amount of RAM consumed
+                        'fragment_readahead': 2,  # Controls the number of files to load in memory ahead of time. This will have impacts on amount of RAM consumed
+                        },
+            "batch_size":100000}
+          )
+    
+    table=db.read(ids=[0])
+    df=table.to_pandas()
+    print(df['data.spg'])
+          
+
     
     
