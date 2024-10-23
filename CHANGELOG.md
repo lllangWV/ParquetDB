@@ -1,6 +1,28 @@
 
 ___
 
+# 0.4.0 (10-23-2024)
+
+##### Bugs
+- Fixed bug in normalization for batch updates.
+
+##### New features
+- Reworked modification handling to preserve main files and create new versions.
+- Improved update method to support list field updates.
+
+##### Documentation updates
+- Updated documentation to reflect recent changes.
+
+##### Maintenance
+- Updated configuration file (`config.yml`).
+- Updated `.gitignore` file.
+- Updated `_version.py` and `CHANGELOG.md` for new release.
+- Merged latest changes from the main branch of the repository.
+
+___
+
+___
+
 # 0.3.1 (10-16-2024)
 
 ##### Bugs
