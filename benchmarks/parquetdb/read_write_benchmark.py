@@ -18,22 +18,17 @@ import pyarrow.parquet as pq
 import pyarrow.fs as fs
 
 from parquetdb import ParquetDB, config
-
+from parquetdb.utils import general_utils
 
 config.logging_config.loggers.timing.level='ERROR'
 config.apply()
 
-def generate_data(n_rows=100, n_columns=100):
-    data=[]
-    for _ in range(n_rows):
-        data.append({f'col_{i}':random.randint(0, 100000) for i in range(0,n_columns)})
-    return data
 
 def benchmark_read_write(num_rows):
     db = ParquetDB(dataset_name='parquetdb', dir=benchmark_dir)
     if db.dataset_exists():
         db.drop_dataset()  # Assuming there's a method to clear the database
-    data=generate_data(n_rows=num_rows)
+    data=general_utils.generate_pylist_data(n_rows=num_rows)
     
     start_time=time.time()
     db.create(data)
