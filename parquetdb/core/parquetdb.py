@@ -103,7 +103,7 @@ class ParquetDB:
         # This ensures all records have the same nested structs
         # incoming_table=pyarrow_utils.replace_empty_structs_in_table(incoming_table)
         column_modification_callbacks=[
-                pyarrow_utils.convert_lists_to_fixed_size_list_arrays_in_column,
+                pyarrow_utils.convert_list_column_to_fixed_tensor,
                 pyarrow_utils.replace_empty_structs_in_column]
         incoming_table=pyarrow_utils.table_column_callbacks(incoming_table, callbacks=column_modification_callbacks)
 
@@ -253,7 +253,7 @@ class ParquetDB:
         
         # Incoming table processing
         column_modification_callbacks=[
-                pyarrow_utils.convert_lists_to_fixed_size_list_arrays_in_column,
+                pyarrow_utils.convert_list_column_to_fixed_tensor,
                 pyarrow_utils.replace_empty_structs_in_column]
         incoming_table=pyarrow_utils.table_column_callbacks(incoming_table, callbacks=column_modification_callbacks)
 

@@ -628,7 +628,26 @@ def flatten_table(table):
         table=flatten_table_in_column(table, column_names)
     return table
 
-def convert_lists_to_fixed_size_list_arrays_in_column(table, column_name):
+def _create_null_value_mapping(column):
+    """Create mapping between null and non-null values for tensor conversion."""
+    # Get mask of valid elements
+    valid_mask = column.combine_chunks().is_valid()
+    
+    # Create full index array for all elements
+    full_indices = pa.array(range(len(valid_mask)))
+    
+    # Create sparse mapping with nulls
+    sparse_mapping = pc.if_else(valid_mask, full_indices, None)
+    
+    # Get indices of non-null elements
+    non_null_positions = pc.indices_nonzero(valid_mask)
+    dense_indices = pa.array(range(len(non_null_positions)))
+    
+    # Create final mapping
+    return pc.replace_with_mask(sparse_mapping, valid_mask, dense_indices)
+
+
+def convert_list_column_to_fixed_tensor(table, column_name):
     """
     Converts a variable-sized list column in a PyArrow Table to a fixed-size list (tensor) column.
 
@@ -665,79 +684,147 @@ def convert_lists_to_fixed_size_list_arrays_in_column(table, column_name):
     """
     
     column_type=table.schema.field(column_name).type
+    
+    if not pa.types.is_list(column_type):
+        return table
 
-    if pa.types.is_list(column_type):
-        logger.debug("Found list. Trying to convert to fixed size list array")
-        column_array=table.column(column_name)
-        column_index=table.schema.get_field_index(column_name)
-        
-        # Drop nulls, then get the get first value in the first chunk
-        valid_values_array=column_array.drop_null().chunk(0)[0].values
-        
-        # Convert to list then initialize as numpy array.
-        np_array=np.array(valid_values_array.tolist())
-        storage_size=math.prod(np_array.shape)
 
-        # This flattens the entire column array, combing all rows
-        non_null_flattened_array=pc.list_flatten(column_array, recursive=True).combine_chunks()
-        fixed_array_type=non_null_flattened_array.type
-        
-        if not (pa.types.is_floating(fixed_array_type) or 
-                pa.types.is_integer(fixed_array_type) or 
-                pa.types.is_boolean(fixed_array_type)or 
-                pa.types.is_decimal(fixed_array_type)):
-            logger.debug("This numpy array is not a floating type. Leaving as ListArray")
-            return table
-        
-        # Initialize the FixedListArray from the flattend array, this will automatically reform the rows for non null values
-        try:
-            non_null_update_list_array=pa.FixedSizeListArray.from_arrays(values=non_null_flattened_array, list_size=storage_size)
-        except:
-            logger.debug("Some of the row arrays are not evenly sized. Leaving as ListArray")
-            return table
-        
-        # In the following we need to map the non null arrays back into an array that includes nulls in the new type
-        is_valid_array=column_array.combine_chunks().is_valid()
-        is_null_array=column_array.combine_chunks().is_null()
-        # Generate a mask that contains index where the array is not null
-        sequence = pa.array(range(len(is_valid_array)))
-        non_null_indices_mask = pc.if_else(is_valid_array, sequence, None)
-        indices = pc.indices_nonzero(is_valid_array)
-        non_null_indices=pa.array(range(len(indices)))
-        non_null_indices_mask=pc.replace_with_mask(non_null_indices_mask, is_valid_array, non_null_indices)
-        
-        update_list_array=non_null_update_list_array.take(non_null_indices_mask)
-        
-        updated_type = pa.fixed_shape_tensor(fixed_array_type, np_array.shape)
-        updated_array = pa.ExtensionArray.from_storage(updated_type, update_list_array)
-        
-        null_array = pa.array([[None]*storage_size], pa.list_(fixed_array_type, storage_size))
-        null_array = pa.ExtensionArray.from_storage(updated_type, null_array)
-        
+    logger.debug("Found list. Trying to convert to fixed size list array")
+    
+    # Step 1: Extract column array and index
+    column_array = table.column(column_name)
+    column_index = table.schema.get_field_index(column_name)
+    
+    # Step 2: Get first non-null element to determine tensor shape
+    non_null_chunk = column_array.drop_null().chunk(0)
+    first_element = non_null_chunk[0].values.tolist()
+    tensor_shape = np.array(first_element).shape
+    tensor_size = math.prod(tensor_shape)
 
-        # Generate unique index mask for update array
-        combined_arrays = pa.concat_arrays([updated_array,null_array])
-        
-        # Generate unique index mask for the null array
-        filter_null_array_sequence=pa.array(range(len(is_valid_array), len(is_valid_array) + 1))
-        print(filter_null_array_sequence)
-        # current_non_null_indices_mask = pc.if_else(is_null_array, filter_null_array_sequence, None)
-        
-        # Generate unique index mask for current array
-        filter_current_array_sequence = pa.array(range(len(is_valid_array)))
-        current_non_null_indices_mask = pc.if_else(is_valid_array, filter_current_array_sequence, None)
-        print(current_non_null_indices_mask)
-        
-        combined_mask=current_non_null_indices_mask.fill_null(filter_null_array_sequence[0])
-        print(combined_mask)
-        updated_array=combined_arrays.take(combined_mask)
-        
-        print(updated_array)
-        
-        updated_field=pa.field(column_name, updated_type)
-        table=table.set_column(column_index, updated_field, updated_array)
+    # Step 3:  Flattens the non-null array, into a single 1-d array combing all rows
+    flattened_values = pc.list_flatten(column_array, recursive=True).combine_chunks()
+    base_type = flattened_values.type
+    
+    # Check if the base type is a floating type
+    if not (pa.types.is_floating(base_type) or 
+            pa.types.is_integer(base_type) or 
+            pa.types.is_boolean(base_type)or 
+            pa.types.is_decimal(base_type)):
+        logger.debug("This numpy array is not a floating type. Leaving as ListArray")
+        return table
+    
+    # Step 4: Create fixed-size array from non-null values
+    try:
+        fixed_size_array = pa.FixedSizeListArray.from_arrays(
+            values=flattened_values, 
+            list_size=tensor_size
+        )
+    except:
+        logger.debug("Inconsistent array sizes detected. Leaving as ListArray")
+        return table
+    
+    
+    # Step 4: Create mapping for null handling
+    null_mapping = _create_null_value_mapping(column_array)
+    
+    
+    # Step 5: Reorder the non-null values to match original array structure
+    # Example: [[1,2], [3,4]] → [None, [1,2], None, [3,4]]
+    reordered_array = fixed_size_array.take(null_mapping)
+    
+    # Step 6: Create the tensor type and convert array to tensor format
+    tensor_type = pa.fixed_shape_tensor(base_type, tensor_shape)
+    tensor_array = pa.ExtensionArray.from_storage(tensor_type, reordered_array)
+    
+    # Step 7: Create a null tensor to use for missing values
+    # Example: [[None,None]] - this will be used to fill null positions
+    null_storage = pa.array([[None] * tensor_size], pa.list_(base_type, tensor_size))
+    null_tensor = pa.ExtensionArray.from_storage(tensor_type, null_storage)
+    
+    # Step 8: Combine the tensor array with the null tensor
+    # Example: [[1,2], [3,4], [None,None]]
+    combined_tensors = pa.concat_arrays([tensor_array, null_tensor])
+    
+    # Step 9: Create mapping to place nulls and values in correct positions
+    valid_mask = null_mapping.is_valid()  # Shows which positions should be null
+    array_len = len(valid_mask)
+    
+    # Index of the null tensor in combined array (it's at the end)
+    null_index = pa.array([array_len])
+    # Indices for non-null values
+    value_indices = pa.array(range(array_len))
+    # Create mapping: null positions get None, valid positions get their index
+    value_mapping = pc.if_else(valid_mask, value_indices, None)
+    
+    # Step 10: Replace None values with index of null tensor and apply mapping
+    # Example mapping: [2, 0, 2, 1] → points to null tensor (2) or value indices (0,1)
+    final_mapping = value_mapping.fill_null(null_index[0])
+    tensor_array = combined_tensors.take(final_mapping)
+    
+    # Step 11: Update table with new tensor column
+    tensor_field = pa.field(column_name, tensor_array.type)
+    return table.set_column(column_index, tensor_field, tensor_array)
+    
+    
+    
+    # # In the following we need to map the non null arrays back into an array that includes nulls in the new type
+    # is_valid_array=column_array.combine_chunks().is_valid()
+    
+    
+    # # # Generate a mask that contains index where the array is not null
+    # # is_valid_index_array = pa.array(range(len(is_valid_array)))
+    # # is_valid_index_mask = pc.if_else(is_valid_array, is_valid_index_array, None)
+    # # indices = pc.indices_nonzero(is_valid_array)
+    # # non_null_indices=pa.array(range(len(indices)))
+    # # is_valid_index_mask=pc.replace_with_mask(is_valid_index_mask, is_valid_array, non_null_indices)
+    
+    
+    
+    # # Input array validation status
+    # valid_elements_mask = column_array.combine_chunks().is_valid()
 
-    return table
+    # # Create position mapping for all elements (including nulls)
+    # full_index_array = pa.array(range(len(valid_elements_mask)))
+    # # Map positions but set null positions to None
+    # sparse_position_map = pc.if_else(valid_elements_mask, full_index_array, None)
+
+    # # Get positions of non-null elements
+    # non_null_positions = pc.indices_nonzero(valid_elements_mask)
+    # # Create sequential indices for non-null elements only
+    # dense_index_array = pa.array(range(len(non_null_positions)))
+
+    # # Replace valid positions with dense indices
+    # final_position_map = pc.replace_with_mask(sparse_position_map, valid_elements_mask, dense_index_array)
+            
+    # reordered_array=non_null_update_list_array.take(final_position_map)
+    
+    # # Create the updated array
+    # updated_type = pa.fixed_shape_tensor(base_array_type, np_array.shape)
+    # updated_array = pa.ExtensionArray.from_storage(updated_type, reordered_array)
+    
+    # # Create the null array of the same type as the updated array
+    # null_array = pa.array([[None]*storage_size], pa.list_(base_array_type, storage_size))
+    # null_array = pa.ExtensionArray.from_storage(updated_type, null_array)
+    
+
+    # # Generate unique index mask for update array
+    # combined_arrays = pa.concat_arrays([updated_array,null_array])
+    
+    # # Generate unique index mask for the null array
+    # filter_null_array_sequence=pa.array(range(len(valid_elements_mask), len(valid_elements_mask) + 1))
+
+    # # Generate unique index mask for current array
+    # filter_current_array_sequence = pa.array(range(len(valid_elements_mask)))
+    # current_is_valid_index_mask = pc.if_else(valid_elements_mask, filter_current_array_sequence, None)
+
+    # combined_mask=current_is_valid_index_mask.fill_null(filter_null_array_sequence[0])
+
+    # updated_array=combined_arrays.take(combined_mask)
+    
+    # updated_field=pa.field(column_name, updated_type)
+    # table=table.set_column(column_index, updated_field, updated_array)
+
+    # return table
 
 def table_column_callbacks(table, callbacks=[]):
     """
@@ -944,23 +1031,23 @@ def update_flattend_table(current_table, incoming_table):
             is_null_array=update_array.is_null()
             print(is_valid_array)
             sequence = pa.array(range(len(is_valid_array)))
-            non_null_indices_mask = pc.if_else(is_valid_array, sequence, None)
+            is_valid_index_mask = pc.if_else(is_valid_array, sequence, None)
             indices = pc.indices_nonzero(is_valid_array)
             non_null_indices=pa.array(range(len(indices)))
-            non_null_indices_mask=pc.replace_with_mask(non_null_indices_mask, is_valid_array, non_null_indices)
-            # print(non_null_indices_mask)
+            is_valid_index_mask=pc.replace_with_mask(is_valid_index_mask, is_valid_array, non_null_indices)
+            # print(is_valid_index_mask)
             combined_arrays=pa.concat_arrays([current_array, update_array])
             
             # Generate unique index mask for update array
             filter_update_array_sequence = pa.array(range(len(is_valid_array),2*len(is_valid_array)))
-            update_non_null_indices_mask = pc.if_else(is_valid_array, filter_update_array_sequence, None)
+            update_is_valid_index_mask = pc.if_else(is_valid_array, filter_update_array_sequence, None)
             
             # Generate unique index mask for current array
             filter_current_array_sequence = pa.array(range(len(is_valid_array)))
-            current_non_null_indices_mask = pc.if_else(is_null_array, filter_current_array_sequence, None)
+            current_is_valid_index_mask = pc.if_else(is_null_array, filter_current_array_sequence, None)
             
             # Combine the two masks. If th
-            combined_mask=current_non_null_indices_mask.fill_null(update_non_null_indices_mask)
+            combined_mask=current_is_valid_index_mask.fill_null(update_is_valid_index_mask)
             
             print(combined_mask)
             
