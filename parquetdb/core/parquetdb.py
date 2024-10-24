@@ -101,7 +101,11 @@ class ParquetDB:
 
         # Sometimes records have a nested dictionaries and some do not. 
         # This ensures all records have the same nested structs
-        incoming_table=pyarrow_utils.replace_empty_structs_in_table(incoming_table)
+        # incoming_table=pyarrow_utils.replace_empty_structs_in_table(incoming_table)
+        column_modification_callbacks=[
+                pyarrow_utils.convert_lists_to_fixed_size_list_arrays_in_column,
+                pyarrow_utils.replace_empty_structs_in_column]
+        incoming_table=pyarrow_utils.table_column_callbacks(incoming_table, callbacks=column_modification_callbacks)
 
         # We store the flatten table because it is easier to process
         incoming_table=pyarrow_utils.flatten_table(incoming_table)
@@ -248,7 +252,11 @@ class ParquetDB:
         del data
         
         # Incoming table processing
-        incoming_table=pyarrow_utils.replace_empty_structs_in_table(incoming_table)
+        column_modification_callbacks=[
+                pyarrow_utils.convert_lists_to_fixed_size_list_arrays_in_column,
+                pyarrow_utils.replace_empty_structs_in_column]
+        incoming_table=pyarrow_utils.table_column_callbacks(incoming_table, callbacks=column_modification_callbacks)
+
         incoming_table=pyarrow_utils.flatten_table(incoming_table)
         incoming_table=pyarrow_utils.table_schema_cast(incoming_table, incoming_table.schema)
 

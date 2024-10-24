@@ -1,3 +1,5 @@
+import math
+import numpy as np
 import pyarrow as pa
 import logging
 
@@ -107,9 +109,6 @@ def merge_structs(current_type: pa.StructType, incoming_type: pa.StructType) -> 
 
     return pa.struct(merged_fields)
 
-
-
-@timeit
 def merge_schemas(current_schema: pa.Schema, incoming_schema: pa.Schema) -> pa.Schema:
     """
     Merges two PyArrow schemas, combining fields and recursively merging struct fields.
@@ -209,6 +208,54 @@ def replace_empty_structs(column_array: pa.Array, dummy_field=pa.field('dummy_fi
 
     return pc.make_struct(*child_arrays, field_names=child_field_names)
     
+def replace_empty_structs_in_column(table, column_name, dummy_field=pa.field('dummy_field', pa.int16())):
+    """
+    Replaces empty struct values in a specified column of a PyArrow Table with a dummy field.
+
+    This function checks if the given column in the table is of a struct type. If it is, it replaces
+    any empty structs in the column with a dummy struct that includes the `dummy_field`. The modified
+    column is then updated in the table and returned.
+
+    Parameters
+    ----------
+    table : pyarrow.Table
+        The input PyArrow Table containing the column to be modified.
+    column_name : str
+        The name of the column in the table where empty structs should be replaced.
+    dummy_field : pyarrow.Field, optional
+        A dummy field to insert into empty structs, by default `pa.field('dummy_field', pa.int16())`.
+
+    Returns
+    -------
+    pyarrow.Table
+        The updated table where empty structs in the specified column have been replaced with dummy structs.
+
+    Examples
+    --------
+    >>> import pyarrow as pa
+    >>> data = pa.array([{'a': 1}, None, {}], type=pa.struct([('a', pa.int64())]))
+    >>> table = pa.table([data], names=['col1'])
+    >>> modified_table = replace_empty_structs_in_column(table, 'col1')
+    >>> print(modified_table)
+    pyarrow.Table
+    col1: struct<a: int64, dummy_field: int16>
+    ----
+    col1: [{a: 1}, {dummy_field: 0}, {dummy_field: 0}]
+    """
+    column_type=table.schema.field(column_name).type
+    if pa.types.is_struct(column_type):
+        logger.debug('This column is a struct')
+        
+        column_array=table.column(column_name)
+        column_index=table.schema.get_field_index(column_name)
+        
+        # Replacing empty structs with dummy structs
+        updated_array=replace_empty_structs(column_array, dummy_field=dummy_field)
+
+        updated_field=pa.field(column_name, updated_array.type)
+        table = table.set_column(column_index, updated_field, updated_array)
+    return table
+    
 def replace_empty_structs_in_table(table, dummy_field=pa.field('dummy_field', pa.int16())):
     """
     Replaces empty struct fields in a PyArrow table with a struct containing a dummy field.
@@ -231,24 +278,8 @@ def replace_empty_structs_in_table(table, dummy_field=pa.field('dummy_field', pa
     >>> replace_empty_structs_in_table(table)
     pyarrow.Table
     """
-    for field_name in table.column_names:
-        field_index=table.schema.get_field_index(field_name)
-        
-        field=table.field(field_index)
-        column_array = table.column(field_index)
-        
-        if pa.types.is_struct(column_array.type):
-            logger.debug('This column is a struct')
-            # Replacing empty structs with dummy structs
-            new_column_array=replace_empty_structs(column_array, dummy_field=dummy_field)
-            new_field=pa.field(field_name, new_column_array.type)
-        else:
-            new_column_array=column_array
-            new_field=field
-            
-        table = table.set_column(field_index,
-                                 new_field, 
-                                 new_column_array)
+    for column_name in table.column_names:
+        table=replace_empty_structs_in_column(table, column_name, dummy_field=dummy_field)
     return table
 
 def order_fields_in_struct(column_array, new_struct_type):
@@ -516,6 +547,62 @@ def flatten_nested_structs(array, parent_name):
             
     return flattened_arrays
 
+def flatten_table_in_column(table, column_name):
+    """
+    Flattens a nested struct column in a PyArrow Table. 
+
+    This function takes a column from a PyArrow Table that is of struct type, and flattens its fields into separate columns.
+    The original struct column is replaced by these individual columns in the resulting table. The column names are
+    sorted alphabetically after flattening.
+    
+    This does not work in in the table_column_callbacks function. 
+    As it will remove existing field of the nested structs
+
+    Parameters
+    ----------
+    table : pyarrow.Table
+        The input PyArrow Table containing the column to be flattened.
+    column_name : str
+        The name of the struct column in the table to be flattened.
+
+    Returns
+    -------
+    pyarrow.Table
+        The updated table where the nested struct column has been flattened into individual columns.
+
+    Examples
+    --------
+    >>> import pyarrow as pa
+    >>> data = pa.array([{'a': 1, 'b': 2}, {'a': 3, 'b': 4}], type=pa.struct([('a', pa.int64()), ('b', pa.int64())]))
+    >>> table = pa.table([data], names=['col1'])
+    >>> modified_table = flatten_table_in_column(table, 'col1')
+    >>> print(modified_table)
+    pyarrow.Table
+    a: int64
+    b: int64
+    ----
+    a: [1, 3]
+    b: [2, 4]
+    """
+    column_type=table.schema.field(column_name).type
+    column_names=table.column_names
+    column_names.pop(column_names.index(column_name))
+
+    if pa.types.is_struct(column_type):
+        print("Found struct. Trying to flatten")
+        column_array=table.column(column_name)
+        
+        flattened_arrays_and_fields = flatten_nested_structs(column_array, column_name)
+        
+        for flattened_array, flattened_field in flattened_arrays_and_fields:
+            table=table.append_column(flattened_field, flattened_array)
+        
+            column_names.append(flattened_field.name)
+            
+        sorted_column_names=sorted(column_names)
+        table=table.select(sorted_column_names)
+    return table
+
 def flatten_table(table):
     """
     Flattens nested struct columns within a PyArrow table.
@@ -537,35 +624,126 @@ def flatten_table(table):
     pyarrow.Table
     """
 
-    flattened_columns = []
-    flattened_fields = []
-
-    for i, column in enumerate(table.columns):
-        column_name = table.field(i).name
-        if pa.types.is_struct(column.type):
-            flattened_arrays_and_fields = flatten_nested_structs(column, column_name)
-            
-            # This is to handle empty structs
-            if len(flattened_arrays_and_fields)==0:
-                flattened_columns.append(column)
-                flattened_fields.append(pa.field(column_name, column.type))
-                continue
-            
-            flattened_column, flattend_fields = zip(*flattened_arrays_and_fields)
-            
-   
-            flattened_columns.extend(flattened_column)
-            flattened_fields.extend(flattend_fields)
-
-        else:
-            flattened_columns.append(column)
-            flattened_fields.append(pa.field(column_name, column.type))
-    table=pa.Table.from_arrays(flattened_columns, schema=pa.schema(flattened_fields, metadata=table.schema.metadata))
-    # table=table.select(sorted(table.column_names))
+    for column_names in table.column_names:
+        table=flatten_table_in_column(table, column_names)
     return table
 
+def convert_lists_to_fixed_size_list_arrays_in_column(table, column_name):
+    """
+    Converts a variable-sized list column in a PyArrow Table to a fixed-size list (tensor) column.
 
-@timeit
+    This function checks if a column in the table is of list type and converts it to a fixed-size list array
+    (i.e., tensor) based on the dimensions of the first non-null element in the list. The fixed-size list 
+    array is then updated in the table.
+
+    Parameters
+    ----------
+    table : pyarrow.Table
+        The input PyArrow Table containing the column to be converted.
+    column_name : str
+        The name of the column in the table which contains list values to be converted to fixed-size arrays.
+
+    Returns
+    -------
+    pyarrow.Table
+        The updated table where the specified column has been converted to a fixed-size list array (tensor).
+
+    Examples
+    --------
+    >>> import pyarrow as pa
+    >>> import numpy as np
+    >>> data = pa.array([[1, 2], [3, 4], [5, 6]], type=pa.list_(pa.int64()))
+    >>> table = pa.table([data], names=['col1'])
+    >>> modified_table = convert_lists_to_fixed_size_list_arrays_in_column(table, 'col1')
+    >>> print(modified_table)
+    pyarrow.Table
+    col1: fixed_shape_tensor<list<item: int64>[2]>
+    ----
+    col1: [ [1, 2], [3, 4], [5, 6] ]
+    """
+    
+    column_type=table.schema.field(column_name).type
+    
+    if pa.types.is_list(column_type):
+        logger.debug("Found list. Trying to convert to fixed size list array")
+        column_array=table.column(column_name)
+        column_index=table.schema.get_field_index(column_name)
+        
+        # Drop nulls, then get the get first value in the first chunk
+        valid_values_array_1=column_array.drop_null().chunk(0)[0].values
+        
+        # Here I want to the test on 2 rows as the first row might happen to be homogeneous
+        valid_values_array_2=column_array.drop_null().chunk(0)[-1].values
+        # Convert to list then initialize as numpy array.
+        try:
+            np_array=np.array(valid_values_array_1.tolist())
+            np_array=np.array(valid_values_array_2.tolist())
+        except Exception as e:
+            logger.debug(f"Error converting list to numpy array: {e}")
+            logger.debug("This numpy array is inhomogeneous. Leaving as ListArray")
+            
+            return table
+        
+        storage_size=math.prod(np_array.shape)
+        # This flattens the entire column array, combing all rows
+        flattened_array=pc.list_flatten(column_array, recursive=True).combine_chunks()
+        fixed_array_type=flattened_array.type
+        
+        # Initialize the FixedListArray from the flattend array, this will automatically reform the rows
+        update_list_array=pa.FixedSizeListArray.from_arrays(values=flattened_array, list_size=storage_size)
+        updated_type = pa.fixed_shape_tensor(fixed_array_type, np_array.shape)
+        updated_array = pa.ExtensionArray.from_storage(updated_type, update_list_array)
+        
+        updated_field=pa.field(column_name, updated_type)
+        table=table.set_column(column_index, updated_field, updated_array)
+
+    return table
+
+def table_column_callbacks(table, callbacks=[]):
+    """
+    Applies a list of callback functions to each column in a PyArrow Table.
+
+    This function iterates over all columns in the provided table and applies each callback function from the
+    `callbacks` list to each column. The callbacks are expected to modify the table in some way (e.g., transforming
+    or updating columns), and the updated table is returned after all callbacks are applied.
+
+    Parameters
+    ----------
+    table : pyarrow.Table
+        The input PyArrow Table to which the callback functions will be applied.
+    callbacks : list of callable, optional
+        A list of functions to be applied to each column in the table. Each callback should take two arguments:
+        the table and the name of the column.
+
+    Returns
+    -------
+    pyarrow.Table
+        The updated table after applying all callback functions to each column.
+
+    Examples
+    --------
+    >>> import pyarrow as pa
+    >>> def uppercase_column_names(table, column_name):
+    ...     new_name = column_name.upper()
+    ...     column = table.column(column_name)
+    ...     return table.rename_columns([new_name if name == column_name else name for name in table.column_names])
+    ...
+    >>> data = pa.array([1, 2, 3])
+    >>> table = pa.table([data], names=['col1'])
+    >>> modified_table = table_column_callbacks(table, callbacks=[uppercase_column_names])
+    >>> print(modified_table)
+    pyarrow.Table
+    COL1: int64
+    ----
+    COL1: [1, 2, 3]
+    """
+    for column_name in table.column_names:
+        logger.info(f"Applying callbacks to column: {column_name}")
+        for callback in callbacks:
+            logger.debug(f"Applying callback: {callback.__name__}")
+            table=callback(table, column_name)
+    return table
+
 def create_struct_arrays_from_dict(nested_dict):
     """
     Creates PyArrow StructArrays and schema from a nested dictionary.
@@ -603,7 +781,6 @@ def create_struct_arrays_from_dict(nested_dict):
         field_names.append(name)
     return pa.StructArray.from_arrays(arrays, fields=fields), pa.struct(fields)
 
-@timeit
 def create_nested_arrays_dict_from_flattened_table(table):
     """
     Reconstructs a nested dictionary of arrays from a flattened PyArrow table.
@@ -647,13 +824,11 @@ def create_nested_arrays_dict_from_flattened_table(table):
                 
     return nested_arrays
 
-@timeit
 def rebuild_nested_table(table):
     nested_arrays_dict = create_nested_arrays_dict_from_flattened_table(table)
     nested_arrays, new_struct = create_struct_arrays_from_dict(nested_arrays_dict)
     new_schema=pa.schema(new_struct, metadata=table.schema.metadata)
     return pa.Table.from_arrays(nested_arrays.flatten(), schema=new_schema)
-
 
 def update_flattend_table(current_table, incoming_table):
     """
@@ -725,7 +900,6 @@ def update_flattend_table(current_table, incoming_table):
                                                 current_table.field(column_name),
                                                 updated_array)
     return updated_table
-
 
 def update_struct_child_field(current_table, incoming_table, field_path):
     """
@@ -938,7 +1112,6 @@ def update_table_nested_method(current_table, incoming_table):
                                                 updated_array)
     return current_table
 
-@timeit
 def update_table(current_table, incoming_table, flatten_method=False):
     """
     Updates the current table using either a flatten method or a nested method depending on the `flatten_method` flag.
@@ -971,7 +1144,6 @@ def update_table(current_table, incoming_table, flatten_method=False):
         
     return current_table
 
-
 def infer_pyarrow_types(data_dict: dict):
     """
     Infers PyArrow types for the given dictionary of data. The function skips the 'id' field and infers
@@ -998,7 +1170,6 @@ def infer_pyarrow_types(data_dict: dict):
         if key != 'id':
             infered_types[key] = pa.infer_type([value])
     return infered_types
-
 
 def update_schema(current_schema, schema=None, field_dict=None):
     """
@@ -1047,7 +1218,6 @@ def update_schema(current_schema, schema=None, field_dict=None):
     updated_schema=pa.schema(field_names, metadata=current_schema.metadata)
 
     return updated_schema
-
 
 def align_table(current_table: pa.Table, new_schema: pa.Schema) -> pa.Table:
     """
