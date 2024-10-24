@@ -635,6 +635,8 @@ def convert_lists_to_fixed_size_list_arrays_in_column(table, column_name):
     This function checks if a column in the table is of list type and converts it to a fixed-size list array
     (i.e., tensor) based on the dimensions of the first non-null element in the list. The fixed-size list 
     array is then updated in the table.
+    
+    This will only convert floats, integers, booleans, and decimals. Also it will only convert if the list is homogeneous.
 
     Parameters
     ----------
@@ -663,34 +665,49 @@ def convert_lists_to_fixed_size_list_arrays_in_column(table, column_name):
     """
     
     column_type=table.schema.field(column_name).type
-    
+
     if pa.types.is_list(column_type):
         logger.debug("Found list. Trying to convert to fixed size list array")
         column_array=table.column(column_name)
         column_index=table.schema.get_field_index(column_name)
         
         # Drop nulls, then get the get first value in the first chunk
-        valid_values_array_1=column_array.drop_null().chunk(0)[0].values
+        valid_values_array=column_array.drop_null().chunk(0)[0].values
         
-        # Here I want to the test on 2 rows as the first row might happen to be homogeneous
-        valid_values_array_2=column_array.drop_null().chunk(0)[-1].values
         # Convert to list then initialize as numpy array.
-        try:
-            np_array=np.array(valid_values_array_1.tolist())
-            np_array=np.array(valid_values_array_2.tolist())
-        except Exception as e:
-            logger.debug(f"Error converting list to numpy array: {e}")
-            logger.debug("This numpy array is inhomogeneous. Leaving as ListArray")
-            
+        np_array=np.array(valid_values_array.tolist())
+        storage_size=math.prod(np_array.shape)
+
+        # This flattens the entire column array, combing all rows
+        non_null_flattened_array=pc.list_flatten(column_array, recursive=True).combine_chunks()
+        fixed_array_type=non_null_flattened_array.type
+        
+        if not (pa.types.is_floating(fixed_array_type) or 
+                pa.types.is_integer(fixed_array_type) or 
+                pa.types.is_boolean(fixed_array_type)or 
+                pa.types.is_decimal(fixed_array_type)):
+            logger.debug("This numpy array is not a floating type. Leaving as ListArray")
             return table
         
-        storage_size=math.prod(np_array.shape)
-        # This flattens the entire column array, combing all rows
-        flattened_array=pc.list_flatten(column_array, recursive=True).combine_chunks()
-        fixed_array_type=flattened_array.type
+        # Initialize the FixedListArray from the flattend array, this will automatically reform the rows for non null values
+        try:
+            non_null_update_list_array=pa.FixedSizeListArray.from_arrays(values=non_null_flattened_array, list_size=storage_size)
+        except:
+            logger.debug("Some of the row arrays are not evenly sized. Leaving as ListArray")
+            return table
         
-        # Initialize the FixedListArray from the flattend array, this will automatically reform the rows
-        update_list_array=pa.FixedSizeListArray.from_arrays(values=flattened_array, list_size=storage_size)
+        # In the following we need to map the non null arrays back into an array that includes nulls in the new type
+        is_valid_array=column_array.combine_chunks().is_valid()
+        
+        # Generate a mask that contains index where the array is not null
+        sequence = pa.array(range(len(is_valid_array)))
+        non_null_indices_mask = pc.if_else(is_valid_array, sequence, None)
+        indices = pc.indices_nonzero(is_valid_array)
+        non_null_indices=pa.array(range(len(indices)))
+        non_null_indices_mask=pc.replace_with_mask(non_null_indices_mask, is_valid_array, non_null_indices)
+        
+        update_list_array=non_null_update_list_array.take(non_null_indices_mask)
+        
         updated_type = pa.fixed_shape_tensor(fixed_array_type, np_array.shape)
         updated_array = pa.ExtensionArray.from_storage(updated_type, update_list_array)
         
