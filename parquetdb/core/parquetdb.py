@@ -1,8 +1,10 @@
+import copy
 import logging
 import os
 import shutil
 from glob import glob
 import time
+import itertools
 from typing import Callable, List, Union
 
 import pandas as pd
@@ -42,19 +44,14 @@ class ParquetDB:
         self.dir = dir
         self.dataset_name=dataset_name
         self.dataset_dir=os.path.join(self.dir,self.dataset_name)
-        self.tmp_dir=os.path.join(self.dir,'tmp')
         self.basename_template = f'{dataset_name}_{{i}}.parquet'
 
-
-        os.makedirs(self.tmp_dir, exist_ok=True)
         os.makedirs(self.dataset_dir, exist_ok=True)
 
         
         self.load_formats=['batches','table','dataset']
-        self.reserved_dataset_names=['tmp']
 
         logger.info(f"dir: {self.dir}")
-        logger.info(f"reserved_dataset_names: {self.reserved_dataset_names}")
         logger.info(f"load_formats: {self.load_formats}")
 
     @timeit
@@ -99,17 +96,8 @@ class ParquetDB:
         new_ids = self._get_new_ids(incoming_table)
         incoming_table=incoming_table.append_column(pa.field('id', pa.int64()), [new_ids])
 
-        # Sometimes records have a nested dictionaries and some do not. 
-        # This ensures all records have the same nested structs
-        # incoming_table=pyarrow_utils.replace_empty_structs_in_table(incoming_table)
-        column_modification_callbacks=[
-                pyarrow_utils.convert_list_column_to_fixed_tensor,
-                pyarrow_utils.replace_empty_structs_in_column]
-        incoming_table=pyarrow_utils.table_column_callbacks(incoming_table, callbacks=column_modification_callbacks)
-
-        # We store the flatten table because it is easier to process
-        incoming_table=pyarrow_utils.flatten_table(incoming_table)
-        
+        incoming_table = self._preprocess_table(incoming_table)
+                
         # If this is the first table, save it directly
         if is_directory_empty(self.dataset_dir):
             incoming_save_path = self._get_save_path()
@@ -124,7 +112,6 @@ class ParquetDB:
             
             # Algin Incoming Table with Merged Schema
             modified_incoming_table=pyarrow_utils.table_schema_cast(incoming_table, merged_schema)
-            logger
             are_schemas_equal=current_schema.equals(modified_incoming_table.schema)
             
             if not are_schemas_equal:
@@ -243,6 +230,7 @@ class ParquetDB:
         """
         if normalize_kwargs is None:
             normalize_kwargs=config.parquetdb_config.normalize_kwargs.to_dict()
+            
         logger.info("Updating data")
         
         # Construct incoming table from the data
@@ -250,20 +238,13 @@ class ParquetDB:
         
         # Free up memory
         del data
-        
-        # Incoming table processing
-        column_modification_callbacks=[
-                pyarrow_utils.convert_list_column_to_fixed_tensor,
-                pyarrow_utils.replace_empty_structs_in_column]
-        incoming_table=pyarrow_utils.table_column_callbacks(incoming_table, callbacks=column_modification_callbacks)
-
-        incoming_table=pyarrow_utils.flatten_table(incoming_table)
+ 
+        incoming_table = self._preprocess_table(incoming_table)
         incoming_table=pyarrow_utils.table_schema_cast(incoming_table, incoming_table.schema)
 
         # Non-exisiting id warning step. This is not really necessary but might be nice for user to check
         # self._validate_id(incoming_table['id'].combine_chunks())
 
-        
         # Apply update normalization
         self._normalize(incoming_table=incoming_table, **normalize_kwargs)
 
@@ -542,10 +523,19 @@ class ParquetDB:
             dataset_dir=nested_dataset_dir
             basename_template=f'{self.dataset_name}_{{i}}.parquet'
             retrieved_data=rebuild_nested_func(retrieved_data)
+            if not isinstance(retrieved_data, pa.lib.Table):
+                logger.debug("retrieved_data is a record batch")
+                retrieved_data, tmp_generator = itertools.tee(retrieved_data)
+                record_batch=next(tmp_generator)
+                schema=record_batch.schema
+                del tmp_generator
+                del record_batch
             
         if isinstance(retrieved_data, pa.lib.Table):
             schema=None
             
+        logger.debug(f"Schema: {schema}")
+        
         try:
             logger.info(f"Writing dataset to {dataset_dir}")
             logger.info(f"Basename template: {basename_template}")
@@ -786,8 +776,7 @@ class ParquetDB:
         logger.info(f"Renaming dataset to {new_name}")
         if not self.dataset_exists():
             raise ValueError(f"Dataset {self.dataset_name} does not exist.")
-        if new_name in self.reserved_dataset_names:
-            raise ValueError(f"Cannot rename to reserved table name: {new_name}")
+
         old_dir = os.path.join(self.dataset_dir)
         old_name=self.dataset_name
         
@@ -1025,7 +1014,7 @@ class ParquetDB:
         nested_dataset_name=f'{dataset_name}_nested'
         nested_dataset_dir=os.path.join(self.dir,nested_dataset_name)
         
-        if os.path.exists(nested_dataset_dir) or rebuild_nested_from_scratch:
+        if os.path.exists(nested_dataset_dir) and rebuild_nested_from_scratch:
             shutil.rmtree(nested_dataset_dir)
         os.makedirs(nested_dataset_dir, exist_ok=True)
         
@@ -1113,7 +1102,7 @@ class ParquetDB:
             logger.info(f"Loading as a {generator.__class__} object")
         except Exception as e:
             logger.debug(f"Error loading table: {e}. Returning empty table")
-            generator=pyarrow_utils.create_empty_batches(schema=dataset.schema, columns=columns)
+            generator=pyarrow_utils.create_empty_batch_generator(schema=dataset.schema, columns=columns)
         return generator
     
     def _load_table(self, dataset, columns:List[str]=None, filter:List[pc.Expression]=None, **kwargs):
@@ -1148,81 +1137,17 @@ class ParquetDB:
             table=pyarrow_utils.create_empty_table(schema=dataset.schema, columns=columns)
         return table
     
-    @timeit
-    def _write_tmp_files(self, tmp_dir=None, delete_existing=False):
-        """
-        Copy current dataset files to a temporary directory.
-
-        This method removes any existing files in the temporary directory and creates new ones by copying 
-        the current dataset files. This is done to safeguard the original data while performing operations 
-        that may overwrite or modify the dataset.
-
-        Parameters
-        ----------
-        tmp_dir : str, optional
-            The path to the temporary directory where the dataset files will be copied. 
-            If not provided, it defaults to `self.tmp_dir`.
-        delete_existing : bool, optional
-            If True, deletes existing temporary files (default is True).
-
-        Returns
-        -------
-        None
-            This function does not return anything but creates a copy of the dataset files in the specified 
-            temporary directory.
-        """
-        logger.info("Writing temporary files")
-        if tmp_dir is None:
-            tmp_dir=self.tmp_dir
-        shutil.rmtree(self.tmp_dir)
-        os.makedirs(self.tmp_dir, exist_ok=True)
-
-        current_filepaths=glob(os.path.join(self.dataset_dir,f'{self.dataset_name}_*.parquet'))
-        for i_file, current_filepath in enumerate(current_filepaths):
-            basename=os.path.basename(current_filepath)
-            
-            tmp_filepath = os.path.join(self.tmp_dir, basename)
-            shutil.copyfile(current_filepath, tmp_filepath)
+    def _preprocess_table(self, table):
+        table=pyarrow_utils.flatten_table(table)
         
-        # if os.path.exists(self.dataset_dir) and delete_existing:
-        #     shutil.rmtree(self.dataset_dir)
-        # os.makedirs(self.dataset_dir, exist_ok=True)
-        logger.info("Temporary files written")
+        for column_name in table.column_names:
+            # Convert list column to fixed tensor
+            table=pyarrow_utils.convert_list_column_to_fixed_tensor(table, column_name)
             
-    @timeit
-    def _restore_tmp_files(self, tmp_dir=None):
-        """
-        Restore temporary Parquet files from a given directory to the dataset directory.
-
-        This function moves temporary Parquet files created during dataset operations
-        from the temporary directory back to the dataset directory. It first identifies
-        all Parquet files matching the dataset name pattern in the temporary directory,
-        then copies them to the dataset directory, and finally deletes the original temporary files.
-
-        Parameters
-        ----------
-        tmp_dir : str, optional
-            The directory containing the temporary Parquet files. If not provided, it defaults
-            to `self.tmp_dir`.
-
-        Returns
-        -------
-        None
-            This function does not return any value. It performs file operations by copying
-            and deleting temporary files.
-
-        """
-        logger.info("Restoring temporary files")
-        if tmp_dir is None:
-            tmp_dir=self.tmp_dir
- 
-        tmp_filepaths=glob(os.path.join(self.tmp_dir,f'{self.dataset_name}_*.parquet'))
-        for i_file, tmp_filepath in enumerate(tmp_filepaths):
-            basename=os.path.basename(tmp_filepath)
-            current_filepath = os.path.join(self.dataset_dir, basename)
-            shutil.copyfile(tmp_filepath, current_filepath)
-            os.remove(tmp_filepath)
-        logger.info("Temporary files restored")
+            # Replace empty structs with dummy structs
+            table=pyarrow_utils.replace_empty_structs_in_column(table, column_name)
+            table=pyarrow_utils.flatten_table_in_column(table, column_name)
+        return table
     
     def _get_new_ids(self, incoming_table):
         """
@@ -1456,5 +1381,5 @@ def table_rebuild_nested_struct(current_table):
 
 def generator_rebuild_nested_struct(generator):
     for record_batch in generator:
-        updated_record_batch=pyarrow_utils.rebuild_nested_table(record_batch)
+        updated_record_batch=pyarrow_utils.rebuild_nested_table(record_batch,load_format='batches')
         yield updated_record_batch

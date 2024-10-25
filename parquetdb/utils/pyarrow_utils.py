@@ -254,6 +254,7 @@ def replace_empty_structs_in_column(table, column_name, dummy_field=pa.field('du
 
         updated_field=pa.field(column_name, updated_array.type)
         table = table.set_column(column_index, updated_field, updated_array)
+        
     return table
     
 def replace_empty_structs_in_table(table, dummy_field=pa.field('dummy_field', pa.int16())):
@@ -587,7 +588,7 @@ def flatten_table_in_column(table, column_name):
     column_type=table.schema.field(column_name).type
     column_names=table.column_names
     column_names.pop(column_names.index(column_name))
-
+    
     if pa.types.is_struct(column_type):
         logger.debug("Found struct. Trying to flatten")
         column_array=table.column(column_name)
@@ -596,9 +597,12 @@ def flatten_table_in_column(table, column_name):
         
         for flattened_array, flattened_field in flattened_arrays_and_fields:
             table=table.append_column(flattened_field, flattened_array)
-        
             column_names.append(flattened_field.name)
-            
+        
+        # Catches case when the column has empty structs
+        if len(flattened_arrays_and_fields)==0:
+            column_names.append(column_name)
+
         sorted_column_names=sorted(column_names)
         table=table.select(sorted_column_names)
     return table
@@ -645,7 +649,6 @@ def _create_null_value_mapping(column):
     
     # Create final mapping
     return pc.replace_with_mask(sparse_mapping, valid_mask, dense_indices)
-
 
 def convert_list_column_to_fixed_tensor(table, column_name):
     """
@@ -726,7 +729,6 @@ def convert_list_column_to_fixed_tensor(table, column_name):
     
     # Step 4: Create mapping for null handling
     null_mapping = _create_null_value_mapping(column_array)
-    
     
     # Step 5: Reorder the non-null values to match original array structure
     # Example: [[1,2], [3,4]] → [None, [1,2], None, [3,4]]
@@ -834,12 +836,14 @@ def create_struct_arrays_from_dict(nested_dict):
     fields=[]
     field_names=[]
     for name, value in nested_dict.items():
+        # logger.debug(f"Building nest for field: {name}")
         if isinstance(value, dict):
             array, struct = create_struct_arrays_from_dict(value)
             field=pa.field(name, struct)
         else:
             array=value
-            array=array.combine_chunks()
+            if isinstance(array, pa.ChunkedArray):
+                array=array.combine_chunks()
             field=pa.field(name,value.type)
         
         arrays.append(array)
@@ -890,11 +894,14 @@ def create_nested_arrays_dict_from_flattened_table(table):
                 
     return nested_arrays
 
-def rebuild_nested_table(table):
+def rebuild_nested_table(table, load_format='table'):
     nested_arrays_dict = create_nested_arrays_dict_from_flattened_table(table)
     nested_arrays, new_struct = create_struct_arrays_from_dict(nested_arrays_dict)
     new_schema=pa.schema(new_struct, metadata=table.schema.metadata)
-    return pa.Table.from_arrays(nested_arrays.flatten(), schema=new_schema)
+    if load_format=='table':
+        return pa.Table.from_arrays(nested_arrays.flatten(), schema=new_schema)
+    elif load_format=='batches':
+        return pa.RecordBatch.from_arrays(nested_arrays.flatten(), schema=new_schema)
 
 def update_flattend_table(current_table, incoming_table):
     """
@@ -940,18 +947,22 @@ def update_flattend_table(current_table, incoming_table):
             current_array = current_array.combine_chunks()
         if isinstance(update_array, pa.ChunkedArray):
             update_array = update_array.combine_chunks()
-        
 
-        try:
+        if not update_array.__class__== pa.lib.FixedShapeTensorArray:
             # Attempt to fill null values in update_array with values from current_array
             updated_array = update_array.fill_null(current_array)
-        except:
+        else:
             # If the above operation fails, proceed with manual handling for fixed-size tensors
 
             # Get boolean masks for valid (non-null) and null entries in update_array
             is_valid_array = update_array.is_valid()
             is_null_array = update_array.is_null()
-
+            
+            sum_is_valid_array=pc.sum(is_valid_array)
+            if sum_is_valid_array==pa.scalar(0, type=sum_is_valid_array.type):
+                logger.debug("No updates are present or non-null for column: {column_name}")
+                continue
+            
             # Create a sequence array for indexing
             sequence = pa.array(range(len(is_valid_array)))
 
