@@ -171,13 +171,13 @@ class ParquetDB:
         -------
         >>> db.create(data=my_data, schema=my_schema, metadata={'source': 'api'}, normalize_dataset=True)
         """
+        
         logger.info("Creating data")
         os.makedirs(self.dataset_dir, exist_ok=True)
         
         # Construct incoming table from the data
         incoming_table = self._construct_table(data, schema=schema, metadata=metadata)
         
-        del data
         
         if 'id' in incoming_table.column_names:
             raise ValueError("When create is called, the data cannot contain an 'id' column.")
@@ -319,9 +319,6 @@ class ParquetDB:
         # Construct incoming table from the data
         incoming_table = self._construct_table(data, schema=schema, metadata=metadata)
         
-        # Free up memory
-        del data
- 
         incoming_table = self._preprocess_table(incoming_table)
         incoming_table=pyarrow_utils.table_schema_cast(incoming_table, incoming_table.schema)
 
