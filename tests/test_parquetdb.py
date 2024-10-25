@@ -458,8 +458,10 @@ class TestParquetDB(unittest.TestCase):
         with self.assertRaises(ValueError):
             self.db.export_dataset(export_path, format='xlsx')
 
-# if __name__ == '__main__':
-#     unittest.main()
+if __name__ == '__main__':
+    unittest.TextTestRunner().run(TestParquetDB('test_nested_data_handling'))
+    unittest.main()
+    
     
 # if __name__ == '__main__':
 #     for x in range(50):
@@ -475,8 +477,3 @@ class TestParquetDB(unittest.TestCase):
         # unittest.TextTestRunner().run(TestParquetDB('test_add_new_field'))
 
 
-if __name__ == "__main__":
-    unittest.TextTestRunner().run(TestParquetDB('test_nested_data_handling'))
-
-# if __name__ == "__main__":
-#     unittest.TextTestRunner().run(TestParquetDB('test_add_new_field'))
