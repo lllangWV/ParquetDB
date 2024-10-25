@@ -7,6 +7,7 @@ import time
 
 from pyarrow import compute as pc
 
+from parquetdb.core.parquetdb import LoadConfig, NormalizeConfig
 from parquetdb.utils.general_utils import timeit
 from parquetdb import ParquetDB, config
 from parquetdb.utils.external_utils import download_alexandria_3d_database
@@ -46,7 +47,7 @@ if __name__ == "__main__":
     
     
     # # Here we create a ParquetDatasetDB object to interact with the database
-    db=ParquetDB(dataset_name='alexandria_3D',dir=base_dir)
+    db=ParquetDB(dataset_name='alexandria_3D_test',dir=base_dir)
 
     # print(f"Dataset dir: {db.dataset_dir}")
     
@@ -95,13 +96,14 @@ if __name__ == "__main__":
         print("Normalizing the database")
         start_time = time.time()
         normalize_dataset(db,
-                        load_format='batches',      # Uses the batch generator to normalize
-                        load_kwargs={'batch_readahead': 10,   # Controls the number of batches to load in memory a head of time. This will have impacts on amount of RAM consumed
-                                    'fragment_readahead': 2,  # Controls the number of files to load in memory ahead of time. This will have impacts on amount of RAM consumed
-                                    },
-                        batch_size = 100000,       # Controls the batchsize when to use when normalizing. This will have impacts on amount of RAM consumed
-                        max_rows_per_file=500000,  # Controls the max number of rows per parquet file
-                        max_rows_per_group=500000) # Controls the max number of rows per group parquet file
+        normalize_config=NormalizeConfig(load_format='batches',      # Uses the batch generator to normalize
+                                            batch_readahead=10,   # Controls the number of batches to load in memory a head of time. This will have impacts on amount of RAM consumed
+                                            fragment_readahead=2,  # Controls the number of files to load in memory ahead of time. This will have impacts on amount of RAM consumed
+                                            batch_size = 100000,       # Controls the batchsize when to use when normalizing. This will have impacts on amount of RAM consumed
+                                            max_rows_per_file=500000,  # Controls the max number of rows per parquet file
+                                            max_rows_per_group=500000) # Controls the max number of rows per group parquet file
+        )
+  
         benchmark_dict['normalization_time']=time.time() - start_time
     else:
         print("Skipping normalization. Change normalize=True to normalize the database.")
@@ -191,9 +193,11 @@ if __name__ == "__main__":
     generator=read_dataset(db,
                        load_format='batches',
                        batch_size=1000,
-                       load_kwargs={'batch_readahead': 10,
-                                    'fragment_readahead': 2,
-                                    },
+                       load_config=LoadConfig(batch_readahead=10,
+                                              fragment_readahead=2,
+                                              fragment_scan_options=None,
+                                              use_threads=True,
+                                              memory_pool=None),
                        columns=['id', 'data.spg'],
                        filters=[pc.field('data.spg') == 204])
     benchmark_dict['read_filtered_spg_204_1000_batches_time']=time.time() - start_time
@@ -229,18 +233,17 @@ if __name__ == "__main__":
                     columns=['id', 'structure','data'], # Instead of using the flatten syntax, we can use the nested syntax
                     ids=[0,1000000],
                     load_format='table',
-                    normalize_kwargs={
-                        'load_format':'batches',
-                        'load_kwargs':{'batch_readahead': 2,
-                                    'fragment_readahead': 2,
-                                    },
-                        'batch_size':50000,
-                        'max_rows_per_file': 500000,
-                        'min_rows_per_group': 0,
-                        'max_rows_per_group': 500000
-                    },
-                    rebuild_nested_struct=True,     # When set to True to rebuild the nested structure
+                    rebuild_nested_struct=True,         # When set to True to rebuild the nested structure
                     rebuild_nested_from_scratch=False,  # When set to True, the nested structure will be rebuilt from scratch
+                    normalize_config=NormalizeConfig(
+                        load_format='batches',
+                        batch_readahead=2,
+                        fragment_readahead=2,
+                        batch_size=50000,
+                        max_rows_per_file=500000,
+                        min_rows_per_group=0,
+                        max_rows_per_group=500000
+                    )
                     )
 
     benchmark_dict['read_rebuild_nested_struct_time']=time.time() - start_time
@@ -265,12 +268,13 @@ if __name__ == "__main__":
     print(df['data.spg'])
     
     db.update([{'id':0, 'data.spg':210}], 
-            normalize_kwargs={
-            "load_format":'batches',      # Uses the batch generator to normalize
-            "load_kwargs":{'batch_readahead': 10,   # Controls the number of batches to load in memory a head of time. This will have impacts on amount of RAM consumed
-                        'fragment_readahead': 2,  # Controls the number of files to load in memory ahead of time. This will have impacts on amount of RAM consumed
-                        },
-            "batch_size":100000}
+            normalize_config=NormalizeConfig(
+                load_format='batches',      # Uses the batch generator to normalize
+                batch_readahead=10,   # Controls the number of batches to load in memory a head of time. This will have impacts on amount of RAM consumed
+                fragment_readahead=2,  # Controls the number of files to load in memory ahead of time. This will have impacts on amount of RAM consumed
+                batch_size = 100000,       # Controls the batchsize when to use when normalizing. This will have impacts on amount of RAM consumed
+                max_rows_per_file=500000,  # Controls the max number of rows per parquet file                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                          
+                max_rows_per_group=500000) # Controls the max number of rows per group parquet file
           )
     
     table=db.read(ids=[0])

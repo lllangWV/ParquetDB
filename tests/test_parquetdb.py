@@ -7,10 +7,12 @@ import os
 import tempfile
 
 import numpy as np
-from parquetdb import ParquetDB, config
 import pyarrow as pa
 import pyarrow.compute as pc
 import pandas as pd
+
+from parquetdb import ParquetDB, config
+from parquetdb.core.parquetdb import LoadConfig, NormalizeConfig
 
 logger=logging.getLogger('tests')
 
@@ -144,7 +146,7 @@ class TestParquetDB(unittest.TestCase):
         self.assertEqual(loaded_data.num_rows, len(self.test_data), "Mismatch in row count before normalization.")
 
         # Step 3: Run normalization. Will normalize to 1 row per file and 1 row per group
-        self.db.normalize( max_rows_per_file= 1, min_rows_per_group = 1, max_rows_per_group = 1)
+        self.db.normalize( normalize_config=NormalizeConfig(max_rows_per_file= 1, min_rows_per_group = 1, max_rows_per_group = 1))
 
         # Step 4: Verify that the data has been normalized (e.g., consistent row distribution)
         normalized_data = self.db.read()

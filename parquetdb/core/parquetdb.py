@@ -1,11 +1,12 @@
 import copy
+from dataclasses import dataclass
 import logging
 import os
 import shutil
 from glob import glob
 import time
 import itertools
-from typing import Callable, List, Union
+from typing import Callable, List, Optional, Union
 
 import pandas as pd
 import pyarrow as pa
@@ -22,6 +23,96 @@ from parquetdb.utils import pyarrow_utils
 logger = logging.getLogger(__name__)
 
 config.logging_config.loggers.parquetdb.level='DEBUG'
+
+
+@dataclass
+class NormalizeConfig:
+    """
+    Configuration for the normalization process, optimizing performance by managing row distribution and file structure.
+    
+    Parameters
+    ----------
+    load_format : str
+        The format of the output dataset. Supported formats are 'table' and 'batches' (default: 'table').
+    batch_size : int, optional
+        The number of rows to process in each batch (default: None).
+    batch_readahead : int, optional
+        The number of batches to read ahead in a file (default: 16).
+    fragment_readahead : int, optional
+        The number of files to read ahead, improving IO utilization at the cost of RAM usage (default: 4).
+    fragment_scan_options : Optional[pa.dataset.FragmentScanOptions], optional
+        Options specific to a particular scan and fragment type, potentially changing across scans.
+    use_threads : bool, optional
+        Whether to use maximum parallelism determined by available CPU cores (default: True).
+    memory_pool : Optional[pa.MemoryPool], optional
+        The memory pool for allocations. Defaults to the system's default memory pool.
+    filesystem : pyarrow.fs.FileSystem, optional
+        Filesystem for writing the dataset (default: None).
+    file_options : pyarrow.fs.FileWriteOptions, optional
+        Options for writing the dataset files (default: None).
+    use_threads : bool
+        Whether to use threads for writing (default: True).
+    max_partitions : int
+        Maximum number of partitions for dataset writing (default: 1024).
+    max_open_files : int
+        Maximum open files for dataset writing (default: 1024).
+    max_rows_per_file : int
+        Maximum rows per file (default: 10,000).
+    min_rows_per_group : int
+        Minimum rows per row group within each file (default: 0).
+    max_rows_per_group : int
+        Maximum rows per row group within each file (default: 10,000).
+    existing_data_behavior : str
+        How to handle existing data in the dataset directory (options: 'overwrite_or_ignore', default: 'overwrite_or_ignore').
+    create_dir : bool
+        Whether to create the dataset directory if it does not exist (default: True).
+    """
+    load_format: str = 'table'
+    batch_size: int = 131_072
+    batch_readahead: int = 16
+    fragment_readahead: int = 4
+    fragment_scan_options: Optional[pa.dataset.FragmentScanOptions] = None
+    use_threads: bool = True
+    memory_pool: Optional[pa.MemoryPool] = None
+    filesystem: Optional[fs.FileSystem] = None
+    file_options: Optional[ds.FileWriteOptions] = None
+    use_threads: bool = config.parquetdb_config.normalize_kwargs.use_threads
+    max_partitions: int = config.parquetdb_config.normalize_kwargs.max_partitions
+    max_open_files: int = config.parquetdb_config.normalize_kwargs.max_open_files
+    max_rows_per_file: int = config.parquetdb_config.normalize_kwargs.max_rows_per_file
+    min_rows_per_group: int = config.parquetdb_config.normalize_kwargs.min_rows_per_group
+    max_rows_per_group: int = config.parquetdb_config.normalize_kwargs.max_rows_per_group
+    file_visitor: Optional[Callable] = None
+    existing_data_behavior: str = config.parquetdb_config.normalize_kwargs.existing_data_behavior
+    create_dir: bool = True
+    
+@dataclass
+class LoadConfig:
+    """
+    Configuration for loading data, specifying columns, filters, batch size, and memory usage.
+
+    Parameters
+    ----------
+    batch_size : int, optional
+        The number of rows to process in each batch (default: 131_072).
+    batch_readahead : int, optional
+        The number of batches to read ahead in a file (default: 16).
+    fragment_readahead : int, optional
+        The number of files to read ahead, improving IO utilization at the cost of RAM usage (default: 4).
+    fragment_scan_options : Optional[pa.dataset.FragmentScanOptions], optional
+        Options specific to a particular scan and fragment type, potentially changing across scans.
+    use_threads : bool, optional
+        Whether to use maximum parallelism determined by available CPU cores (default: True).
+    memory_pool : Optional[pa.MemoryPool], optional
+        The memory pool for allocations. Defaults to the system's default memory pool.
+    """
+    
+    batch_size: int = 131_072
+    batch_readahead: int = 16
+    fragment_readahead: int = 4
+    fragment_scan_options: Optional[pa.dataset.FragmentScanOptions] = None
+    use_threads: bool = True
+    memory_pool: Optional[pa.MemoryPool] = None
 
 class ParquetDB:
     def __init__(self, dataset_name, dir=''):
@@ -54,12 +145,12 @@ class ParquetDB:
         logger.info(f"dir: {self.dir}")
         logger.info(f"load_formats: {self.load_formats}")
 
-    @timeit
-    def create(self, data:Union[List[dict],dict,pd.DataFrame],
-               schema=None,
-               metadata=None,
+    def create(self, 
+               data:Union[List[dict],dict,pd.DataFrame],
+               schema:pa.Schema=None,
+               metadata:dict=None,
                normalize_dataset:bool=False,
-               normalize_kwargs:dict=None
+               normalize_config:dict=NormalizeConfig()
                ):
         """
         Adds new data to the database.
@@ -74,15 +165,12 @@ class ParquetDB:
             Metadata to be attached to the table.
         normalize_dataset : bool, optional
             If True, the dataset will be normalized after the data is added (default is True).
-        normalize_kwargs : dict, optional
-            Additional arguments for the normalization process (default is a dictionary with row group settings).
-        
+        normalize_config : NormalizeConfig, optional
+            Configuration for the normalization process, optimizing performance by managing row distribution and file structure.
         Example
         -------
         >>> db.create(data=my_data, schema=my_schema, metadata={'source': 'api'}, normalize_dataset=True)
         """
-        if normalize_kwargs is None:
-            normalize_kwargs=config.parquetdb_config.normalize_kwargs.to_dict()
         logger.info("Creating data")
         os.makedirs(self.dataset_dir, exist_ok=True)
         
@@ -116,58 +204,56 @@ class ParquetDB:
             
             if not are_schemas_equal:
                 logger.info(f"Schemas not are equal: {are_schemas_equal}. Normalizing the dataset.")
-                self._normalize(schema=merged_schema, **normalize_kwargs)
+                self._normalize(schema=merged_schema, normalize_config=normalize_config)
             incoming_save_path = self._get_save_path()
             pq.write_table(modified_incoming_table, incoming_save_path)
             
             if normalize_dataset:
-                self.normalize(schema=modified_incoming_table.schema, **normalize_kwargs)
+                self._normalize(schema=modified_incoming_table.schema, normalize_config=normalize_config)
                 
             logger.info("Creating dataset passed")
         except Exception as e:
             logger.exception(f"exception aligning schemas: {e}")
-            logger.info("Restoring original files")
-            self._restore_tmp_files()
         return None
     
-    @timeit
     def read(self,
-        load_format: str = 'table',
-        batch_size:int=None,
-        load_kwargs: dict = None,
         ids: List[int] = None,
         columns: List[str] = None,
         filters: List[pc.Expression] = None,
+        load_format: str = 'table',
+        batch_size:int=None,
         include_cols: bool = True,
         rebuild_nested_struct: bool = False,
         rebuild_nested_from_scratch: bool = False,
-        normalize_kwargs: dict = None,
+        load_config:LoadConfig=LoadConfig(),
+        normalize_config:NormalizeConfig=NormalizeConfig()
         ):
         """
         Reads data from the database.
 
         Parameters
         ----------
-        load_format : str, optional
-            The format of the returned data: 'table' or 'batches' (default is 'table').
-        batch_size : int, optional
-            The batch size to use for loading data in batches. If None, data is loaded as a whole (default is None).
-        load_kwargs : dict, optional
-            Additional keyword arguments passed to the pyarrow.dataset.Dataset.to_table or pyarrow.dataset.Dataset.to_batches (default is None).
+        
         ids : list of int, optional
             A list of IDs to read. If None, all data is read (default is None).
         columns : list of str, optional
             The columns to include in the output. If None, all columns are included (default is None).
-        include_cols : bool, optional
-            If True, includes only the specified columns. If False, excludes the specified columns (default is True).
         filters : list of pyarrow.compute.Expression, optional
             Filters to apply to the data (default is None).
+        load_format : str, optional
+            The format of the returned data: 'table' or 'batches' (default is 'table').
+        batch_size : int, optional
+            The batch size to use for loading data in batches. If None, data is loaded as a whole (default is None).
+        include_cols : bool, optional
+            If True, includes only the specified columns. If False, excludes the specified columns (default is True).
         rebuild_nested_struct : bool, optional
             If True, rebuilds the nested structure (default is False).
         rebuild_nested_from_scratch : bool, optional
             If True, rebuilds the nested structure from scratch (default is False).
-        normalize_kwargs : dict, optional
-            Additional keyword arguments passed to the normalization process (default is None).
+        load_config : LoadConfig, optional
+            Configuration for loading data, optimizing performance by managing memory usage.
+        normalize_config : NormalizeConfig, optional
+            Configuration for the normalization process, optimizing performance by managing row distribution and file structure.
         
         Returns
         -------
@@ -178,12 +264,8 @@ class ParquetDB:
         -------
         >>> data = db.read(ids=[1, 2, 3], columns=['name', 'age'], filters=[pc.field('age') > 18])
         """
-        if normalize_kwargs is None:
-            normalize_kwargs=config.parquetdb_config.normalize_kwargs.to_dict()
-        if load_kwargs is None:
-            load_kwargs=config.parquetdb_config.load_kwargs.to_dict()
         if batch_size:
-            load_kwargs['batch_size']=batch_size
+            load_config.batch_size=batch_size
             
         logger.info("Reading data")
         if columns:
@@ -199,16 +281,19 @@ class ParquetDB:
         if rebuild_nested_struct:
             dataset_dir=self.dataset_dir + '_nested'
             if (not os.path.exists(dataset_dir) or rebuild_nested_from_scratch):
-                self.to_nested(normalize_kwargs=normalize_kwargs,rebuild_nested_from_scratch=rebuild_nested_from_scratch)
+                self.to_nested(normalize_config=normalize_config,rebuild_nested_from_scratch=rebuild_nested_from_scratch)
         data = self._load_data(columns=columns, filter=filter_expression, 
                                load_format=load_format, 
                                dataset_dir=dataset_dir,
-                               load_kwargs=load_kwargs)
+                               load_config=load_config)
         logger.info("Reading data passed")
         return data
     
-    @timeit
-    def update(self, data: Union[List[dict], dict, pd.DataFrame], schema=None, metadata=None, normalize_kwargs:dict=None):
+    def update(self, 
+               data: Union[List[dict], dict, pd.DataFrame], 
+               schema:pa.Schema=None, 
+               metadata:dict=None, 
+               normalize_config:NormalizeConfig=NormalizeConfig()):
         """
         Updates existing records in the database.
 
@@ -221,16 +306,14 @@ class ParquetDB:
             The schema for the data being added. If not provided, it will be inferred.
         metadata : dict, optional
             Additional metadata to store alongside the data.
-        normalize_kwargs : dict, optional
-            Additional keyword arguments passed to the normalization process (default is None).
+        normalize_config : NormalizeConfig, optional
+            Configuration for the normalization process, optimizing performance by managing row distribution and file structure.
         
         Example
         -------
         >>> db.update(data=[{'id': 1, 'name': 'John', 'age': 30}, {'id': 2, 'name': 'Jane', 'age': 25}])
         """
-        if normalize_kwargs is None:
-            normalize_kwargs=config.parquetdb_config.normalize_kwargs.to_dict()
-            
+
         logger.info("Updating data")
         
         # Construct incoming table from the data
@@ -246,12 +329,12 @@ class ParquetDB:
         # self._validate_id(incoming_table['id'].combine_chunks())
 
         # Apply update normalization
-        self._normalize(incoming_table=incoming_table, **normalize_kwargs)
+        self._normalize(incoming_table=incoming_table, normalize_config=normalize_config)
 
         logger.info(f"Updated {self.dataset_name} table.")
 
-    @timeit
-    def delete(self, ids:List[int]=None, columns:List[str]=None, normalize_kwargs=None):
+    def delete(self, ids:List[int]=None, columns:List[str]=None, 
+               normalize_config:NormalizeConfig=NormalizeConfig()):
         """
         Deletes records from the database.
 
@@ -261,9 +344,9 @@ class ParquetDB:
             A list of record IDs to delete from the database.
         columns : list of str, optional
             A list of column names to delete from the dataset. If not provided, it will be inferred from the existing data (default: None).
-        normalize_kwargs : dict, optional
-            Additional keyword arguments passed to the normalization process (default is a dictionary with row group settings).
-
+        normalize_config : NormalizeConfig, optional
+            Configuration for the normalization process, optimizing performance by managing row distribution and file structure.
+            
         Returns
         -------
         None
@@ -276,9 +359,7 @@ class ParquetDB:
             raise ValueError("Cannot provide both ids and columns to delete.")
         if ids is None and columns is None:
             raise ValueError("Must provide either ids or columns to delete.")
-        
-        if normalize_kwargs is None:
-            normalize_kwargs=config.parquetdb_config.normalize_kwargs.to_dict()
+
         logger.info("Deleting data from the database")
         
 
@@ -304,26 +385,11 @@ class ParquetDB:
                 return None
             
         # Apply delete normalization
-        self._normalize(ids=ids, columns=columns, **normalize_kwargs)
+        self._normalize(ids=ids, columns=columns, normalize_config=normalize_config)
         
         logger.info(f"Deleted data from {self.dataset_name} dataset.")
 
-    @timeit
-    def normalize(self,
-                load_format: str = 'table',
-                batch_size: int = None,
-                load_kwargs: dict = None,
-                filesystem:fs.FileSystem=None,
-                file_options:ds.FileWriteOptions=None,
-                use_threads:bool=config.parquetdb_config.normalize_kwargs.use_threads,
-                max_partitions:int=config.parquetdb_config.normalize_kwargs.max_partitions,
-                max_open_files:int=config.parquetdb_config.normalize_kwargs.max_open_files,
-                max_rows_per_file: int = config.parquetdb_config.normalize_kwargs.max_rows_per_file,
-                min_rows_per_group: int = config.parquetdb_config.normalize_kwargs.min_rows_per_group,
-                max_rows_per_group: int = config.parquetdb_config.normalize_kwargs.max_rows_per_group,
-                file_visitor:Callable=None,
-                existing_data_behavior: str = config.parquetdb_config.normalize_kwargs.existing_data_behavior,
-                create_dir:bool=True):
+    def normalize(self, normalize_config:NormalizeConfig=NormalizeConfig()):
         """
         Normalize the dataset by restructuring files for consistent row distribution.
 
@@ -334,33 +400,9 @@ class ParquetDB:
 
         Parameters
         ----------
-        load_kwargs : dict, optional
-            These are the kwyword arguments to pass to either `dataset.to_batches` or `dataset.to_table`.
-        batch_size : int, optional
-            The number of rows to process in each batch. Required if `output_format` is set to 'batch_generator' (default: None).
-        load_format : str, optional
-            The format of the output dataset. Supported formats are 'table' and 'batches' (default: 'table').
-        filesystem : pyarrow.fs.FileSystem, optional
-            The filesystem to use for writing the dataset (default is None).
-        file_options : pyarrow.fs.FileWriteOptions, optional
-            The file write options to use for writing the dataset (default is None).
-        use_threads : bool, optional
-            Whether to use threads for writing the dataset (default is True).
-        max_partitions : int, optional
-            The maximum number of partitions to use for writing the dataset (default is 1024).
-        max_open_files : int, optional
-            The maximum number of open files to use for writing the dataset (default is 1024).
-        max_rows_per_file : int, optional
-            The maximum number of rows allowed per file (default: 10,000).
-        min_rows_per_group : int, optional
-            The minimum number of rows per row group within each file (default: 0).
-        max_rows_per_group : int, optional
-            The maximum number of rows per row group within each file (default: 10,000).
-        existing_data_behavior : str, optional
-            Specifies how to handle existing data in the dataset directory. Options are 'overwrite_or_ignore' 
-            (default: 'overwrite_or_ignore').
-        create_dir : bool, optional
-            Whether to create the dataset directory if it does not exist (default is True).
+        normalize_config : NormalizeConfig, optional
+            Configuration for the normalization process, optimizing performance by managing row distribution and file structure.
+        
         Returns
         -------
         None
@@ -368,41 +410,24 @@ class ParquetDB:
 
         Examples
         --------
-        >>> dataset.normalize(
-        ...     load_format='batches',
-        ...     max_rows_per_file=5000,
-        ...     min_rows_per_group=500,
-        ...     max_rows_per_group=5000,
-        ...     existing_data_behavior='overwrite_or_ignore',
-        ...     max_partitions=512
-        ... )
+        from parquetdb.core.parquetdb import NormalizeConfig
+        normalize_config=NormalizeConfig(load_format='batches',
+                                         max_rows_per_file=5000,
+                                         min_rows_per_group=500,
+                                         max_rows_per_group=5000,
+                                         existing_data_behavior='overwrite_or_ignore',
+                                         max_partitions=512)
+        >>> db.normalize(normalize_config=normalize_config)
         """
-        all_args = {k: v for k, v in locals().items() if k != 'self'}
-        self._normalize(**all_args)
+        self._normalize(normalize_config=normalize_config)
     
-    @timeit
     def _normalize(self, 
-                nested_dataset_dir=None, 
+                nested_dataset_dir=None,
                 incoming_table=None, 
                 schema=None, 
                 ids=None,
                 columns=None,
-                batch_size: int = None,
-                load_kwargs: dict = None, 
-                load_format: str = 'table',
-                partitioning: Union[ds.Partitioning, List[str] ]= None,
-                partitioning_flavor:str=None,
-                filesystem:fs.FileSystem=None,
-                file_options:ds.FileWriteOptions=None,
-                use_threads:bool=config.parquetdb_config.normalize_kwargs.use_threads,
-                max_partitions:int=config.parquetdb_config.normalize_kwargs.max_partitions,
-                max_open_files:int=config.parquetdb_config.normalize_kwargs.max_open_files,
-                max_rows_per_file: int = config.parquetdb_config.normalize_kwargs.max_rows_per_file,
-                min_rows_per_group: int = config.parquetdb_config.normalize_kwargs.min_rows_per_group,
-                max_rows_per_group: int = config.parquetdb_config.normalize_kwargs.max_rows_per_group,
-                file_visitor:Callable=None,
-                existing_data_behavior: str = config.parquetdb_config.normalize_kwargs.existing_data_behavior,
-                create_dir:bool=True):
+                normalize_config:NormalizeConfig=NormalizeConfig()):
         """
         Normalize the dataset by restructuring files for consistent row distribution.
 
@@ -423,58 +448,17 @@ class ParquetDB:
             A list of IDs to delete from the dataset. If not provided, it will be inferred from the existing data (default: None).
         columns : list of str, optional
             A list of column names to delete from the dataset. If not provided, it will be inferred from the existing data (default: None).
-        load_kwargs : dict, optional
-            These are the kwyword arguments to pass to either `dataset.to_batches` or `dataset.to_table`.
-        load_format : str, optional
-            The format of the output dataset. Supported formats are 'table' and 'batches' (default: 'table').
-        partitioning : dict, optional
-            Defines how the data should be partitioned. The keys are column names, and values are partition criteria.
-        partitioning_flavor : str, optional
-            The partitioning flavor to use (e.g., 'hive' partitioning).
-        filesystem : pyarrow.fs.FileSystem, optional
-            The filesystem to use for writing the dataset (default is None).
-        file_options : pyarrow.fs.FileWriteOptions, optional
-            The file write options to use for writing the dataset (default is None).
-        use_threads : bool, optional
-            Whether to use threads for writing the dataset (default is True).
-        max_partitions : int, optional
-            The maximum number of partitions to use for writing the dataset (default is 1024).
-        max_open_files : int, optional
-            The maximum number of open files to use for writing the dataset (default is 1024).
-        max_rows_per_file : int, optional
-            The maximum number of rows allowed per file (default: 10,000).
-        min_rows_per_group : int, optional
-            The minimum number of rows per row group within each file (default: 0).
-        max_rows_per_group : int, optional
-            The maximum number of rows per row group within each file (default: 10,000).
-        existing_data_behavior : str, optional
-            Specifies how to handle existing data in the dataset directory. Options are 'overwrite_or_ignore' 
-            (default: 'overwrite_or_ignore').
-        create_dir : bool, optional
-            Whether to create the dataset directory if it does not exist (default is True).
-            
+        normalize_config : NormalizeConfig, optional
+            Configuration for the normalization process, optimizing performance by managing row distribution and file structure.
+        
         Returns
         -------
         None
             This function does not return anything but modifies the dataset directory in place.
 
-        Examples
-        --------
-        >>> dataset.normalize(
-        ...     load_format='batches',
-        ...     max_rows_per_file=5000,
-        ...     min_rows_per_group=500,
-        ...     max_rows_per_group=5000,
-        ...     existing_data_behavior='overwrite_or_ignore',
-        ...     max_partitions=512
-        ... )
         """
-        if load_kwargs is None:
-            load_kwargs=config.parquetdb_config.load_kwargs.to_dict()
-        if batch_size:
-            load_kwargs['batch_size']=batch_size
-        
-        if load_format=='batches':
+
+        if normalize_config.load_format=='batches':
             logger.debug(f"Writing data in batches")
             schema= self.get_schema() if schema is None else schema
             update_func=generator_update
@@ -482,7 +466,7 @@ class ParquetDB:
             schema_cast_func=generator_schema_cast
             rebuild_nested_func=generator_rebuild_nested_struct
             delete_columns_func=generator_delete_columns
-        elif load_format=='table':
+        elif normalize_config.load_format=='table':
             update_func=table_update
             delete_func=table_delete
             delete_columns_func=table_delete_columns
@@ -490,7 +474,13 @@ class ParquetDB:
             rebuild_nested_func=table_rebuild_nested_struct
 
         try:
-            retrieved_data = self._load_data(load_format=load_format, load_kwargs=load_kwargs)        
+            retrieved_data = self._load_data(load_format=normalize_config.load_format, 
+                                             load_config=LoadConfig(**dict(batch_size=normalize_config.batch_size,
+                                                                           batch_readahead=normalize_config.batch_readahead,
+                                                                           fragment_readahead=normalize_config.fragment_readahead,
+                                                                           fragment_scan_options=normalize_config.fragment_scan_options,
+                                                                           use_threads=normalize_config.use_threads,
+                                                                           memory_pool=normalize_config.memory_pool)))
         except pa.lib.ArrowNotImplementedError as e:
             raise ValueError("The incoming data does not match the schema of the existing data.") from e
         # If incoming data is provided this is an update
@@ -546,19 +536,17 @@ class ParquetDB:
                             basename_template=basename_template, 
                             schema=schema,
                             format="parquet", 
-                            partitioning=partitioning,
-                            partitioning_flavor=partitioning_flavor,
-                            filesystem=filesystem,
-                            file_options=file_options,
-                            use_threads=use_threads,
-                            max_partitions=max_partitions,
-                            max_open_files=max_open_files,
-                            max_rows_per_file=max_rows_per_file,
-                            min_rows_per_group=min_rows_per_group,
-                            max_rows_per_group=max_rows_per_group,
-                            file_visitor=file_visitor,
-                            existing_data_behavior=existing_data_behavior,
-                            create_dir=create_dir,
+                            filesystem=normalize_config.filesystem,
+                            file_options=normalize_config.file_options,
+                            use_threads=normalize_config.use_threads,
+                            max_partitions=normalize_config.max_partitions,
+                            max_open_files=normalize_config.max_open_files,
+                            max_rows_per_file=normalize_config.max_rows_per_file,
+                            min_rows_per_group=normalize_config.min_rows_per_group,
+                            max_rows_per_group=normalize_config.max_rows_per_group,
+                            file_visitor=normalize_config.file_visitor,
+                            existing_data_behavior=normalize_config.existing_data_behavior,
+                            create_dir=normalize_config.create_dir,
                             )
             
             # Remove main files to replace with tmp files
@@ -575,13 +563,14 @@ class ParquetDB:
 
         tmp_files=glob(os.path.join(dataset_dir, f'tmp_{self.dataset_name}_*.parquet'))
         for file_path in tmp_files:
-            # new_file_path=file_path.replace('tmp_', '')
             file_name=os.path.basename(file_path).replace('tmp_', '')
             new_file_path=os.path.join(dataset_dir, file_name)
             os.rename(file_path, new_file_path)
 
-    @timeit
-    def update_schema(self, field_dict:dict=None, schema:pa.Schema=None, normalize_kwargs=None):                      
+    def update_schema(self, 
+                      field_dict:dict=None, 
+                      schema:pa.Schema=None, 
+                      normalize_config:NormalizeConfig=NormalizeConfig()):
         """
         Updates the schema of the table in the dataset.
 
@@ -591,15 +580,13 @@ class ParquetDB:
             A dictionary where keys are the field names and values are the new field types.
         schema : pyarrow.Schema, optional
             The new schema to apply to the table.
-        normalize_kwargs : dict, optional
-            Additional keyword arguments passed to the normalization process (default is a dictionary with row group settings).
-
+        normalize_config : NormalizeConfig, optional
+            Configuration for the normalization process, optimizing performance by managing row distribution and file structure.
+            
         Example
         -------
         >>> db.update_schema(field_dict={'age': pa.int32()})
         """
-        if normalize_kwargs is None:
-            normalize_kwargs=config.parquetdb_config.normalize_kwargs.to_dict()
         logger.info("Updating schema")
         current_schema=self.get_schema()
         
@@ -608,7 +595,7 @@ class ParquetDB:
         logger.info(f"updated schema names : {updated_schema.names}")
         
         # Apply Schema normalization
-        self._normalize(schema=updated_schema, **normalize_kwargs)
+        self._normalize(schema=updated_schema, normalize_config=normalize_config)
 
         logger.info(f"Updated Fields in {self.dataset_name} table.")
 
@@ -988,14 +975,15 @@ class ParquetDB:
         shutil.copytree(backup_path, self.dataset_dir)
         logger.info(f"Database restored from {backup_path}.")
 
-    def to_nested(self, normalize_kwargs:dict=None, rebuild_nested_from_scratch: bool = False):
+    def to_nested(self, normalize_config:NormalizeConfig=NormalizeConfig(), 
+                  rebuild_nested_from_scratch: bool = False):
         """
         Converts the current dataset to a nested dataset.
 
         Parameters
         ----------
-        normalize_kwargs : dict, optional
-            Additional keyword arguments passed to the normalization process (default is a dictionary with row group settings).
+        normalize_config : NormalizeConfig, optional
+            Configuration for the normalization process, optimizing performance by managing row distribution and file structure.
         rebuild_nested_from_scratch : bool, optional
             If True, rebuilds the nested structure from scratch (default is False).
 
@@ -1008,8 +996,7 @@ class ParquetDB:
         --------
         >>> db.to_nested()
         """
-        if normalize_kwargs is None:
-            normalize_kwargs=config.parquetdb_config.normalize_kwargs.to_dict()
+
         dataset_name=self.dataset_name
         nested_dataset_name=f'{dataset_name}_nested'
         nested_dataset_dir=os.path.join(self.dir,nested_dataset_name)
@@ -1018,14 +1005,14 @@ class ParquetDB:
             shutil.rmtree(nested_dataset_dir)
         os.makedirs(nested_dataset_dir, exist_ok=True)
         
-        self._normalize(nested_dataset_dir=nested_dataset_dir,  **normalize_kwargs)
+        self._normalize(nested_dataset_dir=nested_dataset_dir,  normalize_config=normalize_config)
 
     def _load_data(self, 
                    load_format:str='table',
                    columns:List[str]=None, 
                    filter:List[pc.Expression]=None, 
                    dataset_dir:str=None,
-                   load_kwargs:dict=None):
+                   load_config:LoadConfig=LoadConfig()):
         """
         Loads data from the dataset, supporting various output formats such as PyArrow Table, Dataset, or a batch generator.
 
@@ -1039,8 +1026,8 @@ class ParquetDB:
             The format for loading the data: 'table', 'batches', or 'dataset' (default is 'table').
         dataset_dir : str, optional
             The directory where the dataset is stored (default is None).
-        load_kwargs : dict, optional
-            Additional keyword arguments passed to `Dataset.to_table` or `Dataset.to_batches` (default is None).
+        load_config : LoadConfig, optional
+            Configuration for loading data, optimizing performance by managing memory usage.
 
         Returns
         -------
@@ -1051,9 +1038,7 @@ class ParquetDB:
         -------
         >>> data = db._load_data(columns=['name', 'age'], load_format='table')
         """
-        if load_kwargs is None:
-            load_kwargs=config.parquetdb_config.load_kwargs.to_dict()
-        
+
         if dataset_dir is None:
             dataset_dir=self.dataset_dir
         
@@ -1063,16 +1048,19 @@ class ParquetDB:
 
         dataset = ds.dataset(dataset_dir, format="parquet")
         if load_format=='batches':
-            return self._load_batches(dataset, columns, filter, **load_kwargs)
+            return self._load_batches(dataset, columns, filter, load_config=load_config)
         elif load_format=='table':
-            return self._load_table(dataset, columns, filter, **load_kwargs)
+            return self._load_table(dataset, columns, filter, load_config=load_config)
         elif load_format=='dataset':
             logger.info(f"Loading data as an {dataset.__class__} object")
             return dataset
         else:
             raise ValueError(f"load_format must be one of the following: {self.load_formats}")
     
-    def _load_batches(self, dataset, columns:List[str]=None, filter:List[pc.Expression]=None, **kwargs):
+    def _load_batches(self, dataset, 
+                      columns:List[str]=None, 
+                      filter:List[pc.Expression]=None, 
+                      load_config:LoadConfig=LoadConfig()):
         """
         Loads data in batches from the dataset, returning an iterator of PyArrow RecordBatches.
 
@@ -1084,8 +1072,8 @@ class ParquetDB:
             A list of column names to load. If None, all columns are loaded (default is None).
         filter : list of pyarrow.compute.Expression, optional
             A list of filters to apply to the data (default is None).
-        **kwargs : dict, optional
-            Additional keyword arguments passed to `Dataset.to_batches`.
+        load_config : LoadConfig, optional
+            Configuration for loading data, optimizing performance by managing memory usage.
 
         Returns
         -------
@@ -1098,14 +1086,16 @@ class ParquetDB:
         """
  
         try:
-            generator=dataset.to_batches(columns=columns, filter=filter, **kwargs)
+            generator=dataset.to_batches(columns=columns, filter=filter, **load_config.__dict__)
             logger.info(f"Loading as a {generator.__class__} object")
         except Exception as e:
             logger.debug(f"Error loading table: {e}. Returning empty table")
             generator=pyarrow_utils.create_empty_batch_generator(schema=dataset.schema, columns=columns)
         return generator
     
-    def _load_table(self, dataset, columns:List[str]=None, filter:List[pc.Expression]=None, **kwargs):
+    def _load_table(self, dataset, 
+                    columns:List[str]=None, 
+                    filter:List[pc.Expression]=None, load_config:LoadConfig=LoadConfig()):
         """
         Loads the entire dataset as a PyArrow Table.
 
@@ -1117,8 +1107,8 @@ class ParquetDB:
             A list of column names to load. If None, all columns are loaded (default is None).
         filter : list of pyarrow.compute.Expression, optional
             A list of filters to apply to the data (default is None).
-        **kwargs : dict, optional
-            Additional keyword arguments passed to `Dataset.to_table`.
+        load_config : LoadConfig, optional
+            Configuration for loading data, optimizing performance by managing memory usage.
 
         Returns
         -------
@@ -1130,7 +1120,7 @@ class ParquetDB:
         >>> table = db._load_table(dataset, columns=['name', 'age'])
         """
         try:
-            table=dataset.to_table(columns=columns, filter=filter, **kwargs)
+            table=dataset.to_table(columns=columns, filter=filter, **load_config.__dict__)
             logger.info(f"Loading data as a {table.__class__} object")
         except Exception as e:
             logger.debug(f"Error loading table: {e}. Returning empty table")
@@ -1383,3 +1373,5 @@ def generator_rebuild_nested_struct(generator):
     for record_batch in generator:
         updated_record_batch=pyarrow_utils.rebuild_nested_table(record_batch,load_format='batches')
         yield updated_record_batch
+        
+        

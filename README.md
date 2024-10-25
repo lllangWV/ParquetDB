@@ -140,13 +140,14 @@ Normalization is a crucial process for ensuring the optimal performance and effi
 This method does not return anything but modifies the dataset directory in place, ensuring a more consistent and efficient structure for future operations.
 
 ```python
-dataset.normalize(
-    batch_size=10000,
-    batch_readahead=10 # Controls the number of batches to load in memory a head of time. This will have impacts on amount of RAM consumed
-    fragment_readahead=2 # Controls the number of files to load in memory ahead of time. This will have impacts on amount of RAM consumed
-    output_format='batch_generator', # Uses the batch generator to normalize
-    max_rows_per_file=100000, # Controls the max number of rows per parquet file
-    max_rows_per_group=100000, # Controls the max number of rows per group parquet file
+db.normalize(
+    normalize_config=NormalizeConfig(
+    load_format='batches',      # Uses the batch generator to normalize
+    batch_readahead=10,         # Controls the number of batches to load in memory a head of time.
+    fragment_readahead=2,       # Controls the number of files to load in memory ahead of time.
+    batch_size = 100000,        # Controls the batchsize when to use when normalizing. This will have impacts on amount of RAM consumed
+    max_rows_per_file=500000,   # Controls the max number of rows per parquet file
+    max_rows_per_group=500000)  # Controls the max number of rows per group parquet file
 )
 ```
 
