@@ -589,7 +589,7 @@ def flatten_table_in_column(table, column_name):
     column_names.pop(column_names.index(column_name))
 
     if pa.types.is_struct(column_type):
-        print("Found struct. Trying to flatten")
+        logger.debug("Found struct. Trying to flatten")
         column_array=table.column(column_name)
         
         flattened_arrays_and_fields = flatten_nested_structs(column_array, column_name)
@@ -764,67 +764,6 @@ def convert_list_column_to_fixed_tensor(table, column_name):
     # Step 11: Update table with new tensor column
     tensor_field = pa.field(column_name, tensor_array.type)
     return table.set_column(column_index, tensor_field, tensor_array)
-    
-    
-    
-    # # In the following we need to map the non null arrays back into an array that includes nulls in the new type
-    # is_valid_array=column_array.combine_chunks().is_valid()
-    
-    
-    # # # Generate a mask that contains index where the array is not null
-    # # is_valid_index_array = pa.array(range(len(is_valid_array)))
-    # # is_valid_index_mask = pc.if_else(is_valid_array, is_valid_index_array, None)
-    # # indices = pc.indices_nonzero(is_valid_array)
-    # # non_null_indices=pa.array(range(len(indices)))
-    # # is_valid_index_mask=pc.replace_with_mask(is_valid_index_mask, is_valid_array, non_null_indices)
-    
-    
-    
-    # # Input array validation status
-    # valid_elements_mask = column_array.combine_chunks().is_valid()
-
-    # # Create position mapping for all elements (including nulls)
-    # full_index_array = pa.array(range(len(valid_elements_mask)))
-    # # Map positions but set null positions to None
-    # sparse_position_map = pc.if_else(valid_elements_mask, full_index_array, None)
-
-    # # Get positions of non-null elements
-    # non_null_positions = pc.indices_nonzero(valid_elements_mask)
-    # # Create sequential indices for non-null elements only
-    # dense_index_array = pa.array(range(len(non_null_positions)))
-
-    # # Replace valid positions with dense indices
-    # final_position_map = pc.replace_with_mask(sparse_position_map, valid_elements_mask, dense_index_array)
-            
-    # reordered_array=non_null_update_list_array.take(final_position_map)
-    
-    # # Create the updated array
-    # updated_type = pa.fixed_shape_tensor(base_array_type, np_array.shape)
-    # updated_array = pa.ExtensionArray.from_storage(updated_type, reordered_array)
-    
-    # # Create the null array of the same type as the updated array
-    # null_array = pa.array([[None]*storage_size], pa.list_(base_array_type, storage_size))
-    # null_array = pa.ExtensionArray.from_storage(updated_type, null_array)
-    
-
-    # # Generate unique index mask for update array
-    # combined_arrays = pa.concat_arrays([updated_array,null_array])
-    
-    # # Generate unique index mask for the null array
-    # filter_null_array_sequence=pa.array(range(len(valid_elements_mask), len(valid_elements_mask) + 1))
-
-    # # Generate unique index mask for current array
-    # filter_current_array_sequence = pa.array(range(len(valid_elements_mask)))
-    # current_is_valid_index_mask = pc.if_else(valid_elements_mask, filter_current_array_sequence, None)
-
-    # combined_mask=current_is_valid_index_mask.fill_null(filter_null_array_sequence[0])
-
-    # updated_array=combined_arrays.take(combined_mask)
-    
-    # updated_field=pa.field(column_name, updated_type)
-    # table=table.set_column(column_index, updated_field, updated_array)
-
-    # return table
 
 def table_column_callbacks(table, callbacks=[]):
     """
@@ -1001,65 +940,64 @@ def update_flattend_table(current_table, incoming_table):
             current_array = current_array.combine_chunks()
         if isinstance(update_array, pa.ChunkedArray):
             update_array = update_array.combine_chunks()
-            
         
-        # Method 1 does not work for Fixed Shape tensors
-        # logger.debug(f"Update array before shape: {update_array}")
-        # is_valid_mask=update_array.is_valid()
-        # valid_update_array=update_array.filter(is_valid_mask)
-        
-        # sum_is_valid_mask=pc.sum(is_valid_mask)
-        # if pc.sum(is_valid_mask) == pa.scalar(0, type=sum_is_valid_mask.type):
-        #     logger.debug(f"No updates are present or non-null for column: {column_name}")
-        #     continue
 
-        # if pa.types.is_list(current_array.type):
-        #     # updated_array = update_array.filter(update_array)
-        #     updated_array = update_array.fill_null(current_array)
-        #     # updated_array = pc.fill_null(update_array, current_array)
-        # else:
-        #     updated_array=pc.replace_with_mask(current_array, is_valid_mask, valid_update_array)
-        # # updated_array = update_array.fill_null(current_array)
-        # updated_array=pc.replace_with_mask(current_array, is_valid_mask, valid_update_array)
-        
-        # Method 2 does not work for Fixed Shape tensors
         try:
+            # Attempt to fill null values in update_array with values from current_array
             updated_array = update_array.fill_null(current_array)
         except:
-            print(update_array)
-            is_valid_array=update_array.is_valid()
-            is_null_array=update_array.is_null()
-            print(is_valid_array)
+            # If the above operation fails, proceed with manual handling for fixed-size tensors
+
+            # Get boolean masks for valid (non-null) and null entries in update_array
+            is_valid_array = update_array.is_valid()
+            is_null_array = update_array.is_null()
+
+            # Create a sequence array for indexing
             sequence = pa.array(range(len(is_valid_array)))
+
+            # Generate an index mask where valid entries have their indices, and null entries are None
             is_valid_index_mask = pc.if_else(is_valid_array, sequence, None)
+
+            # Get indices of non-null values in update_array
             indices = pc.indices_nonzero(is_valid_array)
-            non_null_indices=pa.array(range(len(indices)))
-            is_valid_index_mask=pc.replace_with_mask(is_valid_index_mask, is_valid_array, non_null_indices)
-            # print(is_valid_index_mask)
-            combined_arrays=pa.concat_arrays([current_array, update_array])
-            
-            # Generate unique index mask for update array
-            filter_update_array_sequence = pa.array(range(len(is_valid_array),2*len(is_valid_array)))
-            update_is_valid_index_mask = pc.if_else(is_valid_array, filter_update_array_sequence, None)
-            
-            # Generate unique index mask for current array
+
+            # Create an array of indices for non-null values
+            non_null_indices = pa.array(range(len(indices)))
+
+            # Replace valid indices in the mask with indices of non-null values
+            is_valid_index_mask = pc.replace_with_mask(
+                is_valid_index_mask, is_valid_array, non_null_indices
+            )
+
+            # Generate unique indices for the update_array portion in combined_arrays
+            filter_update_array_sequence = pa.array(
+                range(len(is_valid_array), 2 * len(is_valid_array))
+            )
+            update_is_valid_index_mask = pc.if_else(
+                is_valid_array, filter_update_array_sequence, None
+            )
+
+            # Generate indices for null values in current_array
             filter_current_array_sequence = pa.array(range(len(is_valid_array)))
-            current_is_valid_index_mask = pc.if_else(is_null_array, filter_current_array_sequence, None)
+            current_is_valid_index_mask = pc.if_else(
+                is_null_array, filter_current_array_sequence, None
+            )
+
+            # Combine the two masks, filling nulls in current mask with update mask values
+            combined_mask = current_is_valid_index_mask.fill_null(update_is_valid_index_mask)
+
+            # Concatenate current_array and update_array
+            combined_arrays = pa.concat_arrays([current_array, update_array])
             
-            # Combine the two masks. If th
-            combined_mask=current_is_valid_index_mask.fill_null(update_is_valid_index_mask)
-            
-            print(combined_mask)
-            
-            
-            updated_array=combined_arrays.take(combined_mask)
-            print(updated_array)
-        
-        
-        
-        updated_table = updated_table.set_column(current_table.column_names.index(column_name), 
-                                                current_table.field(column_name),
-                                                updated_array)
+            # Select elements from combined_arrays based on the combined_mask
+            updated_array = combined_arrays.take(combined_mask)
+
+        # Update the column in updated_table with the new updated_array
+        updated_table = updated_table.set_column(
+            current_table.column_names.index(column_name),
+            current_table.field(column_name),
+            updated_array
+        )
     return updated_table
 
 def update_struct_child_field(current_table, incoming_table, field_path):
