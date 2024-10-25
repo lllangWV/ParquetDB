@@ -1,6 +1,25 @@
 
 ___
 
+# 0.5.12 (10-25-2024)
+
+##### Bugs
+- Removed unnecessary deletion that did not affect outer scope variable
+- Removed `ParquetDb_manager` due to an issue
+
+##### New features
+- None identified
+
+##### Documentation updates
+- Updated `_version.py` and `CHANGELOG.md` for the new release
+
+##### Maintenance
+- Merged updates from the main branch of the repository
+
+___
+
+___
+
 # 0.5.11 (10-25-2024)
 
 ##### Bugs
