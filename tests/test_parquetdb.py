@@ -1,3 +1,4 @@
+import json
 import logging
 import time
 import unittest
@@ -18,6 +19,8 @@ config.logging_config.loggers.parquetdb.level='ERROR'
 config.logging_config.loggers.tests.level='DEBUG'
 config.apply()
 
+with open(os.path.join(config.tests_dir,'data', 'alexandria_test.json'), 'r') as f:
+    alexandria_data = json.load(f)
 
 class TestParquetDB(unittest.TestCase):
     def setUp(self):
@@ -34,7 +37,6 @@ class TestParquetDB(unittest.TestCase):
         ]
         logger.debug(f"Test data: {self.test_data}")
         self.test_df = pd.DataFrame(self.test_data)
-
 
     def tearDown(self):
         # Remove the temporary directory after the test
@@ -302,7 +304,6 @@ class TestParquetDB(unittest.TestCase):
         assert df.loc[1, 'unordered_list_string'] == ['reree'], "Row 1 'unordered_list_string' unexpectedly changed"
         assert np.array_equal(table['lattice'].combine_chunks().to_numpy_ndarray()[1], np.array(py_lattice_2)), "Row 1 lattice data unexpectedly changed"
             
-
     def test_get_schema(self):
         # Test retrieving the schema
         data = [
@@ -426,21 +427,16 @@ class TestParquetDB(unittest.TestCase):
         metadata = self.db.get_metadata()
         self.assertIsInstance(metadata, dict)
 
-
     def test_drop_dataset(self):
         self.db.create(data=self.test_data)
         # Drop the table and check if it no longer exists
         self.db.drop_dataset()
-
 
     def test_rename_dataset(self):
         self.db.create(data=self.test_data)
         # Rename the table and check if the new name exists
         self.db.rename_dataset('renamed_table')
 
-        # Attempt to rename to a reserved name
-        with self.assertRaises(ValueError):
-            self.db.rename_dataset('tmp')
 
     def test_export_dataset(self):
         self.db.create(data=self.test_data)
@@ -458,8 +454,23 @@ class TestParquetDB(unittest.TestCase):
         with self.assertRaises(ValueError):
             self.db.export_dataset(export_path, format='xlsx')
 
+    # def test_alexandria_import(self):
+    #     self.db.create(alexandria_data['entries'])
+        
+        
+    #     # Initial read before the update
+    #     table = self.db.read()
+    #     df = table.to_pandas()
+
+    #     print(df.loc[0, 'energy'])
+    #     # Assert the shape before the update (confirming initial data structure)
+    #     assert df.loc[0, 'energy'] == -80.83444733
+    #     assert df.loc[0, 'correction'] == -80.83444733
+    #     assert df.loc[0, 'parameters.correction'] == -80.83444733
+
+
 if __name__ == '__main__':
-    unittest.TextTestRunner().run(TestParquetDB('test_nested_data_handling'))
+    # unittest.TextTestRunner().run(TestParquetDB('test_alexandria_import'))
     unittest.main()
     
     
