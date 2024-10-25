@@ -61,7 +61,7 @@ if __name__ == "__main__":
     if len(os.listdir(db.dataset_dir))==0:
         print("The dataset does not exist. Creating it.")
         json_files=glob(os.path.join(alexandria_dir,'*.json'))
-        for json_file in json_files[:2]:
+        for json_file in json_files[:]:
             
             start_time = time.time()
             data = read_json(json_file)
@@ -71,12 +71,11 @@ if __name__ == "__main__":
             n_materials=len(data['entries'])
             print(f"Processing file: {base_name}")
             print(f"Number of materials: {n_materials}")
-            
             try:
                 # Since we are importing alot of data it is best
                 # to normalize the database afterwards
                 start_time = time.time()
-                create_dataset(db,data['entries'], normalize_dataset=False)
+                create_dataset(db, data['entries'], normalize_dataset=False)
                 create_time = time.time() - start_time
                 
             except Exception as e:
@@ -228,11 +227,22 @@ if __name__ == "__main__":
     start_time = time.time()
     table=read_dataset(db,
                     columns=['id', 'structure','data'], # Instead of using the flatten syntax, we can use the nested syntax
-                    ids=[0],
+                    ids=[0,1000000],
+                    load_format='table',
+                    normalize_kwargs={
+                        'load_format':'batches',
+                        'load_kwargs':{'batch_readahead': 2,
+                                    'fragment_readahead': 2,
+                                    },
+                        'batch_size':50000,
+                        'max_rows_per_file': 500000,
+                        'min_rows_per_group': 0,
+                        'max_rows_per_group': 500000
+                    },
                     rebuild_nested_struct=True,     # When set to True to rebuild the nested structure
                     rebuild_nested_from_scratch=False,  # When set to True, the nested structure will be rebuilt from scratch
-                    load_format='table')
-    
+                    )
+
     benchmark_dict['read_rebuild_nested_struct_time']=time.time() - start_time
     print(table.shape)
     print(table['data'].type)
@@ -254,8 +264,8 @@ if __name__ == "__main__":
     df=table.to_pandas()
     print(df['data.spg'])
     
-    db.update([{'id':0, 'data.spg':204}], 
-              normalize_kwargs={
+    db.update([{'id':0, 'data.spg':210}], 
+            normalize_kwargs={
             "load_format":'batches',      # Uses the batch generator to normalize
             "load_kwargs":{'batch_readahead': 10,   # Controls the number of batches to load in memory a head of time. This will have impacts on amount of RAM consumed
                         'fragment_readahead': 2,  # Controls the number of files to load in memory ahead of time. This will have impacts on amount of RAM consumed
@@ -266,6 +276,10 @@ if __name__ == "__main__":
     table=db.read(ids=[0])
     df=table.to_pandas()
     print(df['data.spg'])
+    
+    
+    lattice = table['structure.lattice.matrix'].combine_chunks().to_numpy_ndarray()
+    print(lattice)
           
 
     
