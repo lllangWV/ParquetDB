@@ -194,35 +194,114 @@ class TestParquetDB(unittest.TestCase):
         self.assertEqual(df[df['name'] == 'Karl'].iloc[0]['occupation'], 'Engineer')
         self.assertTrue(pd.isnull(df[df['name'] == 'Judy'].iloc[0]['occupation']))
         self.assertTrue(np.isnan(df[df['name'] == 'Karl'].iloc[0]['age']))
-
-
-    # def test_nested_empty_struct_field(self):
-    #     # Test adding data with a new field and ensure schema evolves
-    #     # This also test that if new incoming data doesn't have a 
-    #     # field that is already in the schema, a null value of the correct type is added
-    #     data = [
-    #         {'name': {}, 'age': {"field1": {"inner_field1": 1, "inner_field2": 2}}},
-    #     ]
-    #     self.db.create(data)
-
-    #     # Add new data with an additional field
-    #     new_data = [
-    #         {'name': {'age':1}, 'occupation': 'Engineer'}
-    #     ]
-    #     self.db.create(new_data)
-
-    #     # Read back the data
-    #     result = self.db.read()
-    #     df = result.to_pandas()
         
-    #     # Assertions
-    #     # self.assertIn('occupation', df.columns)
-    #     print(df.iloc[0]['name'])
-    #     self.assertIn('dummy_field', df.iloc[0]['name'])
-    #     self.assertEqual(df.iloc[0]['name']['dummy_field'], None)
-    #     self.assertEqual(df.iloc[1]['name']['dummy_field'], None)
-    #     self.assertEqual(df.iloc[0]['age']['field1']['inner_field1'], 1)
-    #     self.assertEqual(df.iloc[1]['name']['age'], 1)
+    def test_nested_data_handling(self):
+    
+        py_lattice_1 = [[[1.1, 0, 0], [0, 1, 0], [0, 0, 1]], [[1, 0, 0], [0, 1, 0], [0, 0, 1]]]
+        py_lattice_2 = [[[2.1, 0, 0], [0, 2, 0], [0, 0, 2]], [[2, 0, 0], [0, 2, 0], [0, 0, 2]]]
+
+        current_data = [
+            {'b': {'x': 10, 'y': 20}, 'c': {}, 'e': 5, 'lattice': py_lattice_1, 'unordered_list_string': ['hi', 'reree'], 'unordered_list_int': [0, 1, 3]},
+            {'b': {'x': 30, 'y': 40}, 'c': {}, 'lattice': py_lattice_2, 'unordered_list_string': ['reree'], 'unordered_list_int': [0, 1]},
+            {'b': {'x': 30, 'y': 40}, 'c': {}},
+            {'b': {'x': 30, 'y': 40}, 'c': {}},
+            {'b': {'x': 30, 'y': 40}, 'c': {}},
+            {'b': {'x': 30, 'y': 40}, 'c': {}, 'lattice': py_lattice_2, 'unordered_list_string': ['reree'], 'unordered_list_int': [0, 1]},
+        ]
+
+        incoming_data = [
+            {'id': 2, 'b': {'x': 10, 'y': 20}, 'c': {}},
+            {'id': 0, 'b': {'y': 50, 'z': {'a': 1.1, 'b': 3.3}}, 'c': {}, 'd': 1, 'e': 6, 'lattice': py_lattice_2, 'unordered_list_string': ['updated']},
+            {'id': 3, 'b': {'y': 50, 'z': {'a': 4.5, 'b': 5.3}}, 'c': {}, 'd': 1, 'e': 6, 'lattice': py_lattice_2, 'unordered_list_string': ['updated']},
+        ]
+
+        self.db.create(current_data)
+        
+        # Initial read before the update
+        table = self.db.read()
+        df = table.to_pandas()
+
+        # Assert the shape before the update (confirming initial data structure)
+        assert df.shape[0] == len(current_data), f"Expected {len(current_data)} rows before update, but got {df.shape[0]}"
+        assert df.loc[0, 'b.x'] == 10
+        assert df.loc[0, 'b.y'] == 20
+        assert np.isnan(df.loc[0, 'c.dummy_field'])
+        assert df.loc[0, 'e'] == 5
+        assert np.array_equal(table['lattice'].combine_chunks().to_numpy_ndarray()[0], np.array(py_lattice_1)), "Row 0 lattice data mismatch after update"
+        assert df.loc[0, 'unordered_list_string'][0] == 'hi', "Row 0 'unordered_list_string' did not update correctly"
+        assert df.loc[0, 'unordered_list_string'][1] == 'reree', "Row 0 'unordered_list_string' did not update correctly"
+        assert df.loc[0, 'unordered_list_int'][0] == 0, "Row 0 'unordered_list_int' did not update correctly"
+        assert df.loc[0, 'unordered_list_int'][1] == 1, "Row 0 'unordered_list_int' did not update correctly"
+        assert df.loc[0, 'unordered_list_int'][2] == 3, "Row 0 'unordered_list_int' did not update correctly"
+        
+        assert df.loc[1, 'b.x'] == 30
+        assert df.loc[1, 'b.y'] == 40
+        assert np.isnan(df.loc[1, 'c.dummy_field'])
+        assert np.isnan(df.loc[1, 'e'])
+        assert np.array_equal(table['lattice'].combine_chunks().to_numpy_ndarray()[1], np.array(py_lattice_2)), "Row 0 lattice data mismatch after update"
+        assert df.loc[1, 'unordered_list_string'][0] == 'reree', "Row 0 'unordered_list_string' did not update correctly"
+        assert df.loc[1, 'unordered_list_int'][0] == 0, "Row 0 'unordered_list_int' did not update correctly"
+        assert df.loc[1, 'unordered_list_int'][1] == 1, "Row 0 'unordered_list_int' did not update correctly"
+        
+        
+        assert df.loc[2, 'b.x'] == 30
+        assert df.loc[2, 'b.y'] == 40
+        assert np.isnan(df.loc[2, 'c.dummy_field'])
+        assert np.isnan(df.loc[2, 'e'])
+        assert np.isnan(df.loc[2, 'e'])
+        assert np.isnan(df.loc[2, 'e'])
+        assert np.isnan(df.loc[2, 'lattice']).all()
+        assert df.loc[2, 'unordered_list_string'] == None
+        assert df.loc[2, 'unordered_list_int'] == None
+        
+        
+        assert df.shape[0] == len(current_data), f"Expected {len(current_data)} rows before update, but got {df.shape[0]}"
+        assert df.loc[5, 'b.x'] == 30
+        assert df.loc[5, 'b.y'] == 40
+        assert np.isnan(df.loc[5, 'c.dummy_field'])
+        assert np.isnan(df.loc[5, 'e'])
+        assert np.array_equal(table['lattice'].combine_chunks().to_numpy_ndarray()[5], np.array(py_lattice_2)), "Row 0 lattice data mismatch after update"
+        assert df.loc[5, 'unordered_list_string'][0] == 'reree', "Row 0 'unordered_list_string' did not update correctly"
+        assert df.loc[5, 'unordered_list_int'][0] == 0, "Row 0 'unordered_list_int' did not update correctly"
+        assert df.loc[5, 'unordered_list_int'][1] == 1, "Row 0 'unordered_list_int' did not update correctly"
+        
+        
+        # Perform the update
+        self.db.update(incoming_data)
+        
+        # Read back the data after the update
+        table = self.db.read()
+        df = table.to_pandas()
+
+        # Assert that the number of rows remains the same (no new rows added)
+        assert df.shape[0] == len(current_data), f"Expected {len(current_data)} rows after update, but got {df.shape[0]}"
+        
+        # Check if the updates for `id:0` have been applied correctly
+        assert df.loc[0, 'b.y'] == 50
+        assert df.loc[0, 'b.x'] == 10
+        assert df.loc[0, 'b.z.a'] == 1.1
+        assert df.loc[0, 'b.z.b'] == 3.3
+        assert df.loc[0, 'e'] == 6, "Row 0 column 'e' values mismatch after update"
+        assert  df.loc[0, 'unordered_list_string'] == ['updated'], "Row 0 'unordered_list_string' did not update correctly"
+        
+        assert np.array_equal(table['lattice'].combine_chunks().to_numpy_ndarray()[0], np.array(py_lattice_2)), "Row 0 lattice data mismatch after update"
+        
+        # Check if the updates for `id:3` have been applied correctly
+        assert df.loc[3, 'b.y'] == 50
+        assert df.loc[3, 'b.x'] == 30
+        assert df.loc[3, 'b.z.a'] == 4.5
+        assert df.loc[3, 'b.z.b'] == 5.3
+        assert df.loc[3, 'e'] == 6, "Row 3 column 'e' values mismatch after update"
+        assert df.loc[3, 'unordered_list_string'] == ['updated'], "Row 3 'unordered_list_string' did not update correctly"
+        assert np.array_equal(table['lattice'].combine_chunks().to_numpy_ndarray()[3], np.array(py_lattice_2)), "Row 3 lattice data mismatch after update"
+        
+
+        # Check that rows without 'id' in incoming data remain unchanged (e.g., row 1)
+        assert df.loc[1, 'b.y'] == 40
+        assert df.loc[1, 'b.x'] == 30
+        assert df.loc[1, 'unordered_list_string'] == ['reree'], "Row 1 'unordered_list_string' unexpectedly changed"
+        assert np.array_equal(table['lattice'].combine_chunks().to_numpy_ndarray()[1], np.array(py_lattice_2)), "Row 1 lattice data unexpectedly changed"
+            
 
     def test_get_schema(self):
         # Test retrieving the schema
@@ -310,7 +389,7 @@ class TestParquetDB(unittest.TestCase):
 
         # Update the 'Mia' record to include a new field and change age to 60
         data = {'id':0, 'age': 60, 'state':'NY'}
-        self.db.update(data,)
+        self.db.update(data)
 
         # Read back the data
         result = self.db.read()
@@ -379,45 +458,25 @@ class TestParquetDB(unittest.TestCase):
         with self.assertRaises(ValueError):
             self.db.export_dataset(export_path, format='xlsx')
 
-    # def test_merge_datasets(self):
-    #     self.db.create(data=self.test_data)
-    #     # Create another table
-    #     additional_data = [
-    #         {'id': 4, 'name': 'Dave', 'age': 40},
-    #         {'id': 5, 'name': 'Eve', 'age': 45}
-    #     ]
-    #     self.db.create(data=additional_data, dataset_name='additional_table')
-
-    #     # Attempt to merge tables (method not implemented)
-    #     with self.assertRaises(NotImplementedError):
-    #         self.db.merge_datasets(['test_table', 'additional_table'], 'merged_table')
-
-    # def test_deep_update(self):
-    #     original_value = {'a': 1, 'b': {'c': 2, 'd': 3}}
-    #     update_value = {'a': 10, 'b': {'c': 20, 'e': 30}}
-    #     expected_value = {'a': 10, 'b': {'c': 20, 'd': 3, 'e': 30}}
-    #     result = deep_update(original_value, update_value)
-    #     self.assertEqual(result, expected_value)
-
-if __name__ == '__main__':
-    unittest.main()
+# if __name__ == '__main__':
+#     unittest.main()
     
 # if __name__ == '__main__':
 #     for x in range(50):
 #         print(f"Iteration {x+1}")
         
-#         # # Create a test suite and add your test case
-#         # suite = unittest.TestLoader().run(TestParquetDB('test_add_new_field'))
-#         # Create a test suite and add your test case
-#         suite = unittest.TestLoader().loadTestsFromTestCase(TestParquetDB)
+        # # Create a test suite and add your test case
+        # suite = unittest.TestLoader().run(TestParquetDB('test_nested_data_handling'))
+        # Create a test suite and add your test case
+        # suite = unittest.TestLoader().loadTestsFromTestCase(TestParquetDB)
         
-#         # Run the tests
-#         unittest.TextTestRunner().run(suite)
-#         # unittest.TextTestRunner().run(TestParquetDB('test_add_new_field'))
+        # Run the tests
+        # unittest.TextTestRunner().run(suite)
+        # unittest.TextTestRunner().run(TestParquetDB('test_add_new_field'))
 
 
-# if __name__ == "__main__":
-#     unittest.TextTestRunner().run(TestParquetDB('test_update_schema'))
+if __name__ == "__main__":
+    unittest.TextTestRunner().run(TestParquetDB('test_nested_data_handling'))
 
 # if __name__ == "__main__":
 #     unittest.TextTestRunner().run(TestParquetDB('test_add_new_field'))
