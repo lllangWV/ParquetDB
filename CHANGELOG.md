@@ -1,6 +1,26 @@
 
 ___
 
+# 0.5.11 (10-25-2024)
+
+##### Bugs
+- None identified
+
+##### New Features
+- Introduced data classes for handling normalization and loading configurations
+
+##### Documentation updates
+- Updated `_version.py` and `CHANGELOG.md` for the latest release
+
+##### Maintenance
+- Reformatted code
+- Removed the `ParquetDBManager` class
+- Merged updates from the main branch of repository `https://github.com/lllangWV/ParquetDB`
+
+___
+
+___
+
 # 0.5.10 (10-25-2024)
 
 ##### Bugs
