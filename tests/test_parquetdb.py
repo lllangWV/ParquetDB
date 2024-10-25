@@ -120,7 +120,7 @@ class TestParquetDB(unittest.TestCase):
             {'name': 'Eve', 'age': 35},
             {'name': 'Frank', 'age': 40}
         ]
-        self.db.create(data, )
+        self.db.create(data)
 
         # Delete 'Eve'
         self.db.delete(ids=[0], )
@@ -311,7 +311,7 @@ class TestParquetDB(unittest.TestCase):
         data = [
             {'name': 'Liam', 'age': 45}
         ]
-        self.db.create(data, )
+        self.db.create(data)
         schema = self.db.get_schema()
 
         # Assertions
