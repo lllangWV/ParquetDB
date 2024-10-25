@@ -1,6 +1,30 @@
 
 ___
 
+# 0.5.1 (10-25-2024)
+
+##### Bugs
+- Fixed a bug related to `FixedListArrays` when they were null.
+- Resolved issues with processing rows that contained null values.
+
+##### New features
+- Introduced a new method for preprocessing the incoming table.
+- Added a test for handling nested data across create, read, and update operations.
+- Modified create and update functionalities to apply column callbacks for dynamic modifications.
+
+##### Documentation updates
+- Enhanced code readability with additional comments.
+
+##### Maintenance
+- Cleaned up code for better organization.
+- Updated the method to restrict list types to numeric and Boolean only.
+- Moved data generation code to `general_utils`.
+- Updated `_version.py` and `CHANGELOG.md` for the new release.
+
+___
+
+___
+
 # 0.4.1 (10-23-2024)
 
 ##### Bugs
