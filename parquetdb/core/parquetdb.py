@@ -22,8 +22,6 @@ from parquetdb.utils import pyarrow_utils
 # Logger setup
 logger = logging.getLogger(__name__)
 
-config.logging_config.loggers.parquetdb.level='DEBUG'
-
 
 @dataclass
 class NormalizeConfig:
