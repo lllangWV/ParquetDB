@@ -250,6 +250,8 @@ if __name__ == "__main__":
     print(table.shape)
     print(table['data'].type)
     
+    print("structure type")
+    print(table['structure'].type)
     try:
         from pymatgen.core.structure import Structure
         
@@ -266,7 +268,7 @@ if __name__ == "__main__":
     table=db.read(ids=[0])
     df=table.to_pandas()
     print(df['data.spg'])
-    
+    start_time = time.time()
     db.update([{'id':0, 'data.spg':210}], 
             normalize_config=NormalizeConfig(
                 load_format='batches',      # Uses the batch generator to normalize
@@ -276,14 +278,16 @@ if __name__ == "__main__":
                 max_rows_per_file=500000,  # Controls the max number of rows per parquet file                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                          
                 max_rows_per_group=500000) # Controls the max number of rows per group parquet file
           )
-    
+    print(f"Time taken to update: {time.time() - start_time}")
     table=db.read(ids=[0])
     df=table.to_pandas()
     print(df['data.spg'])
     
-    
+    start_time = time.time()
+    table=db.read(columns=['structure.lattice.matrix'], filters=[pc.field('data.spg') == 204])
     lattice = table['structure.lattice.matrix'].combine_chunks().to_numpy_ndarray()
-    print(lattice)
+    print(f"Time taken to read lattice: {time.time() - start_time}")
+    print(lattice.shape)
           
 
     
