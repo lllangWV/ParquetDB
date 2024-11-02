@@ -51,6 +51,8 @@ if __name__ == '__main__':
     data = db.read()
     read_time = time.time() - start_time
     del data
+    
+    db.normalize()
 
 
     row_counts = [1, 10, 100, 1000, 10000, 100000, 1000000]
