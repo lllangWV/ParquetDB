@@ -854,7 +854,7 @@ class ParquetDB:
                                    export_dir: str, 
                                    partitioning,
                                    partitioning_flavor=None,
-                                   load_kwargs: dict = None,
+                                   load_config: LoadConfig = LoadConfig(),
                                    load_format: str = 'table',
                                    **kwargs):
         """
@@ -879,7 +879,7 @@ class ParquetDB:
         
         logger.info(f"Exporting partitioned dataset to {export_dir}")
         # Read the entire dataset either in batches or as a whole
-        retrieved_data = self._load_data(load_format=load_format, load_kwargs=load_kwargs)
+        retrieved_data = self._load_data(load_format=load_format, load_config=load_config)
         schema=self.get_schema()
 
         # Can't provide schema to wrrite_to_dataset if the data is a table
