@@ -10,6 +10,7 @@ import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
 from mpl_toolkits.axes_grid1.inset_locator import inset_axes
+import matplotlib.ticker as ticker
 
 import pyarrow as pa
 import pyarrow.compute as pc
@@ -19,6 +20,12 @@ import pyarrow.fs as fs
 
 from parquetdb import ParquetDB, config
 
+
+
+plt.rcParams['axes.labelsize'] = 18
+plt.rcParams['axes.titlesize'] = 18
+plt.rcParams['xtick.labelsize'] = 14
+plt.rcParams['ytick.labelsize'] = 14
 
 db_names=['sqlite','mongodb','parquetdb']
 benchmark_dir=os.path.join(config.data_dir, 'benchmarks')
@@ -130,11 +137,19 @@ def color_diff_log_inset_plot(savefig=None):
     ax_inset.set_xscale('log')
     ax_inset.set_yscale('log')
 
+    nticks = 9
+    maj_loc = ticker.LogLocator(numticks=nticks)
+    min_loc = ticker.LogLocator(subs='all', numticks=nticks)
+    ax_inset.xaxis.set_major_locator(maj_loc)
+    ax_inset.xaxis.set_minor_locator(min_loc)
     
     # Set labels for inset plot
     ax_inset.set_xlabel('Number of Rows (log)', fontsize=8)
-    ax_inset.set_ylabel('Update Time (log)', fontsize=8)
+    ax_inset.set_ylabel('Update Time (log)', fontsize=8, labelpad=-1)
     # ax_inset2.set_ylabel('Read Time (log)', fontsize=8)
+    
+    
+    
     
     
     # Set the same linestyle and make the spine thicker for visibility
@@ -153,7 +168,7 @@ def color_diff_log_inset_plot(savefig=None):
 
     ax1.legend(handles=handles, loc='upper center',  bbox_to_anchor=(0.12, 0,1,1))
     
-    ax1.set_title('Data Input Dependence for ParquetDB on the Update Benchmark for 100 integer columns')
+    ax1.set_title('Data Input Dependence \n Update Benchmark for 100 integer columns')
     plt.tight_layout()
     
     if savefig:

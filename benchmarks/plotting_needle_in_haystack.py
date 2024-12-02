@@ -19,6 +19,13 @@ import pyarrow.fs as fs
 
 from parquetdb import ParquetDB, config
 
+import matplotlib.ticker as ticker
+
+plt.rcParams['axes.labelsize'] = 18
+plt.rcParams['axes.titlesize'] = 18
+plt.rcParams['xtick.labelsize'] = 14
+plt.rcParams['ytick.labelsize'] = 14
+
 
 db_names=['sqlite','mongodb','parquetdb']
 benchmark_dir=os.path.join(config.data_dir, 'benchmarks')
@@ -140,12 +147,21 @@ def color_diff_log_inset_plot(savefig=None):
     ax_inset.set_xscale('log')
     ax_inset.set_yscale('log')
 
-    
+    # ax_inset.xaxis.set_major_locator(LogLocator(base=10.0, subs=None, numticks=6))
+    # ax_inset.yaxis.set_major_locator(LogLocator(base=10.0, subs=None, numticks=10))
+    nticks = 9
+    maj_loc = ticker.LogLocator(numticks=nticks)
+    min_loc = ticker.LogLocator(subs='all', numticks=nticks)
+    ax_inset.xaxis.set_major_locator(maj_loc)
+    ax_inset.xaxis.set_minor_locator(min_loc)
+
     # Set labels for inset plot
     ax_inset.set_xlabel('Number of Rows (log)', fontsize=8)
-    ax_inset.set_ylabel('Read Time (log)', fontsize=8)
+    ax_inset.set_ylabel('Read Time (log)', fontsize=8, labelpad=-2)  # Added labelpad to move label right
     # ax_inset2.set_ylabel('Read Time (log)', fontsize=8)
-    
+    # Set x-axis ticks to show all orders of magnitude
+    # ax_inset.set_xticks([10**1, 10**2, 10**3, 10**4, 10**5])
+    # ax_inset.set_xticklabels(['$10^1$', '$10^2$', '$10^3$', '$10^4$', '$10^5$', '$10^5$'])
     
     # Set the same linestyle and make the spine thicker for visibility
     ax_inset.spines['left'].set_linestyle('solid')
@@ -163,7 +179,7 @@ def color_diff_log_inset_plot(savefig=None):
 
     ax1.legend(lines_1, labels_1 , loc='upper center',  bbox_to_anchor=(0.12, 0,1,1))
     
-    ax1.set_title('Needle in Hay Stack Query Benchmark for SQLite, MongoDB, and ParquetDB for 100 integer columns')
+    ax1.set_title('Needle in Hay Stack Query Benchmark \n for SQLite, MongoDB, and ParquetDB for 100 integer columns')
     plt.tight_layout()
     
     if savefig:
