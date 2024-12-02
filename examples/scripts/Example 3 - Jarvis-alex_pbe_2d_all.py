@@ -10,19 +10,6 @@ import pandas as pd
 config.logging_config.loggers.parquetdb.level = 'ERROR'
 config.apply()
 
-def download_jarvis_dataset(dataset_name: str, store_dir: str):
-    os.makedirs(store_dir, exist_ok=True)
-    d = data(dataset_name, store_dir=store_dir)
-    
-    
-    # Unzip the downloaded dataset
-    zip_files = [f for f in os.listdir(store_dir) if f.endswith('.zip')]
-    for zip_file in zip_files:
-        import zipfile
-        with zipfile.ZipFile(os.path.join(store_dir, zip_file), 'r') as zip_ref:
-            zip_ref.extractall(store_dir)
-    return d
-
 def main():
     dataset_name='alex_pbe_2d_all'
     store_dir = os.path.join(config.data_dir, 'external', 'Jarvis', dataset_name)
@@ -42,7 +29,7 @@ def main():
     with open(json_file[0], 'r') as f:
         d = json.load(f)
     
-    # print("converting to pandas dataframe to clean dataset")
+    print("converting to pandas dataframe to clean dataset")
     df = pd.DataFrame(d).drop(columns=['id'])
 
 
@@ -87,6 +74,10 @@ def main():
     print(f"Total allocated bytes: before reading: {pa.total_allocated_bytes() / 10**6} MB")
     table = db.read(rebuild_nested_struct=True)
     
+    df=table.to_pandas()
+    df.to_csv(os.path.join(store_dir, f'{dataset_name}.csv'), index=False)
+    print(df.head())
+    
     time.sleep(0.5)
     print(f"Total allocated bytes: after reading: {pa.total_allocated_bytes() / 10**6} MB")
     
@@ -114,6 +105,22 @@ def main():
         print(f"Bytes allocated for batch {i}: {pa.total_allocated_bytes() / 10**6} MB")
         
         del batch
+
+
+def download_jarvis_dataset(dataset_name: str, store_dir: str):
+    os.makedirs(store_dir, exist_ok=True)
+    d = data(dataset_name, store_dir=store_dir)
+    
+    
+    # Unzip the downloaded dataset
+    zip_files = [f for f in os.listdir(store_dir) if f.endswith('.zip')]
+    for zip_file in zip_files:
+        import zipfile
+        with zipfile.ZipFile(os.path.join(store_dir, zip_file), 'r') as zip_ref:
+            zip_ref.extractall(store_dir)
+    return d
+
+
     
     
 if __name__ == "__main__":
