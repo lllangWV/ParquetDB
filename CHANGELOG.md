@@ -1,6 +1,33 @@
 
 ___
 
+# 0.5.13 (12-02-2024)
+
+##### Bugs
+- None identified
+
+##### New Features
+- Added additional authors to `pyproject.toml`
+- Introduced new plotting scripts for benchmarks
+- Added utility functions for increased functionality
+- Included example for importing the Jarvis Alexandria 2D dataset
+- Added new example for importing the Jarvis DFT 3D dataset
+- Improved normalization process in benchmarks
+
+##### Documentation updates
+- Updated docstrings for clarity
+- Revised the first example to enhance understanding
+- Updated `_version.py` and `CHANGELOG.md` for the new release
+
+##### Maintenance
+- Merged changes from the main branch of the ParquetDB repository
+- Removed unnecessary logging level modifications
+- Added new examples to demonstrate functionality
+
+___
+
+___
+
 # 0.5.12 (10-25-2024)
 
 ##### Bugs
