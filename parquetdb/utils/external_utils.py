@@ -6,7 +6,10 @@ import shutil
 import requests
 import bz2
 from bs4 import BeautifulSoup
-
+import pandas as pd
+import numpy as np
+from matplotlib.patches import Rectangle
+import matplotlib.pyplot as plt
 from parquetdb import config
 
 # Function to download the file
@@ -216,3 +219,104 @@ def download_alexandria_3d_database(output_dir, n_cores=8, from_scratch=False):
     decompress_bz2_files(source_directory, destination_directory,n_cores=n_cores)
     
     return destination_directory
+
+
+def plot_periodic_table_heatmap(df_elements, property_name=None, save_path=None):
+    """Plot a heatmap in the shape of the periodic table.
+    
+    Args:
+        data: Either a dictionary with element symbols as keys and values for the heatmap,
+              or a DataFrame with 'symbol' and 'value' columns
+        property_name: Name of the property being plotted (for title/colorbar)
+        save_path: Optional path to save the plot
+    """
+    # Convert dictionary to DataFrame if needed
+
+
+    # Get element positions from periodic table data
+    # df_elements = pd.read_csv('data/periodic_table.csv')
+    element_symbols = df_elements['symbol'].tolist()
+    element_groups = df_elements['extended_group'].tolist()
+    element_periods = df_elements['period'].tolist()
+
+    # Map elements to positions
+    element_positions = {}
+    for idx in range(len(element_symbols)):
+        symbol = element_symbols[idx]
+        group = element_groups[idx]
+        period = element_periods[idx]
+        element_positions[symbol] = (group, period)
+
+    # Plotting
+    fig, ax = plt.subplots(figsize=(15, 8))
+
+    # Max group and period for setting axes
+    max_group = max(element_groups)
+    max_period = max(element_periods)
+    min_period = min(element_periods)
+
+    # Colormap setup
+    cmap = plt.cm.viridis
+    norm = plt.Normalize(vmin=df_elements['value'].min(), vmax=df_elements['value'].max())
+
+    # Plot elements as rectangles
+    for idx in range(len(element_symbols)):
+        symbol = element_symbols[idx]
+        group = element_groups[idx]
+        period = element_periods[idx]
+        
+        # Get value for this element if it exists in input data
+        value = df_elements[df_elements['symbol'] == symbol]['value'].values
+        prop_value = value[0] if len(value) > 0 else np.nan
+        
+        x = group
+        y = period
+        color = cmap(norm(prop_value)) if not np.isnan(prop_value) else 'grey'
+        rect = Rectangle((x - 0.5, y - 0.5), 1, 1,
+                         facecolor=color,
+                         edgecolor='white')
+
+        ax.add_patch(rect)
+        ax.text(x, y, symbol,
+                ha='center', va='center', fontsize=8, color='white',
+                bbox=dict(facecolor='black', alpha=1.0, boxstyle='circle'))
+
+    # Axes settings
+    ax.set_xlim(0.5, max_group + 0.5)
+    ax.set_ylim(min_period - 0.5, max_period + 0.5)
+    ax.set_xlabel('Group')
+    ax.set_ylabel('Period')
+    ax.invert_yaxis()
+
+    # Colorbar
+    sm = plt.cm.ScalarMappable(cmap=cmap, norm=norm)
+    sm.set_array([])
+    cbar = plt.colorbar(sm, ax=ax)
+    
+    if property_name:
+        cbar.set_label(property_name.replace('_', ' ').title())
+
+    # Ticks and labels
+    ax.set_xticks(range(1, max_group + 1))
+    ax.set_xticklabels(range(1, max_group + 1))
+    ax.set_yticks(range(min_period, max_period + 1))
+    ax.set_yticklabels(range(min_period, max_period + 1))
+
+    # Remove unnecessary spines
+    ax.spines['top'].set_visible(False)
+    ax.spines['right'].set_visible(False)
+
+    # Title
+    if property_name:
+        plt.title(f'Periodic Table Colored by {property_name.replace("_", " ").title()}', fontsize=14)
+    else:
+        plt.title('Periodic Table Heatmap')
+        
+    plt.tight_layout()
+
+    # Save if path provided
+    if save_path:
+        os.makedirs(os.path.dirname(save_path), exist_ok=True)
+        plt.savefig(save_path)
+        
+    return fig, ax
