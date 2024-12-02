@@ -123,8 +123,6 @@ class ParquetDB:
             The name of the dataset to be created or accessed.
         dir : str, optional
             The directory where the dataset will be stored (default is the current directory).
-        n_cores : int, optional
-            The number of CPU cores to use for parallel processing (default is 8).
         
         Example
         -------
