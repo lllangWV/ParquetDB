@@ -186,6 +186,12 @@ def replace_empty_structs(column_array: pa.Array, dummy_field=pa.field('dummy_fi
     """
     if isinstance(column_array, pa.ChunkedArray):
         column_array = column_array.combine_chunks()
+        
+    if pa.types.is_list(column_array.type):
+        arr_data=replace_empty_structs(column_array.values)
+        arr_offsets=column_array.offsets
+        arr = pa.ListArray.from_arrays(arr_offsets,arr_data)
+        return arr
     
     # Catches non struct field cases
     if not pa.types.is_struct(column_array.type):
@@ -207,8 +213,10 @@ def replace_empty_structs(column_array: pa.Array, dummy_field=pa.field('dummy_fi
     
 
     return pc.make_struct(*child_arrays, field_names=child_field_names)
-    
-def replace_empty_structs_in_column(table, column_name, dummy_field=pa.field('dummy_field', pa.int16())):
+
+def replace_empty_structs_in_column(table, column_name, 
+                                    dummy_field=pa.field('dummy_field', pa.int16()),
+                                    is_nested=False):
     """
     Replaces empty struct values in a specified column of a PyArrow Table with a dummy field.
 
@@ -243,20 +251,56 @@ def replace_empty_structs_in_column(table, column_name, dummy_field=pa.field('du
     col1: [{a: 1}, {dummy_field: 0}, {dummy_field: 0}]
     """
     column_type=table.schema.field(column_name).type
-    if pa.types.is_struct(column_type):
-        logger.debug('This column is a struct')
+    
+    has_empty_struct = 'struct<>' in str(column_type)
+    
+    # Check if any fields in the struct type are empty
+    if pa.types.is_struct(column_type) and has_empty_struct:
+        logger.debug('This column is a StructArray')
         
         column_array=table.column(column_name)
         column_index=table.schema.get_field_index(column_name)
         
         # Replacing empty structs with dummy structs
-        updated_array=replace_empty_structs(column_array, dummy_field=dummy_field)
+        if is_nested:
+            updated_array=replace_empty_structs(column_array, dummy_field=dummy_field)
+        else:
+            updated_array = pa.nulls(len(column_array), type=dummy_field.type)
 
-        updated_field=pa.field(column_name, updated_array.type)
+        updated_field = pa.field(f'{column_name}', updated_array.type)
         table = table.set_column(column_index, updated_field, updated_array)
+        # updated_field = pa.field(f'{column_name}.dummy', updated_array.type)
+        # table = table.set_column(column_index, updated_field, updated_array)
         
-    return table
-    
+        # column_name=f'{column_name}.dummy'
+    elif pa.types.is_list(column_type) and has_empty_struct:
+        logger.debug('This column is a ListArray')
+        column_array=table.column(column_name)
+        column_index=table.schema.get_field_index(column_name)
+        
+        
+        arr_data=replace_empty_structs(column_array.combine_chunks().values)
+        arr_offsets=column_array.combine_chunks().offsets
+        arr = pa.ListArray.from_arrays(arr_offsets,arr_data)
+        new_struct_array = pc.make_struct(arr, field_names=[column_name])
+        table = table.set_column(column_index, pa.field(column_name, new_struct_array.type), new_struct_array)
+        
+    return table#, column_name
+
+def is_empty_struct_in_column(table, column_name):
+    column_type=table.schema.field(column_name).type
+    if pa.types.is_struct(column_type):
+        fields = column_type.fields
+        if len(fields) == 0:
+            return True
+    elif pa.types.is_list(column_type):
+        value_type = column_type.value_type
+        if pa.types.is_struct(value_type):
+            fields = value_type.fields
+            if len(fields) == 0:
+                return True
+    return False
+
 def replace_empty_structs_in_table(table, dummy_field=pa.field('dummy_field', pa.int16())):
     """
     Replaces empty struct fields in a PyArrow table with a struct containing a dummy field.
@@ -591,6 +635,8 @@ def flatten_table_in_column(table, column_name):
     
     if pa.types.is_struct(column_type):
         logger.debug("Found struct. Trying to flatten")
+        
+
         column_array=table.column(column_name)
         
         flattened_arrays_and_fields = flatten_nested_structs(column_array, column_name)
@@ -686,86 +732,91 @@ def convert_list_column_to_fixed_tensor(table, column_name):
     col1: [ [1, 2], [3, 4], [5, 6] ]
     """
     
-    column_type=table.schema.field(column_name).type
-    
-    if not pa.types.is_list(column_type):
-        return table
-
-
-    logger.debug("Found list. Trying to convert to fixed size list array")
-    
-    # Step 1: Extract column array and index
-    column_array = table.column(column_name)
-    column_index = table.schema.get_field_index(column_name)
-    
-    # Step 2: Get first non-null element to determine tensor shape
-    non_null_chunk = column_array.drop_null().chunk(0)
-    first_element = non_null_chunk[0].values.tolist()
-    tensor_shape = np.array(first_element).shape
-    tensor_size = math.prod(tensor_shape)
-
-    # Step 3:  Flattens the non-null array, into a single 1-d array combing all rows
-    flattened_values = pc.list_flatten(column_array, recursive=True).combine_chunks()
-    base_type = flattened_values.type
-    
-    # Check if the base type is a floating type
-    if not (pa.types.is_floating(base_type) or 
-            pa.types.is_integer(base_type) or 
-            pa.types.is_boolean(base_type)or 
-            pa.types.is_decimal(base_type)):
-        logger.debug("This numpy array is not a floating type. Leaving as ListArray")
-        return table
-    
-    # Step 4: Create fixed-size array from non-null values
     try:
-        fixed_size_array = pa.FixedSizeListArray.from_arrays(
-            values=flattened_values, 
-            list_size=tensor_size
-        )
-    except:
-        logger.debug("Inconsistent array sizes detected. Leaving as ListArray")
+        column_type=table.schema.field(column_name).type
+        
+        if not pa.types.is_list(column_type):
+            return table
+
+
+        logger.debug("Found list. Trying to convert to fixed size list array")
+        
+        # Step 1: Extract column array and index
+        column_array = table.column(column_name)
+        column_index = table.schema.get_field_index(column_name)
+        
+        # Step 2: Get first non-null element to determine tensor shape
+        non_null_chunk = column_array.drop_null().chunk(0)
+        first_element = non_null_chunk[0].values.tolist()
+        tensor_shape = np.array(first_element).shape
+        tensor_size = math.prod(tensor_shape)
+
+        # Step 3:  Flattens the non-null array, into a single 1-d array combing all rows
+        flattened_values = pc.list_flatten(column_array, recursive=True).combine_chunks()
+        base_type = flattened_values.type
+        
+        # Check if the base type is a floating type
+        if not (pa.types.is_floating(base_type) or 
+                pa.types.is_integer(base_type) or 
+                pa.types.is_boolean(base_type)or 
+                pa.types.is_decimal(base_type)):
+            logger.debug("This numpy array is not a floating type. Leaving as ListArray")
+            return table
+        
+        # Step 4: Create fixed-size array from non-null values
+        try:
+            fixed_size_array = pa.FixedSizeListArray.from_arrays(
+                values=flattened_values, 
+                list_size=tensor_size
+            )
+        except:
+            logger.debug(f"Inconsistent array sizes detected for {column_name}. Leaving as ListArray")
+            return table
+        
+        
+        # Step 4: Create mapping for null handling
+        null_mapping = _create_null_value_mapping(column_array)
+        
+        # Step 5: Reorder the non-null values to match original array structure
+        # Example: [[1,2], [3,4]] → [None, [1,2], None, [3,4]]
+        reordered_array = fixed_size_array.take(null_mapping)
+        
+        # Step 6: Create the tensor type and convert array to tensor format
+        tensor_type = pa.fixed_shape_tensor(base_type, tensor_shape)
+        tensor_array = pa.ExtensionArray.from_storage(tensor_type, reordered_array)
+        
+        # Step 7: Create a null tensor to use for missing values
+        # Example: [[None,None]] - this will be used to fill null positions
+        null_storage = pa.array([[None] * tensor_size], pa.list_(base_type, tensor_size))
+        null_tensor = pa.ExtensionArray.from_storage(tensor_type, null_storage)
+        
+        # Step 8: Combine the tensor array with the null tensor
+        # Example: [[1,2], [3,4], [None,None]]
+        combined_tensors = pa.concat_arrays([tensor_array, null_tensor])
+        
+        # Step 9: Create mapping to place nulls and values in correct positions
+        valid_mask = null_mapping.is_valid()  # Shows which positions should be null
+        array_len = len(valid_mask)
+        
+        # Index of the null tensor in combined array (it's at the end)
+        null_index = pa.array([array_len])
+        # Indices for non-null values
+        value_indices = pa.array(range(array_len))
+        # Create mapping: null positions get None, valid positions get their index
+        value_mapping = pc.if_else(valid_mask, value_indices, None)
+        
+        # Step 10: Replace None values with index of null tensor and apply mapping
+        # Example mapping: [2, 0, 2, 1] → points to null tensor (2) or value indices (0,1)
+        final_mapping = value_mapping.fill_null(null_index[0])
+        tensor_array = combined_tensors.take(final_mapping)
+        
+        # Step 11: Update table with new tensor column
+        tensor_field = pa.field(column_name, tensor_array.type)
+        return table.set_column(column_index, tensor_field, tensor_array)
+    except Exception as e:
+        
+        logger.debug(f"Error converting {column_name} list column to fixed tensor. Leaving as ListArray")
         return table
-    
-    
-    # Step 4: Create mapping for null handling
-    null_mapping = _create_null_value_mapping(column_array)
-    
-    # Step 5: Reorder the non-null values to match original array structure
-    # Example: [[1,2], [3,4]] → [None, [1,2], None, [3,4]]
-    reordered_array = fixed_size_array.take(null_mapping)
-    
-    # Step 6: Create the tensor type and convert array to tensor format
-    tensor_type = pa.fixed_shape_tensor(base_type, tensor_shape)
-    tensor_array = pa.ExtensionArray.from_storage(tensor_type, reordered_array)
-    
-    # Step 7: Create a null tensor to use for missing values
-    # Example: [[None,None]] - this will be used to fill null positions
-    null_storage = pa.array([[None] * tensor_size], pa.list_(base_type, tensor_size))
-    null_tensor = pa.ExtensionArray.from_storage(tensor_type, null_storage)
-    
-    # Step 8: Combine the tensor array with the null tensor
-    # Example: [[1,2], [3,4], [None,None]]
-    combined_tensors = pa.concat_arrays([tensor_array, null_tensor])
-    
-    # Step 9: Create mapping to place nulls and values in correct positions
-    valid_mask = null_mapping.is_valid()  # Shows which positions should be null
-    array_len = len(valid_mask)
-    
-    # Index of the null tensor in combined array (it's at the end)
-    null_index = pa.array([array_len])
-    # Indices for non-null values
-    value_indices = pa.array(range(array_len))
-    # Create mapping: null positions get None, valid positions get their index
-    value_mapping = pc.if_else(valid_mask, value_indices, None)
-    
-    # Step 10: Replace None values with index of null tensor and apply mapping
-    # Example mapping: [2, 0, 2, 1] → points to null tensor (2) or value indices (0,1)
-    final_mapping = value_mapping.fill_null(null_index[0])
-    tensor_array = combined_tensors.take(final_mapping)
-    
-    # Step 11: Update table with new tensor column
-    tensor_field = pa.field(column_name, tensor_array.type)
-    return table.set_column(column_index, tensor_field, tensor_array)
 
 def table_column_callbacks(table, callbacks=[]):
     """

@@ -225,6 +225,7 @@ class TestParquetDB(unittest.TestCase):
         table = self.db.read()
         df = table.to_pandas()
 
+        # logger.debug(f"DataFrame:\n{df.head()}")
         # Assert the shape before the update (confirming initial data structure)
         assert df.shape[0] == len(current_data), f"Expected {len(current_data)} rows before update, but got {df.shape[0]}"
         assert df.loc[0, 'b.x'] == 10
@@ -472,8 +473,8 @@ class TestParquetDB(unittest.TestCase):
 
 
 if __name__ == '__main__':
-    # unittest.TextTestRunner().run(TestParquetDB('test_alexandria_import'))
-    unittest.main()
+    unittest.TextTestRunner().run(TestParquetDB('test_nested_data_handling'))
+    # unittest.main()
     
     
 # if __name__ == '__main__':

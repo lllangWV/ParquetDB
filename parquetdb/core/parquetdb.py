@@ -1123,13 +1123,18 @@ class ParquetDB:
     def _preprocess_table(self, table):
         table=pyarrow_utils.flatten_table(table)
         
+        
         for column_name in table.column_names:
             # Convert list column to fixed tensor
+            
             table=pyarrow_utils.convert_list_column_to_fixed_tensor(table, column_name)
             
             # Replace empty structs with dummy structs
-            table=pyarrow_utils.replace_empty_structs_in_column(table, column_name)
+            table=pyarrow_utils.replace_empty_structs_in_column(table, column_name, is_nested=True)
+            
             table=pyarrow_utils.flatten_table_in_column(table, column_name)
+            
+        
         return table
     
     def _get_new_ids(self, incoming_table):
