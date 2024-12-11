@@ -1380,6 +1380,52 @@ def update_schema(current_schema, schema=None, field_dict=None):
 
     return updated_schema
 
+def unify_schemas(schema_list, promote_options='permissive'):
+    current_schema, new_schema = schema_list
+    return pa.unify_schemas([current_schema, new_schema], promote_options=promote_options)
+    # try:
+    #     return pa.unify_schemas([current_schema, new_schema], promote_options=promote_options)
+    
+    # except pa.lib.ArrowTypeError as e:
+    #     # Extract field name and types from error message
+    #     error_msg = str(e)
+    #     print(error_msg)
+    #     if "Field" in error_msg and "has incompatible types:" in error_msg:
+    #         # Parse the error message
+    #         field_part = error_msg.split("Field ")[1].split(" has incompatible types:")[0]
+    #         types_part = error_msg.split("has incompatible types: ")[1]
+    #         types = types_part.split(" vs ")
+    #         print(field_part, types)
+            
+        
+    #         if ('extension<arrow.fixed_shape_tensor' in types[0] or 'extension<arrow.fixed_shape_tensor' in types[1]):
+    #             current_field_type=current_schema.field(field_part).type
+    #             new_field_type=new_schema.field(field_part).type
+                
+    #             if 'extension<arrow.fixed_shape_tensor' in current_field_type:
+    #                 value_type=current_field_type.value_type
+    #             elif 'extension<arrow.fixed_shape_tensor' in new_field_type:
+    #                 value_type=new_field_type.value_type
+                
+                
+    #             # if pa.types.is_list(current_field_type):
+    #             #     field_update_type= current_field_type
+    #             # else:
+    #             #     field_update_type= new_field_type
+                    
+    #             field_update_type=pa.list_(value_type)
+    #             field_update={field_part: pa.field(field_part, field_update_type)}
+    #             updated_current_schema=update_schema(current_schema, schema=None, field_dict=field_update)
+    #             updated_new_schema=update_schema(new_schema, schema=None, field_dict=field_update)
+                
+    #             print(updated_current_schema.field(field_part))
+    #             print(updated_new_schema.field(field_part))
+    #             return unify_schemas([updated_current_schema, updated_new_schema], promote_options=promote_options)
+    # finally:
+    #     raise ValueError(f"Schema unification failed: {error_msg}")
+
+    # return merged_schema
+
 def align_table(current_table: pa.Table, new_schema: pa.Schema) -> pa.Table:
     """
     Aligns the given table to the new schema, filling in missing fields or struct fields with null values.

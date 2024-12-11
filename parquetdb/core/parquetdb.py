@@ -192,7 +192,7 @@ class ParquetDB:
             # Merge Schems
             current_schema = self.get_schema()
             incoming_schema=incoming_table.schema
-            merged_schema = pa.unify_schemas([current_schema, incoming_schema],promote_options='permissive')
+            merged_schema = pyarrow_utils.unify_schemas([current_schema, incoming_schema],promote_options='permissive')
             
             # Algin Incoming Table with Merged Schema
             modified_incoming_table=pyarrow_utils.table_schema_cast(incoming_table, merged_schema)
@@ -482,7 +482,7 @@ class ParquetDB:
             retrieved_data=update_func(retrieved_data, incoming_table)
             
             if schema:
-                schema = pa.unify_schemas([schema, incoming_table.schema],promote_options='default')
+                schema = pyarrow_utils.unify_schemas([schema, incoming_table.schema],promote_options='default')
                 schema=pyarrow_utils.sort_schema(schema)
         
         # If ids are provided this is a delete
@@ -1320,7 +1320,7 @@ def table_update(current_table, incoming_table):
     # Merging Schema
     incoming_schema=incoming_table.schema
     current_schema=current_table.schema
-    merged_schema = pa.unify_schemas([current_schema, incoming_schema],promote_options='default')
+    merged_schema = pyarrow_utils.unify_schemas([current_schema, incoming_schema],promote_options='default')
     
     # Aligning current and incoming tables with merged schema
     incoming_table=pyarrow_utils.table_schema_cast(incoming_table, merged_schema)
@@ -1336,7 +1336,7 @@ def generator_update(generator, incoming_table):
     for record_batch in generator:
         if merged_schema is None:
             current_schema=record_batch.schema
-            merged_schema = pa.unify_schemas([current_schema, incoming_schema],promote_options='default')
+            merged_schema = pyarrow_utils.unify_schemas([current_schema, incoming_schema],promote_options='default')
             incoming_table=pyarrow_utils.table_schema_cast(incoming_table, merged_schema)
             
         record_batch = pyarrow_utils.table_schema_cast(record_batch, merged_schema)
