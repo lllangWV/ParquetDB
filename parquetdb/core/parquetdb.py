@@ -22,6 +22,11 @@ from parquetdb.utils import pyarrow_utils
 # Logger setup
 logger = logging.getLogger(__name__)
 
+# TODO: Need to think of better way to handle ragged arrays and fixed shape
+# By default, we try to convert ragged arrays to fixed shape array. 
+# If for some reason, a field that is a ragged array gets mislabeled as a fixed shape array, 
+# an incoming ragged array will conflict with the existing fixed shape array
+
 
 @dataclass
 class NormalizeConfig:
@@ -145,6 +150,8 @@ class ParquetDB:
                data:Union[List[dict],dict,pd.DataFrame],
                schema:pa.Schema=None,
                metadata:dict=None,
+               treat_fields_as_ragged:List[str]=None,
+               convert_to_fixed_shape:bool=True,
                normalize_dataset:bool=False,
                normalize_config:dict=NormalizeConfig()
                ):
@@ -161,6 +168,10 @@ class ParquetDB:
             Metadata to be attached to the table.
         normalize_dataset : bool, optional
             If True, the dataset will be normalized after the data is added (default is True).
+        treat_fields_as_ragged : list of str, optional
+            A list of fields to treat as ragged arrays.
+        convert_to_fixed_shape : bool, optional
+            If True, the ragged arrays will be converted to fixed shape arrays.
         normalize_config : NormalizeConfig, optional
             Configuration for the normalization process, optimizing performance by managing row distribution and file structure.
         Example
@@ -180,36 +191,35 @@ class ParquetDB:
         new_ids = self._get_new_ids(incoming_table)
         incoming_table=incoming_table.append_column(pa.field('id', pa.int64()), [new_ids])
 
-        incoming_table = self._preprocess_table(incoming_table)
-                
+        incoming_table = self._preprocess_table(incoming_table, treat_fields_as_ragged=treat_fields_as_ragged, convert_to_fixed_shape=convert_to_fixed_shape)
+        
         # If this is the first table, save it directly
         if is_directory_empty(self.dataset_dir):
             incoming_save_path = self._get_save_path()
             pq.write_table(incoming_table, incoming_save_path)
             return None
 
-        try:
-            # Merge Schems
-            current_schema = self.get_schema()
-            incoming_schema=incoming_table.schema
-            merged_schema = pyarrow_utils.unify_schemas([current_schema, incoming_schema],promote_options='permissive')
+        # Merge Schems
+        current_schema = self.get_schema()
+        incoming_schema=incoming_table.schema
+        merged_schema = pyarrow_utils.unify_schemas([current_schema, incoming_schema],promote_options='permissive')
+        
+        # Algin Incoming Table with Merged Schema
+        modified_incoming_table=pyarrow_utils.table_schema_cast(incoming_table, merged_schema)
+        are_schemas_equal=current_schema.equals(modified_incoming_table.schema)
+        # print(modified_incoming_table['sites'].combine_chunks().values.field(3).values.field(3))
+        if not are_schemas_equal:
+            logger.info(f"Schemas not are equal: {are_schemas_equal}. Normalizing the dataset.")
+            self._normalize(schema=merged_schema, normalize_config=normalize_config)
+        incoming_save_path = self._get_save_path()
+        pq.write_table(modified_incoming_table, incoming_save_path)
+        
+        if normalize_dataset:
+            self._normalize(schema=modified_incoming_table.schema, normalize_config=normalize_config)
             
-            # Algin Incoming Table with Merged Schema
-            modified_incoming_table=pyarrow_utils.table_schema_cast(incoming_table, merged_schema)
-            are_schemas_equal=current_schema.equals(modified_incoming_table.schema)
-            
-            if not are_schemas_equal:
-                logger.info(f"Schemas not are equal: {are_schemas_equal}. Normalizing the dataset.")
-                self._normalize(schema=merged_schema, normalize_config=normalize_config)
-            incoming_save_path = self._get_save_path()
-            pq.write_table(modified_incoming_table, incoming_save_path)
-            
-            if normalize_dataset:
-                self._normalize(schema=modified_incoming_table.schema, normalize_config=normalize_config)
-                
-            logger.info("Creating dataset passed")
-        except Exception as e:
-            logger.exception(f"exception aligning schemas: {e}")
+        logger.info("Creating dataset passed")
+        # except Exception as e:
+        #     logger.exception(f"exception aligning schemas: {e}")
         return None
     
     def read(self,
@@ -288,7 +298,9 @@ class ParquetDB:
     def update(self, 
                data: Union[List[dict], dict, pd.DataFrame], 
                schema:pa.Schema=None, 
-               metadata:dict=None, 
+               metadata:dict=None,
+               treat_fields_as_ragged=None,
+               convert_to_fixed_shape:bool=True,
                normalize_config:NormalizeConfig=NormalizeConfig()):
         """
         Updates existing records in the database.
@@ -302,6 +314,10 @@ class ParquetDB:
             The schema for the data being added. If not provided, it will be inferred.
         metadata : dict, optional
             Additional metadata to store alongside the data.
+        treat_fields_as_ragged : list of str, optional
+            A list of fields to treat as ragged arrays.
+        convert_to_fixed_shape : bool, optional
+            If True, the ragged arrays will be converted to fixed shape arrays.
         normalize_config : NormalizeConfig, optional
             Configuration for the normalization process, optimizing performance by managing row distribution and file structure.
         
@@ -315,7 +331,9 @@ class ParquetDB:
         # Construct incoming table from the data
         incoming_table = self._construct_table(data, schema=schema, metadata=metadata)
         
-        incoming_table = self._preprocess_table(incoming_table)
+        incoming_table = self._preprocess_table(incoming_table, 
+                                                treat_fields_as_ragged=treat_fields_as_ragged, 
+                                                convert_to_fixed_shape=convert_to_fixed_shape)
         incoming_table=pyarrow_utils.table_schema_cast(incoming_table, incoming_table.schema)
 
         # Non-exisiting id warning step. This is not really necessary but might be nice for user to check
@@ -517,7 +535,7 @@ class ParquetDB:
         if isinstance(retrieved_data, pa.lib.Table):
             schema=None
             
-        logger.debug(f"Schema: {schema}")
+        # logger.debug(f"Schema: {schema}")
         
         try:
             logger.info(f"Writing dataset to {dataset_dir}")
@@ -550,15 +568,26 @@ class ParquetDB:
                 for file_path in main_files:
                     if os.path.isfile(file_path):
                         os.remove(file_path)
+                        
+            tmp_files=glob(os.path.join(dataset_dir, f'tmp_{self.dataset_name}_*.parquet'))
+            for file_path in tmp_files:
+
+                file_name=os.path.basename(file_path).replace('tmp_', '')
+                new_file_path=os.path.join(dataset_dir, file_name)
+                os.rename(file_path, new_file_path)
+                    
                     
         except Exception as e:
             logger.exception(f"exception writing final table to {self.dataset_dir}: {e}")
+            
+            tmp_files=glob(os.path.join(dataset_dir, f'tmp_{self.dataset_name}_*.parquet'))
+            for file_path in tmp_files:
 
-        tmp_files=glob(os.path.join(dataset_dir, f'tmp_{self.dataset_name}_*.parquet'))
-        for file_path in tmp_files:
-            file_name=os.path.basename(file_path).replace('tmp_', '')
-            new_file_path=os.path.join(dataset_dir, file_name)
-            os.rename(file_path, new_file_path)
+                file_name=os.path.basename(file_path).replace('tmp_', '')
+                new_file_path=os.path.join(dataset_dir, file_name)
+                os.rename(file_path, new_file_path)
+
+            raise Exception(f"Exception normalizing table. Error Message: {e}")
 
     def update_schema(self, 
                       field_dict:dict=None, 
@@ -1120,21 +1149,28 @@ class ParquetDB:
             table=pyarrow_utils.create_empty_table(schema=dataset.schema, columns=columns)
         return table
     
-    def _preprocess_table(self, table):
+    def _preprocess_table(self, table, treat_fields_as_ragged=None, convert_to_fixed_shape=True):
         table=pyarrow_utils.flatten_table(table)
         
+        if treat_fields_as_ragged is None:
+            treat_fields_as_ragged=[]
         
         for column_name in table.column_names:
             # Convert list column to fixed tensor
             
-            table=pyarrow_utils.convert_list_column_to_fixed_tensor(table, column_name)
+            treat_as_ragged=False
+            for field_name in treat_fields_as_ragged:
+                if field_name in column_name:
+                    treat_as_ragged=True
+                    break
+            if not treat_as_ragged and convert_to_fixed_shape:
+                table=pyarrow_utils.convert_list_column_to_fixed_tensor(table, column_name)
             
             # Replace empty structs with dummy structs
             table=pyarrow_utils.replace_empty_structs_in_column(table, column_name, is_nested=True)
             
             table=pyarrow_utils.flatten_table_in_column(table, column_name)
             
-        
         return table
     
     def _get_new_ids(self, incoming_table):

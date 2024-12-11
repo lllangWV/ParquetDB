@@ -473,8 +473,8 @@ class TestParquetDB(unittest.TestCase):
 
 
 if __name__ == '__main__':
-    unittest.TextTestRunner().run(TestParquetDB('test_nested_data_handling'))
-    # unittest.main()
+    # unittest.TextTestRunner().run(TestParquetDB('test_nested_data_handling'))
+    unittest.main()
     
     
 # if __name__ == '__main__':

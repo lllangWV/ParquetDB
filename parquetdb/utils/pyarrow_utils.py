@@ -277,15 +277,14 @@ def replace_empty_structs_in_column(table, column_name,
         logger.debug('This column is a ListArray')
         column_array=table.column(column_name)
         column_index=table.schema.get_field_index(column_name)
-        
-        
+
         arr_data=replace_empty_structs(column_array.combine_chunks().values)
         arr_offsets=column_array.combine_chunks().offsets
         arr = pa.ListArray.from_arrays(arr_offsets,arr_data)
-        new_struct_array = pc.make_struct(arr, field_names=[column_name])
-        table = table.set_column(column_index, pa.field(column_name, new_struct_array.type), new_struct_array)
+        # new_struct_array = pc.make_struct(arr, field_names=[column_name])
+        table = table.set_column(column_index, pa.field(column_name, arr.type), arr)
         
-    return table#, column_name
+    return table
 
 def is_empty_struct_in_column(table, column_name):
     column_type=table.schema.field(column_name).type
@@ -739,7 +738,7 @@ def convert_list_column_to_fixed_tensor(table, column_name):
             return table
 
 
-        logger.debug("Found list. Trying to convert to fixed size list array")
+        logger.debug(f"Found list. Trying to convert Field {column_name} to fixed size list array")
         
         # Step 1: Extract column array and index
         column_array = table.column(column_name)
@@ -1389,22 +1388,21 @@ def unify_schemas(schema_list, promote_options='permissive'):
     # except pa.lib.ArrowTypeError as e:
     #     # Extract field name and types from error message
     #     error_msg = str(e)
-    #     print(error_msg)
     #     if "Field" in error_msg and "has incompatible types:" in error_msg:
     #         # Parse the error message
     #         field_part = error_msg.split("Field ")[1].split(" has incompatible types:")[0]
     #         types_part = error_msg.split("has incompatible types: ")[1]
     #         types = types_part.split(" vs ")
-    #         print(field_part, types)
+
             
         
     #         if ('extension<arrow.fixed_shape_tensor' in types[0] or 'extension<arrow.fixed_shape_tensor' in types[1]):
     #             current_field_type=current_schema.field(field_part).type
     #             new_field_type=new_schema.field(field_part).type
                 
-    #             if 'extension<arrow.fixed_shape_tensor' in current_field_type:
+    #             if 'extension<arrow.fixed_shape_tensor' in str(current_field_type):
     #                 value_type=current_field_type.value_type
-    #             elif 'extension<arrow.fixed_shape_tensor' in new_field_type:
+    #             elif 'extension<arrow.fixed_shape_tensor' in str(new_field_type):
     #                 value_type=new_field_type.value_type
                 
                 
@@ -1421,10 +1419,7 @@ def unify_schemas(schema_list, promote_options='permissive'):
     #             print(updated_current_schema.field(field_part))
     #             print(updated_new_schema.field(field_part))
     #             return unify_schemas([updated_current_schema, updated_new_schema], promote_options=promote_options)
-    # finally:
-    #     raise ValueError(f"Schema unification failed: {error_msg}")
 
-    # return merged_schema
 
 def align_table(current_table: pa.Table, new_schema: pa.Schema) -> pa.Table:
     """
@@ -1522,10 +1517,20 @@ def table_schema_cast(current_table, new_schema):
     current_intersection_new = current_names.intersection(new_names)
     
     for name in current_intersection_new:
+        if pa.types.is_list(current_table.column(name).type):
+            try:
+                column_array=current_table.column(name).cast(new_schema.field(name).type)
+                column_array.validate()
+            except pa.lib.ArrowInvalid as e:
+                raise Exception(f"\n\n Error casting column {name} to type {new_schema.field(name).type}.\n\n"
+                                "This is typically caused by a nested list field containing an array of nulls.\n"
+                                "Either remove the null field before putting the data in ParquetDB or \n"
+                                "provide the exact schema when first introducing the new field")
+        
         current_table=current_table.set_column(current_table.schema.get_field_index(name), 
-                                               new_schema.field(name), 
-                                               current_table.column(name).cast(new_schema.field(name).type))
-
+                                            new_schema.field(name), 
+                                            current_table.column(name).cast(new_schema.field(name).type))
+        
     for name in new_minus_current:
         current_table=current_table.append_column(new_schema.field(name), pa.nulls(len(current_table), type=new_schema.field(name).type))
 
