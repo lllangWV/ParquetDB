@@ -27,6 +27,11 @@ logger = logging.getLogger(__name__)
 # If for some reason, a field that is a ragged array gets mislabeled as a fixed shape array, 
 # an incoming ragged array will conflict with the existing fixed shape array
 
+# TODO: Issue when updating structs with new fields that are inside of ListArrays
+# TODO: Add method to set metadata on the field level
+# TODO: Add method to rename field
+# TODO: Add method to sort fields
+# TODO: Issue when adding new fields that are extension types
 
 @dataclass
 class NormalizeConfig:
@@ -118,32 +123,29 @@ class LoadConfig:
     memory_pool: Optional[pa.MemoryPool] = None
 
 class ParquetDB:
-    def __init__(self, dataset_name, dir=''):
+    def __init__(self, db_path):
         """
         Initializes the ParquetDB object.
 
         Parameters
         ----------
-        dataset_name : str
-            The name of the dataset to be created or accessed.
-        dir : str, optional
-            The directory where the dataset will be stored (default is the current directory).
+        db_path : str
+            The path of the database.
         
         Example
         -------
-        >>> db = ParquetDB(dataset_name='my_dataset', dir='/path/to/db', n_cores=4)
+        >>> db = ParquetDB(db_path='/path/to/db')
         """
-        self.dir = dir
-        self.dataset_name=dataset_name
-        self.dataset_dir=os.path.join(self.dir,self.dataset_name)
-        self.basename_template = f'{dataset_name}_{{i}}.parquet'
+        self.db_path=db_path
+        self.dataset_name=os.path.basename(self.db_path)
+        self.basename_template = f'{self.dataset_name}_{{i}}.parquet'
 
-        os.makedirs(self.dataset_dir, exist_ok=True)
+        os.makedirs(self.db_path, exist_ok=True)
 
         
         self.load_formats=['batches','table','dataset']
 
-        logger.info(f"dir: {self.dir}")
+        logger.info(f"db_path: {self.db_path}")
         logger.info(f"load_formats: {self.load_formats}")
 
     def create(self, 
@@ -180,7 +182,7 @@ class ParquetDB:
         """
         
         logger.info("Creating data")
-        os.makedirs(self.dataset_dir, exist_ok=True)
+        os.makedirs(self.db_path, exist_ok=True)
         
         # Construct incoming table from the data
         incoming_table = self._construct_table(data, schema=schema, metadata=metadata)
@@ -194,7 +196,7 @@ class ParquetDB:
         incoming_table = self._preprocess_table(incoming_table, treat_fields_as_ragged=treat_fields_as_ragged, convert_to_fixed_shape=convert_to_fixed_shape)
         
         # If this is the first table, save it directly
-        if is_directory_empty(self.dataset_dir):
+        if is_directory_empty(self.db_path):
             incoming_save_path = self._get_save_path()
             pq.write_table(incoming_table, incoming_save_path)
             return None
@@ -517,7 +519,7 @@ class ParquetDB:
             logger.info("This normalization is a schema update. Applying schema cast function, then normalizing.")
             retrieved_data=schema_cast_func(retrieved_data, schema)
             
-        dataset_dir=self.dataset_dir
+        dataset_dir=self.db_path
         basename_template=f'tmp_{self.dataset_name}_{{i}}.parquet'
         if nested_dataset_dir:
             logger.info("This normalization is a nested rebuild. Applying rebuild function, then normalizing.")
@@ -708,6 +710,32 @@ class ParquetDB:
         # Update metadata in schema and rewrite Parquet files
         self.update_schema(schema=pa.schema(self.get_schema().fields, metadata=metadata))
 
+    # def set_field_metadata(self, field_name: str, metadata: dict):
+    #     schema=self.get_schema()
+    #     field = schema.field(field_name)
+        
+    #     field_metadata = field.metadata
+    #     if field_metadata is None:
+    #         field_metadata = {}
+    #     field_metadata.update(metadata)
+    #     field = field.with_metadata(field_metadata)
+    #     field_index = schema.index(field_name)
+    #     schema = schema.set(field_index, field)
+        
+    #     self.update_schema(schema=schema)
+    #     return schema
+    
+    # def rename_field(self, field_name: str, new_field_name: str):
+    #     schema=self.get_schema()
+    #     new_fields=[]
+    #     for field in schema:
+    #         if field.name==field_name:
+    #             new_fields.append(pa.field(new_field_name, field.type))
+    #     self.update_schema(schema=pa.schema(new_fields))
+    #     return schema
+
+
+
     def get_current_files(self):
         """
         Retrieves the list of current Parquet files in the dataset directory.
@@ -721,7 +749,7 @@ class ParquetDB:
         -------
         >>> files = db.get_current_files()
         """
-        return glob(os.path.join(self.dataset_dir, f'{self.dataset_name}_*.parquet'))
+        return glob(os.path.join(self.db_path, f'{self.dataset_name}_*.parquet'))
     
     def dataset_exists(self, dataset_name:str=None):
         """
@@ -762,8 +790,8 @@ class ParquetDB:
         >>> db.drop_dataset()
         """
         logger.info(f"Dropping dataset {self.dataset_name}")
-        if os.path.exists(self.dataset_dir):
-            shutil.rmtree(self.dataset_dir)
+        if os.path.exists(self.db_path):
+            shutil.rmtree(self.db_path)
             logger.info(f"Table {self.dataset_name} has been dropped.")
         else:
             logger.warning(f"Table {self.dataset_name} does not exist.")
@@ -786,9 +814,9 @@ class ParquetDB:
         if not self.dataset_exists():
             raise ValueError(f"Dataset {self.dataset_name} does not exist.")
 
-        old_dir = os.path.join(self.dataset_dir)
+        old_dir=os.path.dirname(self.db_path)
+        new_dir=os.path.join(old_dir, new_name)
         old_name=self.dataset_name
-        
 
         # Rename all files in the old directory
         old_filepaths = glob(os.path.join(old_dir, f'{old_name}_*.parquet'))
@@ -799,11 +827,10 @@ class ParquetDB:
             os.rename(old_filepath, new_filepath)
 
         # Finally, rename the directory
-        new_dir = os.path.join(self.dir, new_name)
-        os.rename(old_dir, new_dir)
+        os.rename(self.db_path, new_dir)
 
         self.dataset_name=new_name
-        self.dataset_dir=new_dir
+        self.db_path=new_dir
 
         logger.info(f"Table {old_name} has been renamed to {new_name}.")
 
@@ -1062,7 +1089,7 @@ class ParquetDB:
         """
 
         if dataset_dir is None:
-            dataset_dir=self.dataset_dir
+            dataset_dir=self.db_path
         
         logger.info(f"Loading data from {dataset_dir}")
         logger.info(f"Loading only columns: {columns}")
@@ -1192,7 +1219,7 @@ class ParquetDB:
         >>> new_ids = db._get_new_ids(data_list=[{'name': 'Alice'}, {'name': 'Bob'}])
         """
         logger.info("Getting new ids")
-        if is_directory_empty(self.dataset_dir):
+        if is_directory_empty(self.db_path):
             logger.debug("Directory is empty. Starting id from 0")
             start_id = 0
         else:
@@ -1262,12 +1289,12 @@ class ParquetDB:
         >>> save_path = db._get_save_path()
         """
         logger.info("Getting save path")
-        n_files = len(glob(os.path.join(self.dataset_dir, f'{self.dataset_name}_*.parquet')))
+        n_files = len(glob(os.path.join(self.db_path, f'{self.dataset_name}_*.parquet')))
         save_path=None
         if n_files == 0:
-            save_path=os.path.join(self.dataset_dir, f'{self.dataset_name}_0.parquet')
+            save_path=os.path.join(self.db_path, f'{self.dataset_name}_0.parquet')
         else:
-            save_path=os.path.join(self.dataset_dir, f'{self.dataset_name}_{n_files}.parquet')
+            save_path=os.path.join(self.db_path, f'{self.dataset_name}_{n_files}.parquet')
         logger.info(f"Save path: {save_path}")
         return save_path
 

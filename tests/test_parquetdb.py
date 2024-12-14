@@ -28,8 +28,8 @@ class TestParquetDB(unittest.TestCase):
     def setUp(self):
         # Create a temporary directory for the database
         self.temp_dir = tempfile.mkdtemp()
-        self.dataset_name='test_dataset'
-        self.db = ParquetDB(dataset_name=self.dataset_name, dir=self.temp_dir)
+
+        self.db = ParquetDB(db_path=os.path.join(self.temp_dir, 'test_db'))
 
         # Create some test data
         self.test_data = [
