@@ -464,6 +464,12 @@ class TestParquetDB(unittest.TestCase):
         schema=self.db.get_schema()
         print(schema.field('name').metadata)
         assert schema.field('name').metadata=={b'key1':b'value1', b'key2':b'value2'}
+        
+    def test_rename_fields(self):
+        self.db.create(data=self.test_data)
+        self.db.rename_fields({'name':'first_name'})
+        schema=self.db.get_schema()
+        assert 'first_name' in schema.names
 
     # def test_alexandria_import(self):
     #     self.db.create(alexandria_data['entries'])
@@ -481,7 +487,7 @@ class TestParquetDB(unittest.TestCase):
 
 
 if __name__ == '__main__':
-    # unittest.TextTestRunner().run(TestParquetDB('test_set_field_metadata'))
+    unittest.TextTestRunner().run(TestParquetDB('test_rename_fields'))
     # unittest.main()
     
     

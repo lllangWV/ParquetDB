@@ -725,14 +725,18 @@ class ParquetDB:
         self.update_schema(schema=schema)
         return schema
     
-    # def rename_field(self, field_name: str, new_field_name: str):
-    #     schema=self.get_schema()
-    #     new_fields=[]
-    #     for field in schema:
-    #         if field.name==field_name:
-    #             new_fields.append(pa.field(new_field_name, field.type))
-    #     self.update_schema(schema=pa.schema(new_fields))
-    #     return schema
+    def rename_fields(self, name_map:dict, normalize_config:NormalizeConfig=NormalizeConfig()):
+        schema=self.get_schema()
+        new_fields=[]
+        for field in schema:
+            if field.name in name_map:
+                new_fields.append(pa.field(name_map[field.name], field.type))
+            else:
+                new_fields.append(field)
+                
+        self._normalize(schema=pa.schema(new_fields), normalize_config=NormalizeConfig())
+
+        return schema
 
 
 
