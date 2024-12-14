@@ -456,6 +456,14 @@ class TestParquetDB(unittest.TestCase):
         # Export to an unsupported format
         with self.assertRaises(ValueError):
             self.db.export_dataset(export_path, format='xlsx')
+            
+    def test_set_field_metadata(self):
+        self.db.create(data=self.test_data)
+        self.db.set_field_metadata(field_name='name', metadata={'key1':'value1', 'key2':'value2'})
+        
+        schema=self.db.get_schema()
+        print(schema.field('name').metadata)
+        assert schema.field('name').metadata=={b'key1':b'value1', b'key2':b'value2'}
 
     # def test_alexandria_import(self):
     #     self.db.create(alexandria_data['entries'])
@@ -473,8 +481,8 @@ class TestParquetDB(unittest.TestCase):
 
 
 if __name__ == '__main__':
-    # unittest.TextTestRunner().run(TestParquetDB('test_nested_data_handling'))
-    unittest.main()
+    # unittest.TextTestRunner().run(TestParquetDB('test_set_field_metadata'))
+    # unittest.main()
     
     
 # if __name__ == '__main__':

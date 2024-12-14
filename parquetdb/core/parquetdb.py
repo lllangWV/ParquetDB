@@ -710,20 +710,20 @@ class ParquetDB:
         # Update metadata in schema and rewrite Parquet files
         self.update_schema(schema=pa.schema(self.get_schema().fields, metadata=metadata))
 
-    # def set_field_metadata(self, field_name: str, metadata: dict):
-    #     schema=self.get_schema()
-    #     field = schema.field(field_name)
+    def set_field_metadata(self, field_name: str, metadata: dict):
+        schema=self.get_schema()
+        field = schema.field(field_name)
         
-    #     field_metadata = field.metadata
-    #     if field_metadata is None:
-    #         field_metadata = {}
-    #     field_metadata.update(metadata)
-    #     field = field.with_metadata(field_metadata)
-    #     field_index = schema.index(field_name)
-    #     schema = schema.set(field_index, field)
+        field_metadata = field.metadata
+        if field_metadata is None:
+            field_metadata = {}
+        field_metadata.update(metadata)
+        field = field.with_metadata(field_metadata)
+        field_index = schema.get_field_index(field_name)
+        schema = schema.set(field_index, field)
         
-    #     self.update_schema(schema=schema)
-    #     return schema
+        self.update_schema(schema=schema)
+        return schema
     
     # def rename_field(self, field_name: str, new_field_name: str):
     #     schema=self.get_schema()
