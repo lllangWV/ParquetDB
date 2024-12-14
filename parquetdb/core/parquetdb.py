@@ -28,9 +28,6 @@ logger = logging.getLogger(__name__)
 # an incoming ragged array will conflict with the existing fixed shape array
 
 # TODO: Issue when updating structs with new fields that are inside of ListArrays
-# TODO: Add method to set metadata on the field level
-# TODO: Add method to rename field
-# TODO: Add method to sort fields
 # TODO: Issue when adding new fields that are extension types
 
 @dataclass
@@ -737,8 +734,17 @@ class ParquetDB:
         self._normalize(schema=pa.schema(new_fields), normalize_config=NormalizeConfig())
 
         return schema
-
-
+    
+    def sort_fields(self):
+        schema=self.get_schema()
+        field_names=schema.names
+        sorted_field_names=sorted(field_names)
+        new_fields=[]
+        for field_name in sorted_field_names:
+            new_fields.append(schema.field(field_name))
+            
+        schema=pa.schema(new_fields, metadata=schema.metadata)
+        self._normalize(schema=schema, normalize_config=NormalizeConfig())
 
     def get_current_files(self):
         """
