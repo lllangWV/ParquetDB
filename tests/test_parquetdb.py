@@ -18,7 +18,7 @@ logger=logging.getLogger('tests')
 
 config.logging_config.loggers.timing.level='ERROR'
 config.logging_config.loggers.parquetdb.level='ERROR'
-config.logging_config.loggers.tests.level='DEBUG'
+config.logging_config.loggers.tests.level='ERROR'
 config.apply()
 
 with open(os.path.join(config.tests_dir,'data', 'alexandria_test.json'), 'r') as f:
@@ -462,7 +462,6 @@ class TestParquetDB(unittest.TestCase):
         self.db.set_field_metadata(field_name='name', metadata={'key1':'value1', 'key2':'value2'})
         
         schema=self.db.get_schema()
-        print(schema.field('name').metadata)
         assert schema.field('name').metadata=={b'key1':b'value1', b'key2':b'value2'}
         
     def test_rename_fields(self):
@@ -481,6 +480,26 @@ class TestParquetDB(unittest.TestCase):
         assert schema_names[1]=='id'
         assert schema_names[2]=='name'
         
+    def test_fixed_shape_tensor(self):
+        a = np.eye(3).tolist()
+        data_1 = [{'a':3}, {'a':4}]
+        data_2 = [{'2d_array':a}]
+        update_data = [{'2d_array':a, 'id':0}]
+        self.db.create(data_1)
+        self.db.create(data_2)
+        
+        table=self.db.read()
+        assert table['2d_array'].combine_chunks().to_numpy_ndarray().shape==(3,3,3)
+        
+        self.db.update(update_data)
+        table=self.db.read()
+        arrays=table['2d_array'].combine_chunks().to_numpy_ndarray()
+        assert np.array_equal(arrays[0], np.eye(3))
+        assert np.array_equal(arrays[2], np.eye(3))
+        
+        
+        
+        
 
     # def test_alexandria_import(self):
     #     self.db.create(alexandria_data['entries'])
@@ -498,7 +517,7 @@ class TestParquetDB(unittest.TestCase):
 
 
 if __name__ == '__main__':
-    # unittest.TextTestRunner().run(TestParquetDB('test_sort_fields'))
+    # unittest.TextTestRunner().run(TestParquetDB('test_fixed_shape_tensor'))
     unittest.main()
     
     

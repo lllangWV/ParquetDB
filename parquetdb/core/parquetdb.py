@@ -194,6 +194,7 @@ class ParquetDB:
         
         # If this is the first table, save it directly
         if is_directory_empty(self.db_path):
+            logger.info("This is the first table. Saving it directly.")
             incoming_save_path = self._get_save_path()
             pq.write_table(incoming_table, incoming_save_path)
             return None
@@ -1148,7 +1149,7 @@ class ParquetDB:
             generator=dataset.to_batches(columns=columns, filter=filter, **load_config.__dict__)
             logger.info(f"Loading as a {generator.__class__} object")
         except Exception as e:
-            logger.debug(f"Error loading table: {e}. Returning empty table")
+            print(f"Error loading table: {e}. Returning empty table")
             generator=pyarrow_utils.create_empty_batch_generator(schema=dataset.schema, columns=columns)
         return generator
     
@@ -1182,7 +1183,7 @@ class ParquetDB:
             table=dataset.to_table(columns=columns, filter=filter, **load_config.__dict__)
             logger.info(f"Loading data as a {table.__class__} object")
         except Exception as e:
-            logger.debug(f"Error loading table: {e}. Returning empty table")
+            print(f"Error loading table: {e}. Returning empty table")
             table=pyarrow_utils.create_empty_table(schema=dataset.schema, columns=columns)
         return table
     

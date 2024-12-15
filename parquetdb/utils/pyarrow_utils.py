@@ -1509,14 +1509,16 @@ def add_new_null_fields_in_struct(column_array, new_struct_type):
 def table_schema_cast(current_table, new_schema):
     current_names=set(current_table.column_names)
     new_names=set(new_schema.names)
-
+    
     all_names=current_names.union(new_names)
     all_names_sorted=sorted(all_names)
 
     new_minus_current = new_names - current_names
     current_intersection_new = current_names.intersection(new_names)
-    
+
     for name in current_intersection_new:
+        logger.debug(f"Fields in both current and incomring tables: {name}")
+        
         if pa.types.is_list(current_table.column(name).type):
             try:
                 column_array=current_table.column(name).cast(new_schema.field(name).type)
@@ -1532,6 +1534,25 @@ def table_schema_cast(current_table, new_schema):
                                             current_table.column(name).cast(new_schema.field(name).type))
         
     for name in new_minus_current:
+        logger.debug(f"Found new field: {name}")
+        new_type=new_schema.field(name).type
+        
+        if hasattr(new_type, 'extension_name') and new_type.extension_name == 'arrow.fixed_shape_tensor':
+            logger.debug(f"Field {name} is a fixed shape tensor")
+            tensor_size=1
+            for dim in new_type.shape:
+                tensor_size*=dim
+
+            base_type=new_type.value_type
+            tensor_shape=new_type.shape
+            tensor_type = pa.fixed_shape_tensor(base_type, tensor_shape)
+            null_storage = pa.array([[None] * tensor_size], pa.list_(base_type, tensor_size))
+            null_tensor = pa.ExtensionArray.from_storage(tensor_type, null_storage)
+
+            null_column = [null_tensor] * len(current_table)
+            current_table=current_table.append_column(new_schema.field(name), null_column)
+            continue
+        
         current_table=current_table.append_column(new_schema.field(name), pa.nulls(len(current_table), type=new_schema.field(name).type))
 
     
