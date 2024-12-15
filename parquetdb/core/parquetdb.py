@@ -28,7 +28,7 @@ logger = logging.getLogger(__name__)
 # an incoming ragged array will conflict with the existing fixed shape array
 
 # TODO: Issue when updating structs with new fields that are inside of ListArrays
-# TODO: Issue when adding new fields that are extension types
+
 
 @dataclass
 class NormalizeConfig:
