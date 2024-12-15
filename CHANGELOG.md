@@ -1,6 +1,24 @@
 
 ___
 
+# 0.5.14 (12-12-2024)
+
+##### Bugs
+- Improved handling for nested dictionaries within lists to prevent errors with empty nested lists containing structs.
+
+##### New Features
+- Introduced keyword arguments to enhance control over preprocessing of incoming data, allowing automatic conversion of lists of floats or ndarray-like structures to fixed shape tensors.
+
+##### Documentation updates
+- Updated `_version.py` and `CHANGELOG.md` in preparation for a new release.
+
+##### Maintenance
+- Unified schema handling in `pa.unify_schema` to accommodate special cases.
+
+___
+
+___
+
 # 0.5.13 (12-02-2024)
 
 ##### Bugs
