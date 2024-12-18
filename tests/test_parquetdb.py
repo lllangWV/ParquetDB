@@ -510,26 +510,35 @@ class TestParquetDB(unittest.TestCase):
         assert table['b'].combine_chunks().to_pylist()[0]['d'] == 3
         
         
+    def test_update_maintains_existing_extension_arrays(self):
+        data_1 = [{'pbc':[1, 0, 0]}, {'pbc':[0, 1, 0]}]
+        self.db.create(data_1)
         
+        table=self.db.read()
         
+        assert table['pbc'].combine_chunks().to_numpy_ndarray().tolist()==[[1, 0, 0], [0, 1, 0]]
+        data_2 = [{'id':0, 'density': 5}]
+        
+        self.db.update(data_2)
+        table=self.db.read()
+        assert table['pbc'].combine_chunks().to_numpy_ndarray().tolist()==[[1, 0, 0], [0, 1, 0]]
 
-    # def test_alexandria_import(self):
-    #     self.db.create(alexandria_data['entries'])
+    def test_update_maintains_existing_extension_arrays_batches(self):
+        data_1 = [{'pbc':[1, 0, 0]}, {'pbc':[0, 1, 0]}]
+        self.db.create(data_1)
         
+        table=self.db.read()
         
-    #     # Initial read before the update
-    #     table = self.db.read()
-    #     df = table.to_pandas()
-
-    #     print(df.loc[0, 'energy'])
-    #     # Assert the shape before the update (confirming initial data structure)
-    #     assert df.loc[0, 'energy'] == -80.83444733
-    #     assert df.loc[0, 'correction'] == -80.83444733
-    #     assert df.loc[0, 'parameters.correction'] == -80.83444733
-
+        assert table['pbc'].combine_chunks().to_numpy_ndarray().tolist()==[[1, 0, 0], [0, 1, 0]]
+        data_2 = [{'id':0, 'density': 5}]
+        
+        self.db.update(data_2, normalize_config=NormalizeConfig(load_format='batches', batch_size=1))
+        table=self.db.read()
+        assert table['pbc'].combine_chunks().to_numpy_ndarray().tolist()==[[1, 0, 0], [0, 1, 0]]
 
 if __name__ == '__main__':
-    # unittest.TextTestRunner().run(TestParquetDB('test_fixed_shape_tensor'))
+    # unittest.TextTestRunner().run(TestParquetDB('test_update_maintains_existing_extension_arrays'))
+    # unittest.TextTestRunner().run(TestParquetDB('test_update_maintains_existing_extension_arrays_batches'))
     unittest.main()
     
     

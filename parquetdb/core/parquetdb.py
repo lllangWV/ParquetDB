@@ -31,6 +31,10 @@ logger = logging.getLogger(__name__)
 
 # TODO: Add join method
 
+# TODO: Creating empty table does not work for extenstions
+
+
+
 
 @dataclass
 class NormalizeConfig:
@@ -1395,29 +1399,11 @@ def table_schema_cast(current_table, new_schema):
         
         
 def table_update(current_table, incoming_table):
-    # Merging Schema
-    incoming_schema=incoming_table.schema
-    current_schema=current_table.schema
-    merged_schema = pyarrow_utils.unify_schemas([current_schema, incoming_schema],promote_options='default')
-    
-    # Aligning current and incoming tables with merged schema
-    incoming_table=pyarrow_utils.table_schema_cast(incoming_table, merged_schema)
-    current_table = pyarrow_utils.table_schema_cast(current_table, merged_schema)
-    
     updated_record_batch=pyarrow_utils.update_flattend_table(current_table, incoming_table)
     return updated_record_batch
         
 def generator_update(generator, incoming_table):
-    
-    incoming_schema=incoming_table.schema
-    merged_schema=None
     for record_batch in generator:
-        if merged_schema is None:
-            current_schema=record_batch.schema
-            merged_schema = pyarrow_utils.unify_schemas([current_schema, incoming_schema],promote_options='default')
-            incoming_table=pyarrow_utils.table_schema_cast(incoming_table, merged_schema)
-            
-        record_batch = pyarrow_utils.table_schema_cast(record_batch, merged_schema)
         updated_record_batch=pyarrow_utils.update_flattend_table(record_batch, incoming_table)
         yield updated_record_batch
         

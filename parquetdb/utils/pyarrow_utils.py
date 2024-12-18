@@ -974,24 +974,40 @@ def update_flattend_table(current_table, incoming_table):
     logger.debug("Updating table with the flatten method")
     logger.debug(f"Current table shape: {current_table.shape}")
     logger.debug(f"Incoming table shape: {incoming_table.shape}")
+    
+    incoming_schema=incoming_table.schema
+    current_schema=current_table.schema
+    merged_schema = unify_schemas([current_schema, incoming_schema],promote_options='default')
+    
+    current_field_names = current_schema.names
+    incoming_field_names = incoming_schema.names
+    
+    # Aligning current and incoming tables with merged schema
+    aligned_incoming_table=table_schema_cast(incoming_table, merged_schema)
+    aligned_current_table=table_schema_cast(current_table, merged_schema)
 
     # Generate an index mask for the current table, identifying the positions of matching 'id' values in the incoming table.
     # The index_mask will align with the number of rows in the current table, marking where matching ids exist in the incoming table.
-
-    index_mask = pc.index_in(current_table['id'], incoming_table['id'])
+    index_mask = pc.index_in(aligned_current_table['id'], aligned_incoming_table['id'])
     
     # Create an update table by selecting rows from the incoming table using the index mask.
-    update_table=pc.take(incoming_table, index_mask)
+    update_table=pc.take(aligned_incoming_table, index_mask)
 
     logger.debug(f"update_table shape: {update_table.shape}")
-    updated_table=current_table
+    # Default the updated table to the current table
+    updated_table=aligned_current_table
 
-    for column_name in current_table.column_names:
+    for column_name in aligned_current_table.column_names:
         logger.debug(f"Looking for updates in field: {column_name}")
+        # Do not update the id column
         if column_name == 'id':
             continue
-
-        current_array=current_table[column_name]
+        
+        # Do not update the column if it is not in the incoming table
+        if column_name not in incoming_field_names:
+            continue
+        
+        current_array=aligned_current_table[column_name]
         update_array=update_table[column_name]
         if isinstance(current_array, pa.ChunkedArray):
             current_array = current_array.combine_chunks()
@@ -1029,7 +1045,7 @@ def update_flattend_table(current_table, incoming_table):
             is_valid_index_mask = pc.replace_with_mask(
                 is_valid_index_mask, is_valid_array, non_null_indices
             )
-
+            
             # Generate unique indices for the update_array portion in combined_arrays
             filter_update_array_sequence = pa.array(
                 range(len(is_valid_array), 2 * len(is_valid_array))
@@ -1037,7 +1053,7 @@ def update_flattend_table(current_table, incoming_table):
             update_is_valid_index_mask = pc.if_else(
                 is_valid_array, filter_update_array_sequence, None
             )
-
+            
             # Generate indices for null values in current_array
             filter_current_array_sequence = pa.array(range(len(is_valid_array)))
             current_is_valid_index_mask = pc.if_else(
@@ -1046,263 +1062,19 @@ def update_flattend_table(current_table, incoming_table):
 
             # Combine the two masks, filling nulls in current mask with update mask values
             combined_mask = current_is_valid_index_mask.fill_null(update_is_valid_index_mask)
-
             # Concatenate current_array and update_array
             combined_arrays = pa.concat_arrays([current_array, update_array])
-            
+
             # Select elements from combined_arrays based on the combined_mask
             updated_array = combined_arrays.take(combined_mask)
-
+            
         # Update the column in updated_table with the new updated_array
         updated_table = updated_table.set_column(
-            current_table.column_names.index(column_name),
-            current_table.field(column_name),
+            aligned_current_table.column_names.index(column_name),
+            aligned_current_table.field(column_name),
             updated_array
         )
     return updated_table
-
-def update_struct_child_field(current_table, incoming_table, field_path):
-    """
-    Updates a nested child field within a struct column in the current table based on 
-    values from the incoming table.
-
-    Parameters
-    ----------
-    current_table : pa.Table
-        The current PyArrow table to update.
-    incoming_table : pa.Table
-        The incoming PyArrow table containing updated values.
-    field_path : list of str
-        The path to the nested field inside the struct.
-
-    Returns
-    -------
-    pa.Array or None
-        The updated nested field array if updates are present and non-null; otherwise, returns None.
-
-    Examples
-    --------
-    >>> update_struct_child_field(current_table, incoming_table, ['parent_field', 'child_field'])
-    <pyarrow.Array object at 0x...>
-    """
-    logger.debug(f"field_path: {field_path}")
-
-    parent_name=field_path[0]
-    sub_path=field_path[1:]
-    
-    logger.debug(f"parent_name: {parent_name}")
-    logger.debug(f"sub_path: {sub_path}")
-    
-    
-    incoming_filter=pc.field('id').isin(current_table['id']) & ~pc.field(*field_path).is_null(incoming_table[parent_name])
-    
-    filtered_incoming_table = incoming_table.filter(incoming_filter)
-
-    updates_are_present_and_not_null = filtered_incoming_table.num_rows != 0
-    
-    
-    if not updates_are_present_and_not_null:
-        logger.debug("Updates are not present and null")
-        return None
-    
-    # Creating boolean mask
-    current_mask = pc.is_in(current_table['id'], value_set=filtered_incoming_table['id'])
-    current_array =  pc.struct_field(current_table[parent_name], sub_path)
-    incoming_array = pc.struct_field(filtered_incoming_table[parent_name], sub_path)
-    # Creating a boolean mask
-    if isinstance(current_table['id'], pa.ChunkedArray):
-        current_mask = current_mask.combine_chunks()
-        current_array = current_array.combine_chunks()
-        incoming_array = incoming_array.combine_chunks()
-    
-    # filtered_array = pc.filter(mask, mask)
-    # logger.debug(f"Values where the array is True: {len(filtered_array)}")
-    logger.debug(f"Mask shape: {len(current_mask)}")
-    logger.debug(f"Incoming array shape: {len(incoming_array)}")
-    logger.debug(f"Current array shape: {len(current_array)}")
-    
-    new_array= pc.replace_with_mask(current_array, current_mask, incoming_array)
-    return new_array
-
-def update_field(current_table, incoming_table, field_name):
-    """
-    Updates a specific field in the current table with values from the incoming table,
-    based on matching 'id' fields.
-
-    Parameters
-    ----------
-    current_table : pa.Table
-        The current PyArrow table to update.
-    incoming_table : pa.Table
-        The incoming PyArrow table containing updated values.
-    field_name : str
-        The name of the field to update in the current table.
-
-    Returns
-    -------
-    pa.Array or None
-        The updated field array if updates are present and non-null; otherwise, returns None.
-
-    Examples
-    --------
-    >>> update_field(current_table, incoming_table, 'field_name')
-    <pyarrow.Array object at 0x...>
-    """
-    logger.debug(f"field_name: {field_name}")
-    incoming_filter=pc.field('id').isin(current_table['id']) & ~pc.field(field_name).is_null(incoming_table[field_name])
-    filtered_incoming_table = incoming_table.filter(incoming_filter)
-
-    updates_are_present_and_not_null = filtered_incoming_table.num_rows != 0
-    if not updates_are_present_and_not_null:
-        logger.debug("Updates are not present and not null")
-        return None
-    
-    # Creating boolean mask
-    current_mask = pc.is_in(current_table['id'], value_set=filtered_incoming_table['id'])
-    current_array = current_table[field_name]
-    incoming_array = filtered_incoming_table[field_name]
-    # Creating a boolean mask
-    if isinstance(current_table['id'], pa.ChunkedArray):
-        current_mask = current_mask.combine_chunks()
-        current_array = current_array.combine_chunks()
-        incoming_array = incoming_array.combine_chunks()
-    # filtered_array = pc.filter(mask, mask)
-    # logger.debug(f"Values where the array is True: {len(filtered_array)}")
-    logger.debug(f"Mask shape: {len(current_mask)}")
-    logger.debug(f"Incoming array shape: {len(incoming_array)}")
-    logger.debug(f"Current array shape: {len(current_array)}")
-    new_array = pc.replace_with_mask(current_array,current_mask,incoming_array)
-    return new_array
-
-def update_struct_field(current_table, incoming_table, field_path, current_array=None):
-    """
-    Recursively updates nested fields in a struct column of the current table using values 
-    from the incoming table.
-
-    Parameters
-    ----------
-    current_table : pa.Table
-        The current PyArrow table to update.
-    incoming_table : pa.Table
-        The incoming PyArrow table containing updated values.
-    field_path : list of str
-        The path to the nested field inside the struct.
-    current_array : pa.Array, optional
-        The current struct array being processed. Defaults to None.
-
-    Returns
-    -------
-    pa.StructArray
-        The updated struct array with nested fields updated.
-
-    Examples
-    --------
-    >>> update_struct_field(current_table, incoming_table, ['parent_field', 'child_field'])
-    <pyarrow.StructArray object at 0x...>
-    """
-    if current_array is None:
-        logger.debug("This is the first call to update_nested_field")
-        current_array=current_table[field_path[0]]
-        
-    child_field_names=[field.name for field in current_array.type]
-    
-    logger.debug(f"child_field_names: {child_field_names}")
-    
-
-    child_chunked_array_list = current_array.flatten()
-    child_arrays=[]
-    for child_array, child_field_name in zip(child_chunked_array_list, child_field_names):
-        child_field_type=child_array.type
-        
-        sub_path=field_path.copy()
-        sub_path.append(child_field_name)
-
-        if pa.types.is_struct(child_field_type):
-            update_array=update_struct_field(current_table, incoming_table, sub_path, current_array=child_array)
-        else:
-            update_array=update_struct_child_field(current_table, incoming_table, sub_path)
-        
-        if update_array:
-            logger.debug(f"update_array is None for field: {child_field_name}")
-            
-            child_arrays.append(update_array)
-        else:
-            logger.debug(f"update_array is not None for field: {child_field_name}")
-            child_arrays.append(child_array.combine_chunks())
-
-    return pc.make_struct(*child_arrays, field_names=child_field_names)
-
-def update_table_nested_method(current_table, incoming_table):
-    """
-    Updates the current table with values from the incoming table using a nested field update approach.
-    If a field is a struct, it will recursively update the nested fields. Otherwise, it updates the field directly.
-
-    Parameters
-    ----------
-    current_table : pa.Table
-        The current PyArrow table to update.
-    incoming_table : pa.Table
-        The incoming PyArrow table containing updated values.
-
-    Returns
-    -------
-    pa.Table
-        The updated PyArrow table with the changes from the incoming table.
-
-    Examples
-    --------
-    >>> updated_table = update_table_nested_method(current_table, incoming_table)
-    pyarrow.Table
-    """
-    logger.debug("Updating table with nested method")
-    for field_name in current_table.column_names:
-        logger.debug(f"Looking for updates in field: {field_name}")
-        if pa.types.is_struct(current_table.schema.field(field_name).type):
-            
-            # Process nested struct fields
-            updated_array=update_struct_field(current_table, incoming_table, [field_name])
-        else:
-            # Process non-struct fields
-            updated_array=update_field(current_table, incoming_table, field_name)
-        
-        if updated_array and len(updated_array)!=0:
-            logger.info(f"Updating field: {field_name}")
-            current_table=current_table.set_column(current_table.schema.get_field_index(field_name), 
-                                                current_table.schema.field(field_name), 
-                                                updated_array)
-    return current_table
-
-def update_table(current_table, incoming_table, flatten_method=False):
-    """
-    Updates the current table using either a flatten method or a nested method depending on the `flatten_method` flag.
-    
-    Parameters
-    ----------
-    current_table : pa.Table
-        The current PyArrow table to update.
-    incoming_table : pa.Table
-        The incoming PyArrow table containing updated values.
-    flatten_method : bool, optional
-        If True, the flatten method will be used; otherwise, the nested method is used. 
-        Defaults to False.
-
-    Returns
-    -------
-    pa.Table
-        The updated PyArrow table after applying the changes from the incoming table.
-
-    Examples
-    --------
-    >>> updated_table = update_table(current_table, incoming_table, flatten_method=True)
-    pyarrow.Table
-    """
-    logger.info("Updating table")
-    if flatten_method:
-        current_table=update_table_flatten_method(current_table, incoming_table)
-    else:
-        current_table=update_table_nested_method(current_table, incoming_table)
-        
-    return current_table
 
 def infer_pyarrow_types(data_dict: dict):
     """
