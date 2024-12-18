@@ -1,6 +1,25 @@
 
 ___
 
+# 0.7.0 (12-18-2024)
+
+##### Bugs
+- None identified
+
+##### New features
+- None identified
+
+##### Documentation updates
+- Updated _version.py and CHANGELOG.md for the new release
+
+##### Maintenance
+- Refactored ParquetDB to ensure consistent use of db_path for directory handling
+- Merged latest changes from the main branch of the repository
+
+___
+
+___
+
 # 0.6.0 (12-15-2024)
 
 ##### Bugs
