@@ -1,6 +1,28 @@
 
 ___
 
+# 0.6.0 (12-15-2024)
+
+##### Bugs
+- None identified
+
+##### New features
+- Enhanced ParquetDB with improved logging and support for shape tensors.
+- Implemented `sort_fields` method in ParquetDB with unit tests.
+- Implemented `rename_fields` method in ParquetDB with unit tests.
+- Added a method to set field metadata.
+
+##### Documentation updates
+- Updated `_version.py` and `CHANGELOG.md` for new release.
+
+##### Maintenance
+- Removed outdated TODO comments in `parquetdb.py`.
+- Refactored ParquetDB initialization and directory handling.
+
+___
+
+___
+
 # 0.5.14 (12-12-2024)
 
 ##### Bugs
