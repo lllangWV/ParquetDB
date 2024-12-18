@@ -29,6 +29,8 @@ logger = logging.getLogger(__name__)
 
 # TODO: Issue when updating structs with new fields that are inside of ListArrays
 
+# TODO: Add join method
+
 
 @dataclass
 class NormalizeConfig:
@@ -285,7 +287,7 @@ class ParquetDB:
 
         dataset_dir=None
         if rebuild_nested_struct:
-            dataset_dir=self.dataset_dir + '_nested'
+            dataset_dir=self.db_path + '_nested'
             if (not os.path.exists(dataset_dir) or rebuild_nested_from_scratch):
                 self.to_nested(normalize_config=normalize_config,rebuild_nested_from_scratch=rebuild_nested_from_scratch)
         data = self._load_data(columns=columns, filter=filter_expression, 
@@ -578,7 +580,7 @@ class ParquetDB:
                     
                     
         except Exception as e:
-            logger.exception(f"exception writing final table to {self.dataset_dir}: {e}")
+            logger.exception(f"exception writing final table to {self.db_path}: {e}")
             
             tmp_files=glob(os.path.join(dataset_dir, f'tmp_{self.dataset_name}_*.parquet'))
             for file_path in tmp_files:
@@ -868,7 +870,7 @@ class ParquetDB:
         if dest_name in self.reserved_dataset_names:
             raise ValueError(f"Cannot copy to reserved table name: {dest_name}")
         
-        source_dir = self.dataset_dir
+        source_dir = self.db_path
         source_name=self.dataset_name
         dest_dir = os.path.join(self.dir, dest_name)
         
@@ -1013,7 +1015,7 @@ class ParquetDB:
         >>> db.backup_database(backup_path='/path/to/backup')
         """
         logger.info("Backing up database to : {backup_path}")
-        shutil.copytree(self.dataset_dir, backup_path)
+        shutil.copytree(self.db_path, backup_path)
         logger.info(f"Database backed up to {backup_path}.")
 
     def restore_database(self, backup_path: str):
@@ -1030,9 +1032,9 @@ class ParquetDB:
         >>> db.restore_database(backup_path='/path/to/backup')
         """
         logger.info("Restoring database from : {backup_path}")
-        if os.path.exists(self.dataset_dir):
-            shutil.rmtree(self.dataset_dir)
-        shutil.copytree(backup_path, self.dataset_dir)
+        if os.path.exists(self.db_path):
+            shutil.rmtree(self.db_path)
+        shutil.copytree(backup_path, self.db_path)
         logger.info(f"Database restored from {backup_path}.")
 
     def to_nested(self, normalize_config:NormalizeConfig=NormalizeConfig(), 
