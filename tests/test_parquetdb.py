@@ -497,6 +497,18 @@ class TestParquetDB(unittest.TestCase):
         assert np.array_equal(arrays[0], np.eye(3))
         assert np.array_equal(arrays[2], np.eye(3))
         
+    def test_rebuild_nested(self):
+        data = [{'a':1, 'b':{'c':2, 'd':3}}, {'a':4, 'b':{'c':5, 'd':6}}]
+        self.db.create(data)
+        table=self.db.read(rebuild_nested_struct=True)
+        
+        
+        assert pa.types.is_struct(table['b'].type)
+        assert table['b'].type.num_fields==2
+        
+        assert table['b'].combine_chunks().to_pylist()[0]['c'] == 2
+        assert table['b'].combine_chunks().to_pylist()[0]['d'] == 3
+        
         
         
         

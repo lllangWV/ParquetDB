@@ -1061,7 +1061,9 @@ class ParquetDB:
 
         dataset_name=self.dataset_name
         nested_dataset_name=f'{dataset_name}_nested'
-        nested_dataset_dir=os.path.join(self.dir,nested_dataset_name)
+        
+        dir=os.path.dirname(self.db_path)
+        nested_dataset_dir=os.path.join(dir,nested_dataset_name)
         
         if os.path.exists(nested_dataset_dir) and rebuild_nested_from_scratch:
             shutil.rmtree(nested_dataset_dir)
