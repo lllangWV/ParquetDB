@@ -305,6 +305,7 @@ class ParquetDB:
                data: Union[List[dict], dict, pd.DataFrame], 
                schema:pa.Schema=None, 
                metadata:dict=None,
+               update_key:str='id',
                treat_fields_as_ragged=None,
                convert_to_fixed_shape:bool=True,
                normalize_config:NormalizeConfig=NormalizeConfig()):
@@ -346,7 +347,7 @@ class ParquetDB:
         # self._validate_id(incoming_table['id'].combine_chunks())
 
         # Apply update normalization
-        self._normalize(incoming_table=incoming_table, normalize_config=normalize_config)
+        self._normalize(incoming_table=incoming_table,update_key=update_key, normalize_config=normalize_config)
 
         logger.info(f"Updated {self.dataset_name} table.")
 
@@ -444,6 +445,7 @@ class ParquetDB:
                 schema=None, 
                 ids=None,
                 columns=None,
+                update_key:str='id',
                 normalize_config:NormalizeConfig=NormalizeConfig()):
         """
         Normalize the dataset by restructuring files for consistent row distribution.
@@ -503,7 +505,7 @@ class ParquetDB:
         # If incoming data is provided this is an update
         if incoming_table:
             logger.info("This normalization is an update. Applying update function, then normalizing.")
-            retrieved_data=update_func(retrieved_data, incoming_table)
+            retrieved_data=update_func(retrieved_data, incoming_table, update_key=update_key)
             
             if schema:
                 schema = pyarrow_utils.unify_schemas([schema, incoming_table.schema],promote_options='default')
@@ -1398,13 +1400,13 @@ def table_schema_cast(current_table, new_schema):
     return updated_table
         
         
-def table_update(current_table, incoming_table):
-    updated_record_batch=pyarrow_utils.update_flattend_table(current_table, incoming_table)
+def table_update(current_table, incoming_table, update_key:str='id'):
+    updated_record_batch=pyarrow_utils.update_flattend_table(current_table, incoming_table, update_key=update_key)
     return updated_record_batch
         
-def generator_update(generator, incoming_table):
+def generator_update(generator, incoming_table, update_key:str='id'):
     for record_batch in generator:
-        updated_record_batch=pyarrow_utils.update_flattend_table(record_batch, incoming_table)
+        updated_record_batch=pyarrow_utils.update_flattend_table(record_batch, incoming_table, update_key=update_key)
         yield updated_record_batch
         
 def table_delete(current_table, ids):

@@ -535,6 +535,20 @@ class TestParquetDB(unittest.TestCase):
         self.db.update(data_2, normalize_config=NormalizeConfig(load_format='batches', batch_size=1))
         table=self.db.read()
         assert table['pbc'].combine_chunks().to_numpy_ndarray().tolist()==[[1, 0, 0], [0, 1, 0]]
+        
+    def test_update_on_key(self):
+        data_1 = [{'material_id':1, 'material_name':'material_1'}, {'material_id':2, 'material_name':'material_2'}]
+        self.db.create(data_1)
+        
+        table=self.db.read()
+        
+        assert table['material_id'].combine_chunks().to_pylist()==[1, 2]
+        data_2 = [{'material_id':1, 'material_name':'material_1_updated'}]
+        
+        self.db.update(data_2, update_key='material_id')
+        table=self.db.read()
+        assert table['material_id'].combine_chunks().to_pylist()==[1, 2]
+        assert table['material_name'].combine_chunks().to_pylist()==['material_1_updated', 'material_2']
 
 if __name__ == '__main__':
     # unittest.TextTestRunner().run(TestParquetDB('test_update_maintains_existing_extension_arrays'))

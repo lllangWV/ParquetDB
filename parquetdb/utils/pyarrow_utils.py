@@ -953,7 +953,7 @@ def rebuild_nested_table(table, load_format='table'):
     elif load_format=='batches':
         return pa.RecordBatch.from_arrays(nested_arrays.flatten(), schema=new_schema)
 
-def update_flattend_table(current_table, incoming_table):
+def update_flattend_table(current_table, incoming_table, update_key:str='id'):
     """
     Updates the current table using the values from the incoming table by flattening both 
     tables, applying the updates, and then rebuilding the nested structure.
@@ -988,7 +988,7 @@ def update_flattend_table(current_table, incoming_table):
 
     # Generate an index mask for the current table, identifying the positions of matching 'id' values in the incoming table.
     # The index_mask will align with the number of rows in the current table, marking where matching ids exist in the incoming table.
-    index_mask = pc.index_in(aligned_current_table['id'], aligned_incoming_table['id'])
+    index_mask = pc.index_in(aligned_current_table[update_key], aligned_incoming_table[update_key])
     
     # Create an update table by selecting rows from the incoming table using the index mask.
     update_table=pc.take(aligned_incoming_table, index_mask)
@@ -1000,6 +1000,8 @@ def update_flattend_table(current_table, incoming_table):
     for column_name in aligned_current_table.column_names:
         logger.debug(f"Looking for updates in field: {column_name}")
         # Do not update the id column
+        if column_name == update_key:
+            continue
         if column_name == 'id':
             continue
         
@@ -1340,5 +1342,4 @@ def sort_schema(schema):
     for name in names_sorted:
         field_names.append(schema.field(name))
     return pa.schema(field_names)
-
 
