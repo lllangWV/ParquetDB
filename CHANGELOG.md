@@ -1,6 +1,25 @@
 
 ___
 
+# 0.8.0 (12-18-2024)
+
+##### Bugs
+- None identified
+
+##### New features
+- Refactored handling of nested dataset directories in ParquetDB.
+- Added unit tests for rebuilding nested structures.
+
+##### Documentation updates
+- Updated version information in _version.py and CHANGELOG.md for the new release.
+
+##### Maintenance
+- Merged updates from the main branch of the upstream repository.
+
+___
+
+___
+
 # 0.7.0 (12-18-2024)
 
 ##### Bugs
