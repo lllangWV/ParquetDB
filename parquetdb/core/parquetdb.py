@@ -32,8 +32,9 @@ logger = logging.getLogger(__name__)
 # TODO: Add join method
 
 # TODO: Creating empty table does not work for extenstions
+# TODO: Add method which uses pickle to serialize and deserialize columns
 
-
+# TODO: Add method to update on multiple keys
 
 
 @dataclass
@@ -523,7 +524,13 @@ class ParquetDB:
         # If schema is provided this is a schema update
         elif schema:
             logger.info("This normalization is a schema update. Applying schema cast function, then normalizing.")
+            logger.debug(f"current schema metadata : {schema.metadata}")
+            logger.debug(f"current schema names : {schema.names}")
             retrieved_data=schema_cast_func(retrieved_data, schema)
+            
+            logger.debug(f"updated schema metadata : {retrieved_data.schema.metadata}")
+            logger.debug(f"updated schema names : {retrieved_data.schema.names}")
+            
             
         dataset_dir=self.db_path
         basename_template=f'tmp_{self.dataset_name}_{{i}}.parquet'
@@ -620,9 +627,15 @@ class ParquetDB:
         logger.info("Updating schema")
         current_schema=self.get_schema()
         
+        logger.debug(f"current schema metadata : {current_schema.metadata}")
+        if schema:
+            logger.debug(f"incoming schema metadata : {schema.metadata}")
+            
         # Update current schema
         updated_schema=pyarrow_utils.update_schema(current_schema, schema, field_dict)
-        logger.info(f"updated schema names : {updated_schema.names}")
+        
+        logger.debug(f"updated schema metadata : {updated_schema.metadata}")
+        logger.debug(f"updated schema names : {updated_schema.names}")
         
         # Apply Schema normalization
         self._normalize(schema=updated_schema, normalize_config=normalize_config)
@@ -681,7 +694,7 @@ class ParquetDB:
             columns = [col for col in all_columns if col not in columns]
         return columns
     
-    def get_metadata(self):
+    def get_metadata(self, return_bytes:bool=False):
         """
         Retrieves the metadata of the dataset table.
 
@@ -698,7 +711,10 @@ class ParquetDB:
             raise ValueError(f"Dataset {self.dataset_name} does not exist.")
         schema = self.get_schema()
         logger.debug(f"Metadata:\n\n {schema.metadata}\n\n")
-        return schema.metadata
+        
+        metadata = {key.decode('utf-8'): value.decode('utf-8') for key, value in schema.metadata.items()}
+
+        return metadata
     
     def set_metadata(self, metadata:dict):
         """
@@ -714,7 +730,13 @@ class ParquetDB:
         >>> db.set_metadata({'source': 'API', 'version': '1.0'})
         """
         # Update metadata in schema and rewrite Parquet files
-        self.update_schema(schema=pa.schema(self.get_schema().fields, metadata=metadata))
+        new_fields=[]
+        schema=self.get_schema()
+        updated_metadata=self.get_metadata()
+        updated_metadata.update(metadata)
+        for field_name in schema.names:
+            new_fields.append(schema.field(field_name))
+        self.update_schema(schema=pa.schema(new_fields, metadata=updated_metadata))
 
     def set_field_metadata(self, field_name: str, metadata: dict):
         schema=self.get_schema()

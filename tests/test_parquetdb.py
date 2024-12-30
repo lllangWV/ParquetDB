@@ -17,7 +17,7 @@ from parquetdb.core.parquetdb import LoadConfig, NormalizeConfig
 logger=logging.getLogger('tests')
 
 config.logging_config.loggers.timing.level='ERROR'
-config.logging_config.loggers.parquetdb.level='ERROR'
+config.logging_config.loggers.parquetdb.level='DEBUG'
 config.logging_config.loggers.tests.level='ERROR'
 config.apply()
 
@@ -423,12 +423,27 @@ class TestParquetDB(unittest.TestCase):
         self.assertEqual(len(df), 1)
         self.assertEqual(df.iloc[0]['name'], 'Peter')
 
-    def test_get_metadata(self):
+    def test_metadata(self):
         self.db.create(data=self.test_data,
                        metadata={'key1':'value1', 'key2':'value2'})
         # Should return metadata dictionary (can be empty)
         metadata = self.db.get_metadata()
-        self.assertIsInstance(metadata, dict)
+
+        self.assertEqual(metadata['key1'], 'value1')
+        self.assertEqual(metadata['key2'], 'value2')
+        
+        self.db.set_metadata({'key3':'value3', 'key4':'value4'})
+        metadata = self.db.get_metadata()
+        print(metadata)
+        self.assertEqual(metadata['key1'], 'value1')
+        self.assertEqual(metadata['key2'], 'value2')
+        self.assertEqual(metadata['key3'], 'value3')
+        self.assertEqual(metadata['key4'], 'value4')
+        
+        self.db.set_field_metadata(field_name='name', metadata={'key1':'value1', 'key2':'value2'})
+        
+        schema=self.db.get_schema()
+        assert schema.field('name').metadata=={b'key1':b'value1', b'key2':b'value2'}
 
     def test_drop_dataset(self):
         self.db.create(data=self.test_data)
@@ -457,13 +472,6 @@ class TestParquetDB(unittest.TestCase):
         with self.assertRaises(ValueError):
             self.db.export_dataset(export_path, format='xlsx')
             
-    def test_set_field_metadata(self):
-        self.db.create(data=self.test_data)
-        self.db.set_field_metadata(field_name='name', metadata={'key1':'value1', 'key2':'value2'})
-        
-        schema=self.db.get_schema()
-        assert schema.field('name').metadata=={b'key1':b'value1', b'key2':b'value2'}
-        
     def test_rename_fields(self):
         self.db.create(data=self.test_data)
         self.db.rename_fields({'name':'first_name'})
@@ -553,6 +561,7 @@ class TestParquetDB(unittest.TestCase):
 if __name__ == '__main__':
     # unittest.TextTestRunner().run(TestParquetDB('test_update_maintains_existing_extension_arrays'))
     # unittest.TextTestRunner().run(TestParquetDB('test_update_maintains_existing_extension_arrays_batches'))
+    # unittest.TextTestRunner().run(TestParquetDB('test_metadata'))
     unittest.main()
     
     
