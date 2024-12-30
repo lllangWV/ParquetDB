@@ -1,6 +1,24 @@
 
 ___
 
+# 0.10.0 (12-30-2024)
+
+##### Bugs
+- None identified
+
+##### New Features
+- Enhanced metadata handling in ParquetDB
+
+##### Documentation updates
+- Updated version information in `_version.py` and the `CHANGELOG.md` for the new release
+
+##### Maintenance
+- Improved logging functionality in ParquetDB
+
+___
+
+___
+
 # 0.9.0 (12-18-2024)
 
 ##### Bugs
