@@ -209,8 +209,9 @@ class ParquetDB:
         # Merge Schems
         current_schema = self.get_schema()
         incoming_schema=incoming_table.schema
-        merged_schema = pyarrow_utils.unify_schemas([current_schema, incoming_schema],promote_options='permissive')
-        
+
+        merged_schema = pyarrow_utils.unify_schemas([current_schema,incoming_schema],promote_options='permissive')
+
         # Algin Incoming Table with Merged Schema
         modified_incoming_table=pyarrow_utils.table_schema_cast(incoming_table, merged_schema)
         are_schemas_equal=current_schema.equals(modified_incoming_table.schema)
@@ -712,7 +713,10 @@ class ParquetDB:
         schema = self.get_schema()
         logger.debug(f"Metadata:\n\n {schema.metadata}\n\n")
         
-        metadata = {key.decode('utf-8'): value.decode('utf-8') for key, value in schema.metadata.items()}
+        if schema.metadata:
+            metadata = {key.decode('utf-8'): value.decode('utf-8') for key, value in schema.metadata.items()}
+        else:
+            metadata = {}
 
         return metadata
     
@@ -1449,8 +1453,6 @@ def generator_delete_columns(generator, columns):
     for record_batch in generator:
         updated_record_batch = record_batch.drop_columns(columns)
         yield updated_record_batch
-        
-        
         
 def table_rebuild_nested_struct(current_table):
     return pyarrow_utils.rebuild_nested_table(current_table)

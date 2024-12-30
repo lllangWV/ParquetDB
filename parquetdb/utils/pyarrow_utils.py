@@ -1076,6 +1076,7 @@ def update_flattend_table(current_table, incoming_table, update_key:str='id'):
             aligned_current_table.field(column_name),
             updated_array
         )
+    updated_table=updated_table.sort_by('id')
     return updated_table
 
 def infer_pyarrow_types(data_dict: dict):
@@ -1157,7 +1158,17 @@ def update_schema(current_schema, schema=None, field_dict=None):
 
 def unify_schemas(schema_list, promote_options='permissive'):
     current_schema, new_schema = schema_list
-    return pa.unify_schemas([current_schema, new_schema], promote_options=promote_options)
+    merged_metadata={}
+    table_metadata_equal=current_schema.metadata == new_schema.metadata
+    if not table_metadata_equal:
+        if current_schema.metadata:
+            merged_metadata.update(current_schema.metadata)
+        if new_schema.metadata:
+            merged_metadata.update(new_schema.metadata)
+    merged_schema=pa.unify_schemas([current_schema, new_schema], promote_options=promote_options)
+    merged_schema=merged_schema.remove_metadata()
+    merged_schema=merged_schema.with_metadata(merged_metadata)
+    return merged_schema
     # try:
     #     return pa.unify_schemas([current_schema, new_schema], promote_options=promote_options)
     

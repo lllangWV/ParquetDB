@@ -424,8 +424,12 @@ class TestParquetDB(unittest.TestCase):
         self.assertEqual(df.iloc[0]['name'], 'Peter')
 
     def test_metadata(self):
-        self.db.create(data=self.test_data,
-                       metadata={'key1':'value1', 'key2':'value2'})
+        self.db.create(data=self.test_data)
+        
+        metadata=self.db.get_metadata()
+        assert metadata=={}
+        
+        self.db.create(data=self.test_data,metadata={'key1':'value1', 'key2':'value2'})
         # Should return metadata dictionary (can be empty)
         metadata = self.db.get_metadata()
 
@@ -434,7 +438,7 @@ class TestParquetDB(unittest.TestCase):
         
         self.db.set_metadata({'key3':'value3', 'key4':'value4'})
         metadata = self.db.get_metadata()
-        print(metadata)
+
         self.assertEqual(metadata['key1'], 'value1')
         self.assertEqual(metadata['key2'], 'value2')
         self.assertEqual(metadata['key3'], 'value3')
@@ -502,6 +506,10 @@ class TestParquetDB(unittest.TestCase):
         self.db.update(update_data)
         table=self.db.read()
         arrays=table['2d_array'].combine_chunks().to_numpy_ndarray()
+        ids=table['id'].combine_chunks().to_pylist()
+        
+        assert ids==[0, 1, 2]
+
         assert np.array_equal(arrays[0], np.eye(3))
         assert np.array_equal(arrays[2], np.eye(3))
         
@@ -562,6 +570,7 @@ if __name__ == '__main__':
     # unittest.TextTestRunner().run(TestParquetDB('test_update_maintains_existing_extension_arrays'))
     # unittest.TextTestRunner().run(TestParquetDB('test_update_maintains_existing_extension_arrays_batches'))
     # unittest.TextTestRunner().run(TestParquetDB('test_metadata'))
+    # unittest.TextTestRunner().run(TestParquetDB('test_fixed_shape_tensor'))
     unittest.main()
     
     
