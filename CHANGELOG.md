@@ -1,6 +1,25 @@
 
 ___
 
+# 0.9.0 (12-18-2024)
+
+##### Bugs
+- None identified
+
+##### New features
+- Enhanced the update functionality to support customizable update keys in ParquetDB.
+
+##### Documentation updates
+- Updated `_version.py` and `CHANGELOG.md` to reflect the new release.
+
+##### Maintenance
+- Refactored table update logic and improved schema alignment in ParquetDB.
+- Merged updates from the main branch.
+
+___
+
+___
+
 # 0.8.0 (12-18-2024)
 
 ##### Bugs
