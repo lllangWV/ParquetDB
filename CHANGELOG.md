@@ -1,6 +1,25 @@
 
 ___
 
+# 0.11.0 (12-30-2024)
+
+##### Bugs
+- None identified
+
+##### New Features
+- None identified
+
+##### Documentation updates
+- Updated `_version.py` and `CHANGELOG.md` for the new release
+
+##### Maintenance
+- Refactored schema merging and improved metadata handling in ParquetDB
+- Merged changes from the main remote repository
+
+___
+
+___
+
 # 0.10.0 (12-30-2024)
 
 ##### Bugs
