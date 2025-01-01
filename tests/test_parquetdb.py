@@ -9,6 +9,7 @@ import tempfile
 import numpy as np
 import pyarrow as pa
 import pyarrow.compute as pc
+import pyarrow.parquet as pq
 import pandas as pd
 
 from parquetdb import ParquetDB, config
@@ -58,7 +59,6 @@ class TestParquetDB(unittest.TestCase):
             {'name': 'Bob', 'age': 25}
         ]
         self.db.create(data)
-        
         table=self.db.read()
         df=table.to_pandas()
         logger.debug(f"DataFrame:\n{df}")
@@ -424,21 +424,28 @@ class TestParquetDB(unittest.TestCase):
         self.assertEqual(df.iloc[0]['name'], 'Peter')
 
     def test_metadata(self):
+        
+
+        metadata=self.db.get_metadata()
+        self.db.set_metadata({'class':'test'})
+        assert self.db.get_metadata()['class']=='test'
+        
         self.db.create(data=self.test_data)
         
         metadata=self.db.get_metadata()
-        assert metadata=={}
+        assert metadata=={'class':'test'}
         
         self.db.create(data=self.test_data,metadata={'key1':'value1', 'key2':'value2'})
         # Should return metadata dictionary (can be empty)
         metadata = self.db.get_metadata()
-
+        
         self.assertEqual(metadata['key1'], 'value1')
         self.assertEqual(metadata['key2'], 'value2')
         
         self.db.set_metadata({'key3':'value3', 'key4':'value4'})
         metadata = self.db.get_metadata()
 
+        self.assertEqual(metadata['class'], 'test')
         self.assertEqual(metadata['key1'], 'value1')
         self.assertEqual(metadata['key2'], 'value2')
         self.assertEqual(metadata['key3'], 'value3')
@@ -565,12 +572,29 @@ class TestParquetDB(unittest.TestCase):
         table=self.db.read()
         assert table['material_id'].combine_chunks().to_pylist()==[1, 2]
         assert table['material_name'].combine_chunks().to_pylist()==['material_1_updated', 'material_2']
+        
+    def test_initialize_empty_table(self):
+        assert self.db.is_empty()
+        
+        files=os.listdir(self.db.db_path)
+        assert len(files)==1
+        
+        table=pq.read_table(os.path.join(self.db.db_path, files[0]))
+        assert table.num_rows==0
+    
+
 
 if __name__ == '__main__':
+    # unittest.TextTestRunner().run(TestParquetDB('test_nested_data_handling'))
+    # unittest.TextTestRunner().run(TestParquetDB('test_update_maintains_existing_extension_arrays'))
     # unittest.TextTestRunner().run(TestParquetDB('test_update_maintains_existing_extension_arrays'))
     # unittest.TextTestRunner().run(TestParquetDB('test_update_maintains_existing_extension_arrays_batches'))
     # unittest.TextTestRunner().run(TestParquetDB('test_metadata'))
     # unittest.TextTestRunner().run(TestParquetDB('test_fixed_shape_tensor'))
+    # unittest.TextTestRunner().run(TestParquetDB('test_metadata'))
+    # unittest.TextTestRunner().run(TestParquetDB('test_initialize_empty_table'))
+    # unittest.TextTestRunner().run(TestParquetDB('test_batch_reading'))
+    #  unittest.TextTestRunner().run(TestParquetDB('test_create_and_read'))
     unittest.main()
     
     

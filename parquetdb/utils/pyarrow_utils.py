@@ -436,12 +436,9 @@ def create_empty_table(schema: pa.Schema, columns: list = None, special_fields: 
     if columns:
         schema = pa.schema([field for field in schema if field.name in columns])
 
-    logger.debug(f"Schema: \n{schema}\n")
-
     if not schema.names:
         schema=pa.schema(special_fields)
 
-    
     # Create an empty table with the derived schema
     empty_table = pa.Table.from_pydict({field.name: [] for field in schema}, schema=schema)
 
@@ -1135,8 +1132,13 @@ def update_schema(current_schema, schema=None, field_dict=None):
         A new PyArrow table with the updated schema.
     """
     # Check if the table name is in the list of table names
-    schema_metadata=current_schema.metadata
+    updated_metadata={}
+    if current_schema.metadata:
+        updated_metadata.update(current_schema.metadata)
     current_field_names=sorted(current_schema.names)
+    
+    logger.debug(f"current_field_names: {current_field_names}")
+    logger.debug(f"current_metadata: {updated_metadata}")
     if field_dict:
         updated_schema=current_schema
         for field_name, new_field in field_dict.items():
@@ -1144,16 +1146,15 @@ def update_schema(current_schema, schema=None, field_dict=None):
 
             if field_name in current_field_names:
                 updated_schema=updated_schema.set(field_index, new_field)
-
-    if schema:
+    if schema is not None:
         updated_schema=schema
-        schema_metadata=schema.metadata
+        if schema.metadata:
+            updated_metadata.update(schema.metadata)
         
     field_names=[]
     for field in current_field_names:
         field_names.append(updated_schema.field(field))
-    updated_schema=pa.schema(field_names, metadata=schema_metadata)
-
+    updated_schema=pa.schema(field_names, metadata=updated_metadata)
     return updated_schema
 
 def unify_schemas(schema_list, promote_options='permissive'):
@@ -1347,6 +1348,22 @@ def table_schema_cast(current_table, new_schema):
     
     current_table=current_table.replace_schema_metadata(new_schema.metadata)
     return current_table
+
+def schema_equal(schema1, schema2):
+    are_schemas_equal=schema1.equals(schema2)
+    logger.debug(f"Are schemas equal before metadata check: {are_schemas_equal}")
+    # Check if metadata are equal
+    metadata1={}
+    if schema1.metadata:
+        metadata1.update(schema1.metadata)
+    metadata2={}
+    if schema2.metadata:
+        metadata2.update(schema2.metadata)
+        
+    if metadata1 != metadata2:
+        logger.info(f"Metadata not equal. Current: {metadata1}, Incoming: {metadata2}")
+        are_schemas_equal = False
+    return are_schemas_equal
 
 def sort_schema(schema):
 

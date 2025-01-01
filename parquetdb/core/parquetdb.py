@@ -151,7 +151,11 @@ class ParquetDB:
 
         logger.info(f"db_path: {self.db_path}")
         logger.info(f"load_formats: {self.load_formats}")
-
+        
+        table=pyarrow_utils.create_empty_table(schema=pa.schema([pa.field('id', pa.int64())]))
+        
+        pq.write_table(table, self._get_save_path())
+        
     def create(self, 
                data:Union[List[dict],dict,pd.DataFrame],
                schema:pa.Schema=None,
@@ -198,31 +202,39 @@ class ParquetDB:
         incoming_table=incoming_table.append_column(pa.field('id', pa.int64()), [new_ids])
 
         incoming_table = self._preprocess_table(incoming_table, treat_fields_as_ragged=treat_fields_as_ragged, convert_to_fixed_shape=convert_to_fixed_shape)
-        
-        # If this is the first table, save it directly
-        if is_directory_empty(self.db_path):
-            logger.info("This is the first table. Saving it directly.")
-            incoming_save_path = self._get_save_path()
-            pq.write_table(incoming_table, incoming_save_path)
-            return None
 
         # Merge Schems
+        initially_empty=self.is_empty()
         current_schema = self.get_schema()
         incoming_schema=incoming_table.schema
 
         merged_schema = pyarrow_utils.unify_schemas([current_schema,incoming_schema],promote_options='permissive')
-
         # Algin Incoming Table with Merged Schema
         modified_incoming_table=pyarrow_utils.table_schema_cast(incoming_table, merged_schema)
-        are_schemas_equal=current_schema.equals(modified_incoming_table.schema)
-        # print(modified_incoming_table['sites'].combine_chunks().values.field(3).values.field(3))
-        if not are_schemas_equal:
+        are_schemas_equal=pyarrow_utils.schema_equal(current_schema, modified_incoming_table.schema)
+        
+        # Align Existing Data with the merged schema, if it is not empty
+        if not are_schemas_equal and not initially_empty:
             logger.info(f"Schemas not are equal: {are_schemas_equal}. Normalizing the dataset.")
             self._normalize(schema=merged_schema, normalize_config=normalize_config)
-        incoming_save_path = self._get_save_path()
-        pq.write_table(modified_incoming_table, incoming_save_path)
         
+        # Write the incoming table to the database
+        try:
+            incoming_save_path = self._get_save_path()
+            pq.write_table(modified_incoming_table, incoming_save_path)
+            
+            # If the dataset is initially empty, remove the initial file and rename the incoming file to the initial file
+            if initially_empty:
+                initial_file_path=os.path.join(self.db_path, f'{self.dataset_name}_0.parquet')
+                incoming_file_path=os.path.join(self.db_path, f'{self.dataset_name}_1.parquet')
+                os.remove(initial_file_path)
+                os.rename(incoming_file_path, initial_file_path)
+        except Exception as e:
+            logger.exception(f"exception writing table: {e}")
+            
+ 
         if normalize_dataset:
+            logger.info("Normalizing the dataset")
             self._normalize(schema=modified_incoming_table.schema, normalize_config=normalize_config)
             
         logger.info("Creating dataset passed")
@@ -553,57 +565,60 @@ class ParquetDB:
             
         # logger.debug(f"Schema: {schema}")
         
-        try:
-            logger.info(f"Writing dataset to {dataset_dir}")
-            logger.info(f"Basename template: {basename_template}")
-            
-            
-            ds.write_dataset(retrieved_data, 
-                            dataset_dir,
-                            basename_template=basename_template, 
-                            schema=schema,
-                            format="parquet", 
-                            filesystem=normalize_config.filesystem,
-                            file_options=normalize_config.file_options,
-                            use_threads=normalize_config.use_threads,
-                            max_partitions=normalize_config.max_partitions,
-                            max_open_files=normalize_config.max_open_files,
-                            max_rows_per_file=normalize_config.max_rows_per_file,
-                            min_rows_per_group=normalize_config.min_rows_per_group,
-                            max_rows_per_group=normalize_config.max_rows_per_group,
-                            file_visitor=normalize_config.file_visitor,
-                            existing_data_behavior=normalize_config.existing_data_behavior,
-                            create_dir=normalize_config.create_dir,
-                            )
-            
-            # Remove main files to replace with tmp files
-            tmp_files=glob(os.path.join(dataset_dir, f'tmp_{self.dataset_name}_*.parquet'))
-            
-            if len(tmp_files)!=0:
-                main_files=glob(os.path.join(dataset_dir, f'{self.dataset_name}_*.parquet'))
-                for file_path in main_files:
-                    if os.path.isfile(file_path):
-                        os.remove(file_path)
-                        
-            tmp_files=glob(os.path.join(dataset_dir, f'tmp_{self.dataset_name}_*.parquet'))
-            for file_path in tmp_files:
+        
+        if self.is_empty():
+            # Handles case when table is empty
+            # os.remove(os.path.join(dataset_dir, f'{self.dataset_name}_0.parquet'))
+            pq.write_table(retrieved_data, os.path.join(dataset_dir, f'{self.dataset_name}_0.parquet'))
+        else:
+            # Handles case when table is not empty
+            try:
+                logger.info(f"Writing dataset to {dataset_dir}")
+                logger.info(f"Basename template: {basename_template}")
+        
+                ds.write_dataset(retrieved_data, 
+                                dataset_dir,
+                                basename_template=basename_template, 
+                                schema=schema,
+                                format="parquet", 
+                                filesystem=normalize_config.filesystem,
+                                file_options=normalize_config.file_options,
+                                use_threads=normalize_config.use_threads,
+                                max_partitions=normalize_config.max_partitions,
+                                max_open_files=normalize_config.max_open_files,
+                                max_rows_per_file=normalize_config.max_rows_per_file,
+                                min_rows_per_group=normalize_config.min_rows_per_group,
+                                max_rows_per_group=normalize_config.max_rows_per_group,
+                                file_visitor=normalize_config.file_visitor,
+                                existing_data_behavior=normalize_config.existing_data_behavior,
+                                create_dir=normalize_config.create_dir,
+                                )
+                # Remove main files to replace with tmp files
+                tmp_files=glob(os.path.join(dataset_dir, f'tmp_{self.dataset_name}_*.parquet'))
+                
+                if len(tmp_files)!=0:
+                    main_files=glob(os.path.join(dataset_dir, f'{self.dataset_name}_*.parquet'))
+                    for file_path in main_files:
+                        if os.path.isfile(file_path):
+                            os.remove(file_path)
+                            
+                tmp_files=glob(os.path.join(dataset_dir, f'tmp_{self.dataset_name}_*.parquet'))
+                for file_path in tmp_files:
 
-                file_name=os.path.basename(file_path).replace('tmp_', '')
-                new_file_path=os.path.join(dataset_dir, file_name)
-                os.rename(file_path, new_file_path)
-                    
-                    
-        except Exception as e:
-            logger.exception(f"exception writing final table to {self.db_path}: {e}")
-            
-            tmp_files=glob(os.path.join(dataset_dir, f'tmp_{self.dataset_name}_*.parquet'))
-            for file_path in tmp_files:
+                    file_name=os.path.basename(file_path).replace('tmp_', '')
+                    new_file_path=os.path.join(dataset_dir, file_name)
+                    os.rename(file_path, new_file_path)
+            except Exception as e:
+                logger.exception(f"exception writing final table to {self.db_path}: {e}")
+                
+                tmp_files=glob(os.path.join(dataset_dir, f'tmp_{self.dataset_name}_*.parquet'))
+                for file_path in tmp_files:
 
-                file_name=os.path.basename(file_path).replace('tmp_', '')
-                new_file_path=os.path.join(dataset_dir, file_name)
-                os.rename(file_path, new_file_path)
+                    file_name=os.path.basename(file_path).replace('tmp_', '')
+                    new_file_path=os.path.join(dataset_dir, file_name)
+                    os.rename(file_path, new_file_path)
 
-            raise Exception(f"Exception normalizing table. Error Message: {e}")
+                raise Exception(f"Exception normalizing table. Error Message: {e}")
 
     def update_schema(self, 
                       field_dict:dict=None, 
@@ -629,7 +644,8 @@ class ParquetDB:
         current_schema=self.get_schema()
         
         logger.debug(f"current schema metadata : {current_schema.metadata}")
-        if schema:
+        
+        if schema is not None:
             logger.debug(f"incoming schema metadata : {schema.metadata}")
             
         # Update current schema
@@ -642,6 +658,9 @@ class ParquetDB:
         self._normalize(schema=updated_schema, normalize_config=normalize_config)
 
         logger.info(f"Updated Fields in {self.dataset_name} table.")
+        
+    def is_empty(self):
+        return self._load_data(columns=['id'],load_format='dataset').head(num_rows=1).num_rows==0
 
     def get_schema(self):
         """
@@ -711,7 +730,7 @@ class ParquetDB:
         if not self.dataset_exists():
             raise ValueError(f"Dataset {self.dataset_name} does not exist.")
         schema = self.get_schema()
-        logger.debug(f"Metadata:\n\n {schema.metadata}\n\n")
+        logger.debug(f"Metadata: {schema.metadata}")
         
         if schema.metadata:
             metadata = {key.decode('utf-8'): value.decode('utf-8') for key, value in schema.metadata.items()}
@@ -740,6 +759,7 @@ class ParquetDB:
         updated_metadata.update(metadata)
         for field_name in schema.names:
             new_fields.append(schema.field(field_name))
+        logger.debug(f"updated metadata: {updated_metadata}")
         self.update_schema(schema=pa.schema(new_fields, metadata=updated_metadata))
 
     def set_field_metadata(self, field_name: str, metadata: dict):
@@ -817,10 +837,11 @@ class ParquetDB:
         """
         
         if dataset_name:
-            dataset_dir=os.path.join(self.dir,dataset_name)
+            dir=os.path.dirname(self.db_path)
+            dataset_dir=os.path.join(dir,dataset_name)
             return os.path.exists(dataset_dir)
         else:
-            return len(self.get_current_files()) != 0
+            return os.path.exists(self.db_path)
 
     def drop_dataset(self):
         """
@@ -895,16 +916,15 @@ class ParquetDB:
         >>> db.copy_dataset('new_dataset_copy', overwrite=True)
         """
         logger.info(f"Copying dataset to {dest_name}")
+        dir=os.path.dirname(self.db_path)
         if overwrite and self.dataset_exists(dest_name):
-            shutil.rmtree(os.path.join(self.dir, dest_name))
+            shutil.rmtree(os.path.join(dir, dest_name))
         elif self.dataset_exists(dest_name):
             raise ValueError(f"Dataset {dest_name} already exists.")
-        if dest_name in self.reserved_dataset_names:
-            raise ValueError(f"Cannot copy to reserved table name: {dest_name}")
         
         source_dir = self.db_path
         source_name=self.dataset_name
-        dest_dir = os.path.join(self.dir, dest_name)
+        dest_dir = os.path.join(dir, dest_name)
         
         os.makedirs(dest_dir, exist_ok=True)
 
@@ -1266,7 +1286,8 @@ class ParquetDB:
         >>> new_ids = db._get_new_ids(data_list=[{'name': 'Alice'}, {'name': 'Bob'}])
         """
         logger.info("Getting new ids")
-        if is_directory_empty(self.db_path):
+        
+        if self.is_empty():
             logger.debug("Directory is empty. Starting id from 0")
             start_id = 0
         else:
