@@ -1469,3 +1469,52 @@ def join_tables(left_table, right_table, left_keys, right_keys=None, join_type='
     joined_table=joined_table.replace_schema_metadata(metadata)
     return joined_table
     
+    
+def update_fixed_shape_tensor(current_array, update_array):
+    is_valid_array = update_array.is_valid()
+    is_null_array = update_array.is_null()
+    
+    sum_is_valid_array=pc.sum(is_valid_array)
+    if sum_is_valid_array==pa.scalar(0, type=sum_is_valid_array.type):
+        logger.debug("No updates are present or non-null for column: {column_name}")
+        return current_array
+    
+    # Create a sequence array for indexing
+    sequence = pa.array(range(len(is_valid_array)))
+
+    # Generate an index mask where valid entries have their indices, and null entries are None
+    is_valid_index_mask = pc.if_else(is_valid_array, sequence, None)
+
+    # Get indices of non-null values in update_array
+    indices = pc.indices_nonzero(is_valid_array)
+
+    # Create an array of indices for non-null values
+    non_null_indices = pa.array(range(len(indices)))
+
+    # Replace valid indices in the mask with indices of non-null values
+    is_valid_index_mask = pc.replace_with_mask(
+        is_valid_index_mask, is_valid_array, non_null_indices
+    )
+    
+    # Generate unique indices for the update_array portion in combined_arrays
+    filter_update_array_sequence = pa.array(
+        range(len(is_valid_array), 2 * len(is_valid_array))
+    )
+    update_is_valid_index_mask = pc.if_else(
+        is_valid_array, filter_update_array_sequence, None
+    )
+    
+    # Generate indices for null values in current_array
+    filter_current_array_sequence = pa.array(range(len(is_valid_array)))
+    current_is_valid_index_mask = pc.if_else(
+        is_null_array, filter_current_array_sequence, None
+    )
+
+    # Combine the two masks, filling nulls in current mask with update mask values
+    combined_mask = current_is_valid_index_mask.fill_null(update_is_valid_index_mask)
+    # Concatenate current_array and update_array
+    combined_arrays = pa.concat_arrays([current_array, update_array])
+
+    # Select elements from combined_arrays based on the combined_mask
+    updated_array = combined_arrays.take(combined_mask)
+    return updated_array

@@ -193,7 +193,7 @@ class ParquetDB:
         new_ids = self._get_new_ids(incoming_table)
         incoming_table=incoming_table.append_column(pa.field('id', pa.int64()), [new_ids])
 
-        incoming_table = self._preprocess_table(incoming_table, treat_fields_as_ragged=treat_fields_as_ragged, convert_to_fixed_shape=convert_to_fixed_shape)
+        incoming_table = ParquetDB.preprocess_table(incoming_table, treat_fields_as_ragged=treat_fields_as_ragged, convert_to_fixed_shape=convert_to_fixed_shape)
 
         # Merge Schems
         initially_empty=self.is_empty()
@@ -349,7 +349,7 @@ class ParquetDB:
         # Construct incoming table from the data
         incoming_table = ParquetDB.construct_table(data, schema=schema, metadata=metadata)
         
-        incoming_table = self._preprocess_table(incoming_table, 
+        incoming_table = ParquetDB.preprocess_table(incoming_table, 
                                                 treat_fields_as_ragged=treat_fields_as_ragged, 
                                                 convert_to_fixed_shape=convert_to_fixed_shape)
         incoming_table=pyarrow_utils.table_schema_cast(incoming_table, incoming_table.schema)
@@ -1257,7 +1257,8 @@ class ParquetDB:
             table=pyarrow_utils.create_empty_table(schema=dataset.schema, columns=columns)
         return table
     
-    def _preprocess_table(self, table, treat_fields_as_ragged=None, convert_to_fixed_shape=True):
+    @staticmethod
+    def preprocess_table(table, treat_fields_as_ragged=None, convert_to_fixed_shape=True):
         table=pyarrow_utils.flatten_table(table)
         
         if treat_fields_as_ragged is None:
