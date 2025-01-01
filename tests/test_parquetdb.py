@@ -14,6 +14,7 @@ import pandas as pd
 
 from parquetdb import ParquetDB, config
 from parquetdb.core.parquetdb import LoadConfig, NormalizeConfig
+from parquetdb.utils import pyarrow_utils
 
 logger=logging.getLogger('tests')
 
@@ -607,9 +608,216 @@ class TestParquetDB(unittest.TestCase):
         self.db.update(incoming_table, update_keys=['id_1', 'id_2'])
         
         table=self.db.read()
+        print(table.to_pandas())
         assert table['field_1'].combine_chunks().to_pylist()==['here', None, None, None]
         assert table['field_2'].combine_chunks().to_pylist()==['there', None, 'field_2', None]
         assert table['field_3'].combine_chunks().to_pylist()==[None, None, 'field_3', None]
+        
+    def test_table_join(self):
+        # Create first table with employee data
+        current_data = [
+            {'id_1': 100, 'id_2': 10,'field_1':'here'},
+            {'id_1': 33, 'id_2': 12},
+            {'id_1': 12, 'id_2': 13, 'field_2':'field_2'},
+        ]
+
+        current_table = ParquetDB.construct_table(current_data)
+
+        # Create second table with salary data 
+        incoming_data = [
+            {'id_1': 100, 'id_2': 10,'field_2':'there'},
+            {'id_1': 5, 'id_2': 5},
+            {'id_1': 33, 'id_2': 13},  # Note: emp_id 4 doesn't exist in employees
+            {'id_1': 33, 'id_2': 12, 'field_2':'field_2', 'field_3':'field_3'},  # Note: emp_id 4 doesn't exist in employees
+        ]
+
+        incoming_table = ParquetDB.construct_table(incoming_data)
+        
+        
+        join_type='left outer'
+        left_outer_table_pyarrow = incoming_table.join(current_table,
+                                            keys=['id_1', 'id_2'],right_keys=['id_1', 'id_2'],
+                                            left_suffix='_incoming',right_suffix='_current',
+                                            join_type=join_type)
+        
+        column_names=left_outer_table_pyarrow.column_names
+        names_sorted=sorted(column_names)
+        left_outer_table_pyarrow_sorted=left_outer_table_pyarrow.select(names_sorted)
+        
+
+        left_outer_table=pyarrow_utils.join_tables(incoming_table, current_table, 
+                             left_keys=['id_1', 'id_2'], right_keys=['id_1', 'id_2'],
+                             left_suffix='_incoming', right_suffix='_current',
+                             join_type=join_type)
+
+        column_names=left_outer_table.column_names
+        names_sorted=sorted(column_names)
+        left_outer_table_sorted=left_outer_table.select(names_sorted)
+
+        for name in left_outer_table_sorted.column_names:
+            assert left_outer_table_pyarrow_sorted[name].to_pylist()==left_outer_table_sorted[name].to_pylist()
+            
+        join_type='right outer'
+        right_outer_table_pyarrow = incoming_table.join(current_table,
+                                            keys=['id_1', 'id_2'],right_keys=['id_1', 'id_2'],
+                                            left_suffix='_incoming',right_suffix='_current',
+                                            join_type=join_type)
+        
+        column_names=right_outer_table_pyarrow.column_names
+        names_sorted=sorted(column_names)
+        right_outer_table_pyarrow_sorted=right_outer_table_pyarrow.select(names_sorted)
+        
+
+        right_outer_table=pyarrow_utils.join_tables(incoming_table, current_table, 
+                             left_keys=['id_1', 'id_2'], right_keys=['id_1', 'id_2'],
+                             left_suffix='_incoming', right_suffix='_current',
+                             join_type=join_type)
+
+        column_names=right_outer_table.column_names
+        names_sorted=sorted(column_names)
+        right_outer_table_sorted=right_outer_table.select(names_sorted)
+
+        for name in right_outer_table_sorted.column_names:
+            assert right_outer_table_pyarrow_sorted[name].to_pylist()==right_outer_table_sorted[name].to_pylist()
+            
+        join_type='inner'
+        inner_table_pyarrow = incoming_table.join(current_table,
+                                            keys=['id_1', 'id_2'],right_keys=['id_1', 'id_2'],
+                                            left_suffix='_incoming',right_suffix='_current',
+                                            join_type=join_type)
+        
+        column_names=inner_table_pyarrow.column_names
+        names_sorted=sorted(column_names)
+        inner_table_pyarrow_sorted=inner_table_pyarrow.select(names_sorted)
+        
+
+        inner_table=pyarrow_utils.join_tables(incoming_table, current_table, 
+                             left_keys=['id_1', 'id_2'], right_keys=['id_1', 'id_2'],
+                             left_suffix='_incoming', right_suffix='_current',
+                             join_type=join_type)
+
+        column_names=inner_table.column_names
+        names_sorted=sorted(column_names)
+        inner_table_sorted=inner_table.select(names_sorted)
+
+        for name in inner_table_sorted.column_names:
+            assert inner_table_pyarrow_sorted[name].to_pylist()==inner_table_sorted[name].to_pylist()
+            
+        join_type='right anti'
+        right_anti_table_pyarrow = incoming_table.join(current_table,
+                                            keys=['id_1', 'id_2'],right_keys=['id_1', 'id_2'],
+                                            left_suffix='_incoming',right_suffix='_current',
+                                            join_type=join_type)
+        
+        column_names=right_anti_table_pyarrow.column_names
+        names_sorted=sorted(column_names)
+        right_anti_table_pyarrow_sorted=right_anti_table_pyarrow.select(names_sorted)
+        
+
+        right_anti_table=pyarrow_utils.join_tables(incoming_table, current_table, 
+                             left_keys=['id_1', 'id_2'], right_keys=['id_1', 'id_2'],
+                             left_suffix='_incoming', right_suffix='_current',
+                             join_type=join_type)
+
+        column_names=right_anti_table.column_names
+        names_sorted=sorted(column_names)
+        right_anti_table_sorted=right_anti_table.select(names_sorted)
+
+        for name in right_anti_table_sorted.column_names:
+            assert right_anti_table_pyarrow_sorted[name].to_pylist()==right_anti_table_sorted[name].to_pylist()
+            
+        join_type='left anti'
+        left_anti_table_pyarrow = incoming_table.join(current_table,
+                                            keys=['id_1', 'id_2'],right_keys=['id_1', 'id_2'],
+                                            left_suffix='_incoming',right_suffix='_current',
+                                            join_type=join_type)
+        
+        column_names=left_anti_table_pyarrow.column_names
+        names_sorted=sorted(column_names)
+        left_anti_table_pyarrow_sorted=left_anti_table_pyarrow.select(names_sorted)
+        
+
+        left_anti_table=pyarrow_utils.join_tables(incoming_table, current_table, 
+                             left_keys=['id_1', 'id_2'], right_keys=['id_1', 'id_2'],
+                             left_suffix='_incoming', right_suffix='_current',
+                             join_type=join_type)
+
+        column_names=left_anti_table.column_names
+        names_sorted=sorted(column_names)
+        left_anti_table_sorted=left_anti_table.select(names_sorted)
+
+        for name in left_anti_table_sorted.column_names:
+            assert left_anti_table_pyarrow_sorted[name].to_pylist()==left_anti_table_sorted[name].to_pylist()
+            
+            
+        join_type='left semi'
+        left_semi_table_pyarrow = incoming_table.join(current_table,
+                                            keys=['id_1', 'id_2'],right_keys=['id_1', 'id_2'],
+                                            left_suffix='_incoming',right_suffix='_current',
+                                            join_type=join_type)
+        
+        column_names=left_semi_table_pyarrow.column_names
+        names_sorted=sorted(column_names)
+        left_semi_table_pyarrow_sorted=left_semi_table_pyarrow.select(names_sorted)
+        
+
+        left_semi_table=pyarrow_utils.join_tables(incoming_table, current_table, 
+                             left_keys=['id_1', 'id_2'], right_keys=['id_1', 'id_2'],
+                             left_suffix='_incoming', right_suffix='_current',
+                             join_type=join_type)
+
+        column_names=left_semi_table.column_names
+        names_sorted=sorted(column_names)
+        left_semi_table_sorted=left_semi_table.select(names_sorted)
+
+        for name in left_semi_table_sorted.column_names:
+            assert left_semi_table_pyarrow_sorted[name].to_pylist()==left_semi_table_sorted[name].to_pylist()
+            
+        join_type='right semi'
+        right_semi_table_pyarrow = incoming_table.join(current_table,
+                                            keys=['id_1', 'id_2'],right_keys=['id_1', 'id_2'],
+                                            left_suffix='_incoming',right_suffix='_current',
+                                            join_type=join_type)
+        
+        column_names=right_semi_table_pyarrow.column_names
+        names_sorted=sorted(column_names)
+        right_semi_table_pyarrow_sorted=right_semi_table_pyarrow.select(names_sorted)
+        
+
+        right_semi_table=pyarrow_utils.join_tables(incoming_table, current_table, 
+                             left_keys=['id_1', 'id_2'], right_keys=['id_1', 'id_2'],
+                             left_suffix='_incoming', right_suffix='_current',
+                             join_type=join_type)
+
+        column_names=right_semi_table.column_names
+        names_sorted=sorted(column_names)
+        right_semi_table_sorted=right_semi_table.select(names_sorted)
+
+        for name in right_semi_table_sorted.column_names:
+            assert right_semi_table_pyarrow_sorted[name].to_pylist()==right_semi_table_sorted[name].to_pylist()
+            
+        join_type='full outer'
+        full_outer_table_pyarrow = incoming_table.join(current_table,
+                                            keys=['id_1', 'id_2'],right_keys=['id_1', 'id_2'],
+                                            left_suffix='_incoming',right_suffix='_current',
+                                            join_type=join_type)
+        
+        column_names=full_outer_table_pyarrow.column_names
+        names_sorted=sorted(column_names)
+        full_outer_table_pyarrow_sorted=full_outer_table_pyarrow.select(names_sorted)
+        
+
+        full_outer_table=pyarrow_utils.join_tables(incoming_table, current_table, 
+                             left_keys=['id_1', 'id_2'], right_keys=['id_1', 'id_2'],
+                             left_suffix='_incoming', right_suffix='_current',
+                             join_type=join_type)
+
+        column_names=full_outer_table.column_names
+        names_sorted=sorted(column_names)
+        full_outer_table_sorted=full_outer_table.select(names_sorted)
+
+        for name in full_outer_table_sorted.column_names:
+            assert full_outer_table_pyarrow_sorted[name].to_pylist()==full_outer_table_sorted[name].to_pylist()
 
 if __name__ == '__main__':
     # unittest.TextTestRunner().run(TestParquetDB('test_nested_data_handling'))
@@ -622,6 +830,8 @@ if __name__ == '__main__':
     # unittest.TextTestRunner().run(TestParquetDB('test_initialize_empty_table'))
     # unittest.TextTestRunner().run(TestParquetDB('test_batch_reading'))
     #  unittest.TextTestRunner().run(TestParquetDB('test_create_and_read'))
+    # unittest.TextTestRunner().run(TestParquetDB('test_update_multi_keys'))
+    # unittest.TextTestRunner().run(TestParquetDB('test_fixed_shape_tensor'))
     unittest.main()
     
     

@@ -22,19 +22,10 @@ from parquetdb.utils import pyarrow_utils
 # Logger setup
 logger = logging.getLogger(__name__)
 
-# TODO: Need to think of better way to handle ragged arrays and fixed shape
-# By default, we try to convert ragged arrays to fixed shape array. 
-# If for some reason, a field that is a ragged array gets mislabeled as a fixed shape array, 
-# an incoming ragged array will conflict with the existing fixed shape array
 
 # TODO: Issue when updating structs with new fields that are inside of ListArrays
-
-# TODO: Add join method
-
 # TODO: Creating empty table does not work for extenstions
 # TODO: Add method which uses pickle to serialize and deserialize columns
-
-# TODO: Add method to update on multiple keys
 
 
 @dataclass
@@ -1472,8 +1463,12 @@ def table_schema_cast(current_table, new_schema):
         
         
 def table_update(current_table, incoming_table, update_keys:Union[List[str], str] =['id']):
-    updated_record_batch=pyarrow_utils.update_flattend_table(current_table, incoming_table, update_keys=update_keys)
-    return updated_record_batch
+    updated_table=pyarrow_utils.update_flattend_table(current_table, incoming_table, update_keys=update_keys)
+    # print(current_table.to_pandas())
+    # print(incoming_table.to_pandas())
+    # updated_table=pyarrow_utils.join_tables(current_table, incoming_table, left_keys=update_keys,right_keys=update_keys,join_type='left outer')
+    # print(updated_table.to_pandas())
+    return updated_table
         
 def generator_update(generator, incoming_table, update_keys:Union[List[str], str] =['id']):
     for record_batch in generator:

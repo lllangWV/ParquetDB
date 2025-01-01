@@ -1396,3 +1396,76 @@ def sort_schema(schema):
         field_names.append(schema.field(name))
     return pa.schema(field_names, metadata=schema.metadata)
 
+
+
+def join_tables(left_table, right_table, left_keys, right_keys=None, join_type='left outer', left_suffix=None, right_suffix=None, coalesce_keys=True):
+    # Add index column to both tables
+    if right_keys:
+        tmp_right_table=right_table.select(right_keys)
+        tmp_right_table = tmp_right_table.append_column('right_index', pa.array(np.arange(len(tmp_right_table))))
+    else:
+        tmp_right_table=pa.Table.from_arrays([pa.array(np.arange(len(right_table)))], names=['right_index'])
+    
+    tmp_left_table=left_table.select(left_keys)
+    tmp_left_table = tmp_left_table.append_column('left_index', pa.array(np.arange(len(tmp_left_table))))
+
+    joined_table = tmp_left_table.join(
+        tmp_right_table,
+        keys=left_keys,
+        right_keys=right_keys,
+        join_type=join_type,
+        coalesce_keys=coalesce_keys)
+
+    right_columns=set(right_table.column_names)
+    left_columns=set(left_table.column_names)
+
+    metadata={}
+    try:
+        for column_name in left_columns:
+            field = left_table.schema.field(column_name)
+            if column_name in left_keys:
+                continue
+            new_column=left_table[column_name].take(joined_table['left_index'])
+            if left_suffix and column_name in right_columns and column_name in left_columns and 'right_index' in joined_table.column_names:
+                column_name=column_name+left_suffix
+                
+            new_field=field.with_name(column_name)
+            joined_table=joined_table.add_column(0, new_field, new_column)
+        
+        left_metadata=left_table.schema.metadata
+        if left_metadata:
+            metadata.update(left_metadata)
+    except Exception as e:
+        logger.debug(e)
+        pass
+    
+    try:
+        
+        for column_name in right_columns:
+            field = right_table.schema.field(column_name)
+            if column_name in right_keys:
+                continue
+            new_column=right_table[column_name].take(joined_table['right_index'])
+            if right_suffix and column_name in right_columns and column_name in left_columns and 'left_index' in joined_table.column_names:
+                column_name=column_name+right_suffix
+                
+            new_field=field.with_name(column_name)
+            joined_table=joined_table.append_column(new_field, new_column)
+        
+        
+        right_metadata=right_table.schema.metadata
+        if right_metadata:
+            metadata.update(right_metadata)
+    except Exception as e:
+        logger.debug(e)
+        pass
+    
+    if 'right_index' in joined_table.column_names:
+        joined_table=joined_table.drop(['right_index'])
+    if 'left_index' in joined_table.column_names:
+        joined_table=joined_table.drop(['left_index'])
+    
+
+    joined_table=joined_table.replace_schema_metadata(metadata)
+    return joined_table
+    
