@@ -346,6 +346,9 @@ class ParquetDB:
         -------
         >>> db.update(data=[{'id': 1, 'name': 'John', 'age': 30}, {'id': 2, 'name': 'Jane', 'age': 25}])
         """
+        if self.is_empty():
+            logger.info(f"Dataset {self.dataset_name} is empty. No data to update.")
+            return None
 
         logger.info("Updating data")
         
@@ -391,8 +394,14 @@ class ParquetDB:
             raise ValueError("Cannot provide both ids and columns to delete.")
         if ids is None and columns is None:
             raise ValueError("Must provide either ids or columns to delete.")
+        
+        if self.is_empty():
+            logger.info(f"Dataset {self.dataset_name} is empty. No data to delete.")
+            return None
 
         logger.info("Deleting data from the database")
+        
+        
         
 
         if ids:
@@ -451,6 +460,9 @@ class ParquetDB:
                                          max_partitions=512)
         >>> db.normalize(normalize_config=normalize_config)
         """
+        if self.is_empty():
+            logger.info(f"Dataset {self.dataset_name} is empty. No data to normalize.")
+            return None
         self._normalize(normalize_config=normalize_config)
     
     def _normalize(self, 
