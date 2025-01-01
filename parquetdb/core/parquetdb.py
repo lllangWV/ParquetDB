@@ -152,9 +152,10 @@ class ParquetDB:
         logger.info(f"db_path: {self.db_path}")
         logger.info(f"load_formats: {self.load_formats}")
         
-        table=pyarrow_utils.create_empty_table(schema=pa.schema([pa.field('id', pa.int64())]))
-        
-        pq.write_table(table, self._get_save_path())
+        if self.is_empty():
+            logger.info(f"Dataset {self.dataset_name} is empty. Creating empty dataset.")
+            table=pyarrow_utils.create_empty_table(schema=pa.schema([pa.field('id', pa.int64())]))
+            pq.write_table(table, self._get_save_path())
         
     def create(self, 
                data:Union[List[dict],dict,pd.DataFrame],
@@ -672,7 +673,10 @@ class ParquetDB:
         logger.info(f"Updated Fields in {self.dataset_name} table.")
         
     def is_empty(self):
-        return self._load_data(columns=['id'],load_format='dataset').head(num_rows=1).num_rows==0
+        if self.dataset_exists():
+            return self._load_data(columns=['id'],load_format='dataset').head(num_rows=1).num_rows==0
+        else:
+            return True
 
     def get_schema(self):
         """
@@ -870,6 +874,9 @@ class ParquetDB:
         logger.info(f"Dropping dataset {self.dataset_name}")
         if os.path.exists(self.db_path):
             shutil.rmtree(self.db_path)
+            os.makedirs(self.db_path, exist_ok=True)
+            table=pyarrow_utils.create_empty_table(schema=pa.schema([pa.field('id', pa.int64())]))
+            pq.write_table(table, self._get_save_path())
             logger.info(f"Table {self.dataset_name} has been dropped.")
         else:
             logger.warning(f"Table {self.dataset_name} does not exist.")
