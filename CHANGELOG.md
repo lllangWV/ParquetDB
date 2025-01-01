@@ -1,6 +1,25 @@
 
 ___
 
+# 0.12.0 (01-01-2025)
+
+##### Bugs
+- None identified
+
+##### New Features
+- Developed early exit functionality for handling empty datasets in ParquetDB operations.
+- Enhanced table handling and schema management features in ParquetDB.
+
+##### Documentation updates
+- Updated version information and CHANGELOG for the new release.
+
+##### Maintenance
+- Merged changes from the main branch of the remote repository.
+
+___
+
+___
+
 # 0.11.0 (12-30-2024)
 
 ##### Bugs
