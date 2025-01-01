@@ -194,7 +194,7 @@ class ParquetDB:
         os.makedirs(self.db_path, exist_ok=True)
         
         # Construct incoming table from the data
-        incoming_table = self._construct_table(data, schema=schema, metadata=metadata)
+        incoming_table = ParquetDB.construct_table(data, schema=schema, metadata=metadata)
         
         
         if 'id' in incoming_table.column_names:
@@ -320,7 +320,7 @@ class ParquetDB:
                data: Union[List[dict], dict, pd.DataFrame], 
                schema:pa.Schema=None, 
                metadata:dict=None,
-               update_key:str='id',
+               update_keys:Union[List[str], str] =['id'],
                treat_fields_as_ragged=None,
                convert_to_fixed_shape:bool=True,
                normalize_config:NormalizeConfig=NormalizeConfig()):
@@ -336,6 +336,8 @@ class ParquetDB:
             The schema for the data being added. If not provided, it will be inferred.
         metadata : dict, optional
             Additional metadata to store alongside the data.
+        update_key : list of str or str, optional
+            The keys to use for the update. If a list, the update will be performed on the intersection of the existing data and the incoming data.
         treat_fields_as_ragged : list of str, optional
             A list of fields to treat as ragged arrays.
         convert_to_fixed_shape : bool, optional
@@ -354,7 +356,7 @@ class ParquetDB:
         logger.info("Updating data")
         
         # Construct incoming table from the data
-        incoming_table = self._construct_table(data, schema=schema, metadata=metadata)
+        incoming_table = ParquetDB.construct_table(data, schema=schema, metadata=metadata)
         
         incoming_table = self._preprocess_table(incoming_table, 
                                                 treat_fields_as_ragged=treat_fields_as_ragged, 
@@ -365,7 +367,7 @@ class ParquetDB:
         # self._validate_id(incoming_table['id'].combine_chunks())
 
         # Apply update normalization
-        self._normalize(incoming_table=incoming_table,update_key=update_key, normalize_config=normalize_config)
+        self._normalize(incoming_table=incoming_table,update_keys=update_keys, normalize_config=normalize_config)
 
         logger.info(f"Updated {self.dataset_name} table.")
 
@@ -472,7 +474,7 @@ class ParquetDB:
                 schema=None, 
                 ids=None,
                 columns=None,
-                update_key:str='id',
+                update_keys:Union[List[str], str] =['id'],
                 normalize_config:NormalizeConfig=NormalizeConfig()):
         """
         Normalize the dataset by restructuring files for consistent row distribution.
@@ -494,6 +496,8 @@ class ParquetDB:
             A list of IDs to delete from the dataset. If not provided, it will be inferred from the existing data (default: None).
         columns : list of str, optional
             A list of column names to delete from the dataset. If not provided, it will be inferred from the existing data (default: None).
+        update_keys : list of str or str, optional
+            The keys to use for the update. If a list, the update will be performed on the intersection of the existing data and the incoming data.
         normalize_config : NormalizeConfig, optional
             Configuration for the normalization process, optimizing performance by managing row distribution and file structure.
         
@@ -532,7 +536,7 @@ class ParquetDB:
         # If incoming data is provided this is an update
         if incoming_table:
             logger.info("This normalization is an update. Applying update function, then normalizing.")
-            retrieved_data=update_func(retrieved_data, incoming_table, update_key=update_key)
+            retrieved_data=update_func(retrieved_data, incoming_table, update_keys=update_keys)
             
             if schema:
                 schema = pyarrow_utils.unify_schemas([schema, incoming_table.schema],promote_options='default')
@@ -1414,7 +1418,8 @@ class ParquetDB:
         if load_format not in self.load_formats:
             raise ValueError(f"load_format must be one of the following: {self.load_formats}")
     
-    def _construct_table(self, data, schema=None, metadata=None):
+    @staticmethod
+    def construct_table(data, schema=None, metadata=None):
             logger.info("Validating data")
             if isinstance(data, dict):
                 logger.info("The incoming data is a dictonary of arrays")
@@ -1466,13 +1471,13 @@ def table_schema_cast(current_table, new_schema):
     return updated_table
         
         
-def table_update(current_table, incoming_table, update_key:str='id'):
-    updated_record_batch=pyarrow_utils.update_flattend_table(current_table, incoming_table, update_key=update_key)
+def table_update(current_table, incoming_table, update_keys:Union[List[str], str] =['id']):
+    updated_record_batch=pyarrow_utils.update_flattend_table(current_table, incoming_table, update_keys=update_keys)
     return updated_record_batch
         
-def generator_update(generator, incoming_table, update_key:str='id'):
+def generator_update(generator, incoming_table, update_keys:Union[List[str], str] =['id']):
     for record_batch in generator:
-        updated_record_batch=pyarrow_utils.update_flattend_table(record_batch, incoming_table, update_key=update_key)
+        updated_record_batch=pyarrow_utils.update_flattend_table(record_batch, incoming_table, update_keys=update_keys)
         yield updated_record_batch
         
 def table_delete(current_table, ids):

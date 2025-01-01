@@ -1,5 +1,6 @@
 import math
 import numpy as np
+from typing import List, Union
 import pyarrow as pa
 import logging
 
@@ -950,7 +951,7 @@ def rebuild_nested_table(table, load_format='table'):
     elif load_format=='batches':
         return pa.RecordBatch.from_arrays(nested_arrays.flatten(), schema=new_schema)
 
-def update_flattend_table(current_table, incoming_table, update_key:str='id'):
+def update_flattend_table(current_table, incoming_table, update_keys: Union[List[str], str] = ['id']):
     """
     Updates the current table using the values from the incoming table by flattening both 
     tables, applying the updates, and then rebuilding the nested structure.
@@ -985,8 +986,26 @@ def update_flattend_table(current_table, incoming_table, update_key:str='id'):
 
     # Generate an index mask for the current table, identifying the positions of matching 'id' values in the incoming table.
     # The index_mask will align with the number of rows in the current table, marking where matching ids exist in the incoming table.
-    index_mask = pc.index_in(aligned_current_table[update_key], aligned_incoming_table[update_key])
     
+    
+    if isinstance(update_keys, str):
+        index_mask = pc.index_in(aligned_current_table[update_keys], aligned_incoming_table[update_keys])
+    elif isinstance(update_keys, list) and len(update_keys)==1:
+        index_mask = pc.index_in(aligned_current_table[update_keys[0]], aligned_incoming_table[update_keys[0]])
+    elif isinstance(update_keys, list) and len(update_keys)>1:
+        
+        tmp_current_table = aligned_current_table.select(update_keys)
+        tmp_incoming_table = aligned_incoming_table.select(update_keys)
+        tmp_current_table = tmp_current_table.append_column('current_index', pa.array(np.arange(len(tmp_current_table))))
+        tmp_incoming_table = tmp_incoming_table.append_column('incoming_index', pa.array(np.arange(len(tmp_incoming_table))))
+
+        right_outer_table = tmp_incoming_table.join(
+                    tmp_current_table,
+                    keys=update_keys,
+                    right_keys=update_keys,
+                    join_type='right outer')
+        index_mask = right_outer_table['incoming_index'].take(right_outer_table['current_index'])
+
     # Create an update table by selecting rows from the incoming table using the index mask.
     update_table=pc.take(aligned_incoming_table, index_mask)
 
@@ -997,7 +1016,9 @@ def update_flattend_table(current_table, incoming_table, update_key:str='id'):
     for column_name in aligned_current_table.column_names:
         logger.debug(f"Looking for updates in field: {column_name}")
         # Do not update the id column
-        if column_name == update_key:
+        if isinstance(update_keys, str) and column_name == update_keys:
+            continue
+        if isinstance(update_keys, list) and column_name in update_keys:
             continue
         if column_name == 'id':
             continue
@@ -1373,5 +1394,5 @@ def sort_schema(schema):
     field_names=[]
     for name in names_sorted:
         field_names.append(schema.field(name))
-    return pa.schema(field_names)
+    return pa.schema(field_names, metadata=schema.metadata)
 
