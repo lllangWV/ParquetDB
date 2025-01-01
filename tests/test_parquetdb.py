@@ -568,7 +568,7 @@ class TestParquetDB(unittest.TestCase):
         assert table['material_id'].combine_chunks().to_pylist()==[1, 2]
         data_2 = [{'material_id':1, 'material_name':'material_1_updated'}]
         
-        self.db.update(data_2, update_key='material_id')
+        self.db.update(data_2, update_keys='material_id')
         table=self.db.read()
         assert table['material_id'].combine_chunks().to_pylist()==[1, 2]
         assert table['material_name'].combine_chunks().to_pylist()==['material_1_updated', 'material_2']
@@ -581,8 +581,35 @@ class TestParquetDB(unittest.TestCase):
         
         table=pq.read_table(os.path.join(self.db.db_path, files[0]))
         assert table.num_rows==0
-    
+        
+    def test_update_multi_keys(self):
+        current_data = [
+            {'id_1': 100, 'id_2': 10,'field_1':'here'},
+            {'id_1': 55, 'id_2': 11},
+            {'id_1': 33, 'id_2': 12},
+            {'id_1': 12, 'id_2': 13},
+        ]
 
+        current_table = pa.Table.from_pylist(current_data)
+        self.db.create(current_table)
+        
+        # Create second table with salary data 
+        incoming_data = [
+            {'id_1': 100, 'id_2': 10,'field_2':'there'},
+            {'id_1': 5, 'id_2': 5},
+            {'id_1': 33, 'id_2': 13},  # Note: emp_id 4 doesn't exist in employees
+            {'id_1': 33, 'id_2': 12, 'field_2':'field_2', 'field_3':'field_3'},  # Note: emp_id 4 doesn't exist in employees
+        ]
+
+        incoming_table = ParquetDB.construct_table(incoming_data)
+
+
+        self.db.update(incoming_table, update_keys=['id_1', 'id_2'])
+        
+        table=self.db.read()
+        assert table['field_1'].combine_chunks().to_pylist()==['here', None, None, None]
+        assert table['field_2'].combine_chunks().to_pylist()==['there', None, 'field_2', None]
+        assert table['field_3'].combine_chunks().to_pylist()==[None, None, 'field_3', None]
 
 if __name__ == '__main__':
     # unittest.TextTestRunner().run(TestParquetDB('test_nested_data_handling'))
