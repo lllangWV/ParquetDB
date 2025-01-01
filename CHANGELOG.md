@@ -1,6 +1,24 @@
 
 ___
 
+# 0.13.0 (01-01-2025)
+
+##### Bugs
+- None identified
+
+##### New Features
+- Enhanced the `drop` method to recreate the dataset directory and initialize an empty table when dropping an existing dataset.
+
+##### Documentation updates
+- Updated `_version.py` and `CHANGELOG.md` for the new release.
+
+##### Maintenance
+- Merged updates from the main branch of the repository.
+
+___
+
+___
+
 # 0.12.0 (01-01-2025)
 
 ##### Bugs
