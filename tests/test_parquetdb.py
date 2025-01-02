@@ -425,8 +425,6 @@ class TestParquetDB(unittest.TestCase):
         self.assertEqual(df.iloc[0]['name'], 'Peter')
 
     def test_metadata(self):
-        
-
         metadata=self.db.get_metadata()
         self.db.set_metadata({'class':'test'})
         assert self.db.get_metadata()['class']=='test'
@@ -452,22 +450,25 @@ class TestParquetDB(unittest.TestCase):
         self.assertEqual(metadata['key3'], 'value3')
         self.assertEqual(metadata['key4'], 'value4')
         
-        
+        # Testing set_metadata with update=False
         self.db.set_metadata({'key5':'value5', 'key6':'value6'}, update=False)
-        metadata = self.db.get_metadata()
-        self.assertEqual(metadata['key5'], 'value5')
-        self.assertEqual(metadata['key6'], 'value6')
-        
+        assert self.db.get_metadata()=={'key5':'value5', 'key6':'value6'}
+   
+        # Testing set_field_metadata with update=True
         self.db.set_field_metadata(field_name='name', metadata={'key1':'value1', 'key2':'value2'})
-        
         schema=self.db.get_schema()
         assert schema.field('name').metadata=={b'key1':b'value1', b'key2':b'value2'}
         
+        # Testing set_field_metadata with update=True with existing metadata
+        self.db.set_field_metadata(field_name='name', metadata={'key3':'value3', 'key4':'value4'}, update=True)
+        schema=self.db.get_schema()
+        assert schema.field('name').metadata=={b'key1':b'value1', b'key2':b'value2', b'key3':b'value3', b'key4':b'value4'}
+        
+        # Testing set_field_metadata with update=False
         self.db.set_field_metadata(field_name='name', metadata={'key3':'value3', 'key4':'value4'}, update=False)
         schema=self.db.get_schema()
         assert schema.field('name').metadata=={b'key3':b'value3', b'key4':b'value4'}
         
-
     def test_drop_dataset(self):
         self.db.create(data=self.test_data)
         # Drop the table and check if it no longer exists
@@ -477,7 +478,6 @@ class TestParquetDB(unittest.TestCase):
         self.db.create(data=self.test_data)
         # Rename the table and check if the new name exists
         self.db.rename_dataset('renamed_table')
-
 
     def test_export_dataset(self):
         self.db.create(data=self.test_data)
@@ -543,7 +543,6 @@ class TestParquetDB(unittest.TestCase):
         
         assert table['b'].combine_chunks().to_pylist()[0]['c'] == 2
         assert table['b'].combine_chunks().to_pylist()[0]['d'] == 3
-        
         
     def test_update_maintains_existing_extension_arrays(self):
         data_1 = [{'pbc':[1, 0, 0]}, {'pbc':[0, 1, 0]}]
@@ -835,7 +834,7 @@ if __name__ == '__main__':
     # unittest.TextTestRunner().run(TestParquetDB('test_update_maintains_existing_extension_arrays'))
     # unittest.TextTestRunner().run(TestParquetDB('test_update_maintains_existing_extension_arrays'))
     # unittest.TextTestRunner().run(TestParquetDB('test_update_maintains_existing_extension_arrays_batches'))
-    # unittest.TextTestRunner().run(TestParquetDB('test_metadata'))
+    unittest.TextTestRunner().run(TestParquetDB('test_metadata'))
     # unittest.TextTestRunner().run(TestParquetDB('test_fixed_shape_tensor'))
     # unittest.TextTestRunner().run(TestParquetDB('test_metadata'))
     # unittest.TextTestRunner().run(TestParquetDB('test_initialize_empty_table'))
@@ -843,7 +842,7 @@ if __name__ == '__main__':
     #  unittest.TextTestRunner().run(TestParquetDB('test_create_and_read'))
     # unittest.TextTestRunner().run(TestParquetDB('test_update_multi_keys'))
     # unittest.TextTestRunner().run(TestParquetDB('test_fixed_shape_tensor'))
-    unittest.main()
+    # unittest.main()
     
     
 # if __name__ == '__main__':

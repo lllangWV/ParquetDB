@@ -1124,7 +1124,7 @@ def infer_pyarrow_types(data_dict: dict):
             infered_types[key] = pa.infer_type([value])
     return infered_types
 
-def update_schema(current_schema, schema=None, field_dict=None):
+def update_schema(current_schema, schema=None, field_dict=None, update_metadata=True):
     """
     Update the schema of a given table based on a provided schema or field modifications.
 
@@ -1137,15 +1137,15 @@ def update_schema(current_schema, schema=None, field_dict=None):
     ----------
     current_current : pa.Schema
         The current schema of the table.
-    
     schema : pa.Schema, optional
         A new schema to replace the existing schema of the table. If provided, this will
         completely override the current schema.
-    
     field_dict : dict, optional
         A dictionary where the keys are existing field names and the values are the new
         PyArrow field definitions to replace the old ones. This is used for selectively 
         updating specific fields within the current schema.
+    update_metadata : bool, optional
+        Whether to update the metadata of the table.
 
     Returns
     -------
@@ -1167,10 +1167,13 @@ def update_schema(current_schema, schema=None, field_dict=None):
 
             if field_name in current_field_names:
                 updated_schema=updated_schema.set(field_index, new_field)
+                
     if schema is not None:
         updated_schema=schema
-        if schema.metadata:
+        if schema.metadata and update_metadata:
             updated_metadata.update(schema.metadata)
+        else:
+            updated_metadata=schema.metadata
         
     field_names=[]
     for field in current_field_names:

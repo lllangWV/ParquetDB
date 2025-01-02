@@ -630,7 +630,8 @@ class ParquetDB:
 
     def update_schema(self, 
                       field_dict:dict=None, 
-                      schema:pa.Schema=None, 
+                      schema:pa.Schema=None,
+                      update_metadata:bool=True,
                       normalize_config:NormalizeConfig=NormalizeConfig()):
         """
         Updates the schema of the table in the dataset.
@@ -643,7 +644,10 @@ class ParquetDB:
             The new schema to apply to the table.
         normalize_config : NormalizeConfig, optional
             Configuration for the normalization process, optimizing performance by managing row distribution and file structure.
+        update_metadata : bool, optional
+            Whether to update the metadata of the table.
             
+
         Example
         -------
         >>> db.update_schema(field_dict={'age': pa.int32()})
@@ -657,7 +661,7 @@ class ParquetDB:
             logger.debug(f"incoming schema metadata : {schema.metadata}")
             
         # Update current schema
-        updated_schema=pyarrow_utils.update_schema(current_schema, schema, field_dict)
+        updated_schema=pyarrow_utils.update_schema(current_schema, schema, field_dict, update_metadata=update_metadata)
         
         logger.debug(f"updated schema metadata : {updated_schema.metadata}")
         logger.debug(f"updated schema names : {updated_schema.names}")
@@ -774,7 +778,7 @@ class ParquetDB:
         for field_name in schema.names:
             new_fields.append(schema.field(field_name))
 
-        self.update_schema(schema=pa.schema(new_fields, metadata=updated_metadata))
+        self.update_schema(schema=pa.schema(new_fields, metadata=updated_metadata), update_metadata=update)
 
     def set_field_metadata(self, field_name: str, metadata: dict, update:bool=True):
         schema=self.get_schema()
@@ -787,11 +791,12 @@ class ParquetDB:
             field_metadata.update(metadata)
         else:
             field_metadata=metadata
+            
         field = field.with_metadata(field_metadata)
         field_index = schema.get_field_index(field_name)
         schema = schema.set(field_index, field)
         
-        self.update_schema(schema=schema)
+        self.update_schema(schema=schema, update_metadata=update)
         return schema
     
     def rename_fields(self, name_map:dict, normalize_config:NormalizeConfig=NormalizeConfig()):
