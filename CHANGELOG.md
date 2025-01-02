@@ -1,6 +1,24 @@
 
 ___
 
+# 0.16.0 (01-02-2025)
+
+##### Bugs
+- None identified
+
+##### New Features
+- Enhanced unit tests to validate schema updates and ensure correct handling of metadata updates with the new parameter.
+
+##### Documentation updates
+- Updated `_version.py` and `CHANGELOG.md` for the new release.
+
+##### Maintenance
+- Merged changes from the main branch of the repository.
+
+___
+
+___
+
 # 0.15.0 (01-02-2025)
 
 ##### Bugs
