@@ -1,6 +1,27 @@
 
 ___
 
+# 0.14.0 (01-01-2025)
+
+##### Bugs
+- None identified
+
+##### New Features
+- None identified
+
+##### Documentation updates
+- Updated the CHANGELOG.md to reflect the new release.
+
+##### Maintenance
+- Refactored the ParquetDB preprocessing for improved code structure.
+- Removed outdated TODO comments from `parquetdb.py` to streamline the codebase.
+- Refactored update handling in ParquetDB. 
+- Updated `_version.py` to align with the new release.
+
+___
+
+___
+
 # 0.13.0 (01-01-2025)
 
 ##### Bugs
