@@ -452,10 +452,21 @@ class TestParquetDB(unittest.TestCase):
         self.assertEqual(metadata['key3'], 'value3')
         self.assertEqual(metadata['key4'], 'value4')
         
+        
+        self.db.set_metadata({'key5':'value5', 'key6':'value6'}, update=False)
+        metadata = self.db.get_metadata()
+        self.assertEqual(metadata['key5'], 'value5')
+        self.assertEqual(metadata['key6'], 'value6')
+        
         self.db.set_field_metadata(field_name='name', metadata={'key1':'value1', 'key2':'value2'})
         
         schema=self.db.get_schema()
         assert schema.field('name').metadata=={b'key1':b'value1', b'key2':b'value2'}
+        
+        self.db.set_field_metadata(field_name='name', metadata={'key3':'value3', 'key4':'value4'}, update=False)
+        schema=self.db.get_schema()
+        assert schema.field('name').metadata=={b'key3':b'value3', b'key4':b'value4'}
+        
 
     def test_drop_dataset(self):
         self.db.create(data=self.test_data)

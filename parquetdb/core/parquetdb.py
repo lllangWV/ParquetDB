@@ -750,7 +750,7 @@ class ParquetDB:
 
         return metadata
     
-    def set_metadata(self, metadata:dict):
+    def set_metadata(self, metadata:dict, update:bool=True):
         """
         Sets or updates the metadata of the dataset table.
 
@@ -767,20 +767,26 @@ class ParquetDB:
         new_fields=[]
         schema=self.get_schema()
         updated_metadata=self.get_metadata()
-        updated_metadata.update(metadata)
+        if update:
+            updated_metadata.update(metadata)
+        else:
+            updated_metadata=metadata
         for field_name in schema.names:
             new_fields.append(schema.field(field_name))
-        logger.debug(f"updated metadata: {updated_metadata}")
+
         self.update_schema(schema=pa.schema(new_fields, metadata=updated_metadata))
 
-    def set_field_metadata(self, field_name: str, metadata: dict):
+    def set_field_metadata(self, field_name: str, metadata: dict, update:bool=True):
         schema=self.get_schema()
         field = schema.field(field_name)
         
         field_metadata = field.metadata
         if field_metadata is None:
             field_metadata = {}
-        field_metadata.update(metadata)
+        if update:
+            field_metadata.update(metadata)
+        else:
+            field_metadata=metadata
         field = field.with_metadata(field_metadata)
         field_index = schema.get_field_index(field_name)
         schema = schema.set(field_index, field)
