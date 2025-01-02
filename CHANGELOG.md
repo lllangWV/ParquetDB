@@ -1,6 +1,24 @@
 
 ___
 
+# 0.15.0 (01-02-2025)
+
+##### Bugs
+- None identified
+
+##### New features
+- Modified unit tests to validate new metadata setting behaviors, ensuring proper functionality for both update and replace actions.
+
+##### Documentation updates
+- Updated `_version.py` and `CHANGELOG.md` for the new release.
+
+##### Maintenance
+- Merged changes from the main branch of the repository.
+
+___
+
+___
+
 # 0.14.0 (01-01-2025)
 
 ##### Bugs
