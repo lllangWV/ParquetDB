@@ -6,7 +6,7 @@ import shutil
 from glob import glob
 import time
 import itertools
-from typing import Callable, List, Optional, Union
+from typing import Callable, List, Optional, Union, Dict
 
 import pandas as pd
 import pyarrow as pa
@@ -780,21 +780,28 @@ class ParquetDB:
 
         self.update_schema(schema=pa.schema(new_fields, metadata=updated_metadata), update_metadata=update)
 
-    def set_field_metadata(self, field_name: str, metadata: dict, update:bool=True):
+    def set_field_metadata(self, fields_metadata: Dict[str, dict], update:bool=True):
         schema=self.get_schema()
-        field = schema.field(field_name)
         
-        field_metadata = field.metadata
-        if field_metadata is None:
-            field_metadata = {}
-        if update:
-            field_metadata.update(metadata)
-        else:
-            field_metadata=metadata
+        for field_name, incoming_field_metadata in fields_metadata.items():
+            if field_name not in schema.names:
+                logger.warning(f"Field {field_name} not found in schema. Skipping.")
+                continue
             
-        field = field.with_metadata(field_metadata)
-        field_index = schema.get_field_index(field_name)
-        schema = schema.set(field_index, field)
+            field = schema.field(field_name)
+            
+            field_metadata = field.metadata
+            if field_metadata is None:
+                field_metadata = {}
+                
+            if update:
+                field_metadata.update(incoming_field_metadata)
+            else:
+                field_metadata=incoming_field_metadata
+            
+            field = field.with_metadata(field_metadata)
+            field_index = schema.get_field_index(field_name)
+            schema = schema.set(field_index, field)
         
         self.update_schema(schema=schema, update_metadata=update)
         return schema

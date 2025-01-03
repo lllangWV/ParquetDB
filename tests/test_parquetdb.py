@@ -455,17 +455,21 @@ class TestParquetDB(unittest.TestCase):
         assert self.db.get_metadata()=={'key5':'value5', 'key6':'value6'}
    
         # Testing set_field_metadata with update=True
-        self.db.set_field_metadata(field_name='name', metadata={'key1':'value1', 'key2':'value2'})
+        
+        fields_metadata={'name':{'key1':'value1', 'key2':'value2'}}
+        self.db.set_field_metadata(fields_metadata=fields_metadata)
         schema=self.db.get_schema()
         assert schema.field('name').metadata=={b'key1':b'value1', b'key2':b'value2'}
         
         # Testing set_field_metadata with update=True with existing metadata
-        self.db.set_field_metadata(field_name='name', metadata={'key3':'value3', 'key4':'value4'}, update=True)
+        fields_metadata={'name':{'key3':'value3', 'key4':'value4'}}
+        self.db.set_field_metadata(fields_metadata=fields_metadata, update=True)
         schema=self.db.get_schema()
         assert schema.field('name').metadata=={b'key1':b'value1', b'key2':b'value2', b'key3':b'value3', b'key4':b'value4'}
         
         # Testing set_field_metadata with update=False
-        self.db.set_field_metadata(field_name='name', metadata={'key3':'value3', 'key4':'value4'}, update=False)
+        fields_metadata={'name':{'key3':'value3', 'key4':'value4'}}
+        self.db.set_field_metadata(fields_metadata=fields_metadata, update=False)
         schema=self.db.get_schema()
         assert schema.field('name').metadata=={b'key3':b'value3', b'key4':b'value4'}
         
@@ -834,7 +838,7 @@ if __name__ == '__main__':
     # unittest.TextTestRunner().run(TestParquetDB('test_update_maintains_existing_extension_arrays'))
     # unittest.TextTestRunner().run(TestParquetDB('test_update_maintains_existing_extension_arrays'))
     # unittest.TextTestRunner().run(TestParquetDB('test_update_maintains_existing_extension_arrays_batches'))
-    unittest.TextTestRunner().run(TestParquetDB('test_metadata'))
+    # unittest.TextTestRunner().run(TestParquetDB('test_metadata'))
     # unittest.TextTestRunner().run(TestParquetDB('test_fixed_shape_tensor'))
     # unittest.TextTestRunner().run(TestParquetDB('test_metadata'))
     # unittest.TextTestRunner().run(TestParquetDB('test_initialize_empty_table'))
@@ -842,7 +846,7 @@ if __name__ == '__main__':
     #  unittest.TextTestRunner().run(TestParquetDB('test_create_and_read'))
     # unittest.TextTestRunner().run(TestParquetDB('test_update_multi_keys'))
     # unittest.TextTestRunner().run(TestParquetDB('test_fixed_shape_tensor'))
-    # unittest.main()
+    unittest.main()
     
     
 # if __name__ == '__main__':
