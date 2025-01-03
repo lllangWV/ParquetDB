@@ -810,15 +810,19 @@ class ParquetDB:
         self.update_schema(schema=schema, update_metadata=update)
         return schema
     
-    def get_field_metadata(self, field_name:str = None, return_bytes:bool=False):
+    def get_field_metadata(self, field_names:Union[str, List[str]] = None, return_bytes:bool=False):
         schema=self.get_schema()
         fields_metadata={}
         
-        if field_name:
-            field_metadata=schema.field(field_name).metadata
-            if field_metadata is None:
-                field_metadata={}
-            fields_metadata[field_name]=field_metadata
+        if field_names:
+            if isinstance(field_names, str):
+                field_names=[field_names]
+                
+            for field_name in field_names:
+                field_metadata=schema.field(field_name).metadata
+                if field_metadata is None:
+                    field_metadata={}
+                fields_metadata[field_name]=field_metadata
         else:
             for field in schema:
                 field_metadata=field.metadata
@@ -830,10 +834,7 @@ class ParquetDB:
             for field_name, field_metadata in fields_metadata.items():
                 fields_metadata[field_name]={key.decode('utf-8'): value.decode('utf-8') for key, value in field_metadata.items()}
                     
-        if field_name:
-            return fields_metadata[field_name]
-        else:
-            return fields_metadata
+        return fields_metadata
     
     def rename_fields(self, name_map:dict, normalize_config:NormalizeConfig=NormalizeConfig()):
         schema=self.get_schema()
