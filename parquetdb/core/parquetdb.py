@@ -118,7 +118,7 @@ class LoadConfig:
     memory_pool: Optional[pa.MemoryPool] = None
 
 class ParquetDB:
-    def __init__(self, db_path):
+    def __init__(self, db_path, initial_fields:List[pa.Field]=None):
         """
         Initializes the ParquetDB object.
 
@@ -134,9 +134,11 @@ class ParquetDB:
         self.db_path=db_path
         self.dataset_name=os.path.basename(self.db_path)
         self.basename_template = f'{self.dataset_name}_{{i}}.parquet'
-
         os.makedirs(self.db_path, exist_ok=True)
-
+        
+        if initial_fields is None:
+            initial_fields=[]
+        initial_fields= [pa.field('id', pa.int64())] + initial_fields
         
         self.load_formats=['batches','table','dataset']
 
@@ -145,7 +147,7 @@ class ParquetDB:
         
         if self.is_empty():
             logger.info(f"Dataset {self.dataset_name} is empty. Creating empty dataset.")
-            table=pyarrow_utils.create_empty_table(schema=pa.schema([pa.field('id', pa.int64())]))
+            table=pyarrow_utils.create_empty_table(schema=pa.schema(initial_fields))
             pq.write_table(table, self._get_save_path())
         
     def create(self, 

@@ -595,7 +595,22 @@ class TestParquetDB(unittest.TestCase):
         assert len(files)==1
         
         table=pq.read_table(os.path.join(self.db.db_path, files[0]))
-        assert table.num_rows==0
+        table_shape=table.shape
+        assert table_shape==(0, 1)
+        
+        for file in files:
+            os.remove(os.path.join(self.db.db_path, file))
+        
+        # Test with initial fields
+        db = ParquetDB(self.db.db_path, initial_fields=[pa.field('source_id', pa.int64()), pa.field('target_id', pa.int64())])
+        assert db.is_empty()
+        
+        files=os.listdir(db.db_path)
+        assert len(files)==1
+        
+        table=pq.read_table(os.path.join(self.db.db_path, files[0]))
+        table_shape=table.shape
+        assert table_shape==(0, 3)
         
     def test_update_multi_keys(self):
         current_data = [
@@ -833,6 +848,7 @@ class TestParquetDB(unittest.TestCase):
         for name in full_outer_table_sorted.column_names:
             assert full_outer_table_pyarrow_sorted[name].to_pylist()==full_outer_table_sorted[name].to_pylist()
 
+
 if __name__ == '__main__':
     # unittest.TextTestRunner().run(TestParquetDB('test_nested_data_handling'))
     # unittest.TextTestRunner().run(TestParquetDB('test_update_maintains_existing_extension_arrays'))
@@ -841,12 +857,12 @@ if __name__ == '__main__':
     # unittest.TextTestRunner().run(TestParquetDB('test_metadata'))
     # unittest.TextTestRunner().run(TestParquetDB('test_fixed_shape_tensor'))
     # unittest.TextTestRunner().run(TestParquetDB('test_metadata'))
-    # unittest.TextTestRunner().run(TestParquetDB('test_initialize_empty_table'))
+    unittest.TextTestRunner().run(TestParquetDB('test_initialize_empty_table'))
     # unittest.TextTestRunner().run(TestParquetDB('test_batch_reading'))
     #  unittest.TextTestRunner().run(TestParquetDB('test_create_and_read'))
     # unittest.TextTestRunner().run(TestParquetDB('test_update_multi_keys'))
     # unittest.TextTestRunner().run(TestParquetDB('test_fixed_shape_tensor'))
-    unittest.main()
+    # unittest.main()
     
     
 # if __name__ == '__main__':
