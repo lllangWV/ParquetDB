@@ -458,20 +458,20 @@ class TestParquetDB(unittest.TestCase):
         
         fields_metadata={'name':{'key1':'value1', 'key2':'value2'}}
         self.db.set_field_metadata(fields_metadata=fields_metadata)
-        schema=self.db.get_schema()
-        assert schema.field('name').metadata=={b'key1':b'value1', b'key2':b'value2'}
+        field_metadata=self.db.get_field_metadata(field_name='name')
+        assert field_metadata=={'key1':'value1', 'key2':'value2'}
         
         # Testing set_field_metadata with update=True with existing metadata
         fields_metadata={'name':{'key3':'value3', 'key4':'value4'}}
         self.db.set_field_metadata(fields_metadata=fields_metadata, update=True)
-        schema=self.db.get_schema()
-        assert schema.field('name').metadata=={b'key1':b'value1', b'key2':b'value2', b'key3':b'value3', b'key4':b'value4'}
+        field_metadata=self.db.get_field_metadata(field_name='name', return_bytes=True)
+        assert field_metadata=={b'key1':b'value1', b'key2':b'value2', b'key3':b'value3', b'key4':b'value4'}
         
         # Testing set_field_metadata with update=False
         fields_metadata={'name':{'key3':'value3', 'key4':'value4'}}
         self.db.set_field_metadata(fields_metadata=fields_metadata, update=False)
-        schema=self.db.get_schema()
-        assert schema.field('name').metadata=={b'key3':b'value3', b'key4':b'value4'}
+        field_metadata=self.db.get_field_metadata(field_name='name', return_bytes=True)
+        assert field_metadata=={b'key3':b'value3', b'key4':b'value4'}
         
     def test_drop_dataset(self):
         self.db.create(data=self.test_data)
