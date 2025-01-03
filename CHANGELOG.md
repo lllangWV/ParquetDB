@@ -1,6 +1,24 @@
 
 ___
 
+# 0.18.0 (01-03-2025)
+
+##### Bugs
+- None identified
+
+##### New features
+- Enhanced metadata handling for ParquetDB
+
+##### Documentation updates
+- Updated `_version.py` and `CHANGELOG.md` in preparation for the new release
+
+##### Maintenance
+- Merged updates from the main branch of the repository
+
+___
+
+___
+
 # 0.17.0 (01-03-2025)
 
 ##### Bugs
