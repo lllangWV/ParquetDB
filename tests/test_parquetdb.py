@@ -481,7 +481,9 @@ class TestParquetDB(unittest.TestCase):
     def test_rename_dataset(self):
         self.db.create(data=self.test_data)
         # Rename the table and check if the new name exists
-        self.db.rename_dataset('renamed_table')
+        self.db.rename_dataset('renamed_table', remove_dest=True)
+        
+        assert self.db.dataset_name=='renamed_table'
 
     def test_export_dataset(self):
         self.db.create(data=self.test_data)
@@ -857,12 +859,13 @@ if __name__ == '__main__':
     # unittest.TextTestRunner().run(TestParquetDB('test_metadata'))
     # unittest.TextTestRunner().run(TestParquetDB('test_fixed_shape_tensor'))
     # unittest.TextTestRunner().run(TestParquetDB('test_metadata'))
-    unittest.TextTestRunner().run(TestParquetDB('test_initialize_empty_table'))
+    # unittest.TextTestRunner().run(TestParquetDB('test_initialize_empty_table'))
     # unittest.TextTestRunner().run(TestParquetDB('test_batch_reading'))
     #  unittest.TextTestRunner().run(TestParquetDB('test_create_and_read'))
     # unittest.TextTestRunner().run(TestParquetDB('test_update_multi_keys'))
     # unittest.TextTestRunner().run(TestParquetDB('test_fixed_shape_tensor'))
-    # unittest.main()
+    # unittest.TextTestRunner().run(TestParquetDB('test_rename_dataset'))
+    unittest.main()
     
     
 # if __name__ == '__main__':

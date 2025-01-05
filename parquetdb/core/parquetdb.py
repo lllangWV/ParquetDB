@@ -131,10 +131,8 @@ class ParquetDB:
         -------
         >>> db = ParquetDB(db_path='/path/to/db')
         """
-        self.db_path=db_path
-        self.dataset_name=os.path.basename(self.db_path)
-        self.basename_template = f'{self.dataset_name}_{{i}}.parquet'
-        os.makedirs(self.db_path, exist_ok=True)
+        self._db_path=db_path
+        os.makedirs(self._db_path, exist_ok=True)
         
         if initial_fields is None:
             initial_fields=[]
@@ -150,6 +148,18 @@ class ParquetDB:
             table=pyarrow_utils.create_empty_table(schema=pa.schema(initial_fields))
             pq.write_table(table, self._get_save_path())
         
+    @property
+    def db_path(self):
+        return self._db_path
+
+    @property
+    def dataset_name(self):
+        return os.path.basename(self._db_path)
+    
+    @property
+    def basename_template(self):
+        return f'{self.dataset_name}_{{i}}.parquet'
+    
     def create(self, 
                data:Union[List[dict],dict,pd.DataFrame],
                schema:pa.Schema=None,
@@ -927,7 +937,7 @@ class ParquetDB:
             logger.warning(f"Table {self.dataset_name} does not exist.")
         logger.info(f"Dataset {self.dataset_name} dropped")
     
-    def rename_dataset(self, new_name:str):
+    def rename_dataset(self, new_name:str, remove_dest:bool=False):
         """
         Renames the current dataset to a new name.
 
@@ -944,23 +954,30 @@ class ParquetDB:
         if not self.dataset_exists():
             raise ValueError(f"Dataset {self.dataset_name} does not exist.")
 
-        old_dir=os.path.dirname(self.db_path)
-        new_dir=os.path.join(old_dir, new_name)
+        old_dir=self.db_path
+        parent_dir=os.path.dirname(old_dir)
+        new_dir=os.path.join(parent_dir, new_name)
         old_name=self.dataset_name
+        
+        if os.path.exists(new_dir):
+            if remove_dest:
+                shutil.rmtree(new_dir)
+            else:
+                raise ValueError(f"Dataset {new_name} already exists.")
 
         # Rename all files in the old directory
         old_filepaths = glob(os.path.join(old_dir, f'{old_name}_*.parquet'))
         for old_filepath in old_filepaths:
             filename=os.path.basename(old_filepath)
             file_index=filename.split('.')[0].replace('_','')
+            
             new_filepath = os.path.join(old_dir, f'{new_name}_{file_index}.parquet')
             os.rename(old_filepath, new_filepath)
-
+            
         # Finally, rename the directory
-        os.rename(self.db_path, new_dir)
+        os.rename(old_dir, new_dir)
 
-        self.dataset_name=new_name
-        self.db_path=new_dir
+        self._db_path=new_dir
 
         logger.info(f"Table {old_name} has been renamed to {new_name}.")
 
