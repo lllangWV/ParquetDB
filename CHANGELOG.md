@@ -1,6 +1,43 @@
 
 ___
 
+# 0.20.0 (01-06-2025)
+
+##### Bugs
+- None identified
+
+##### New Features
+- None identified
+
+##### Documentation updates
+- Updated `_version.py` and `CHANGELOG.md` to reflect the new release
+
+##### Maintenance
+- None identified
+
+___
+
+___
+
+# 0.19.0 (01-03-2025)
+
+##### Bugs
+- None identified
+
+##### New features
+- Enhanced ParquetDB initialization to accept initial fields for schema definition.
+- Refactored the `get_field_metadata` method to support retrieval of metadata for multiple field names.
+
+##### Documentation updates
+- Updated version information in `_version.py` and `CHANGELOG.md` following the new release.
+
+##### Maintenance
+- Merged changes from the main branch of the repository.
+
+___
+
+___
+
 # 0.18.0 (01-03-2025)
 
 ##### Bugs
