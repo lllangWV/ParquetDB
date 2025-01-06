@@ -5,6 +5,7 @@ import os
 import shutil
 from glob import glob
 import time
+import dill
 import itertools
 from typing import Callable, List, Optional, Union, Dict
 
@@ -18,7 +19,13 @@ import pyarrow.fs as fs
 from parquetdb import config
 from parquetdb.utils.general_utils import timeit, is_directory_empty
 from parquetdb.utils import pyarrow_utils
+from parquetdb.utils import data_utils
+from parquetdb.utils import mp_utils
+from parquetdb.settings import SERIALIZE_PYTHON_OBJECTS
+from parquetdb.core import types
 
+
+dill.settings['recurse'] = True
 # Logger setup
 logger = logging.getLogger(__name__)
 
@@ -118,7 +125,7 @@ class LoadConfig:
     memory_pool: Optional[pa.MemoryPool] = None
 
 class ParquetDB:
-    def __init__(self, db_path, initial_fields:List[pa.Field]=None):
+    def __init__(self, db_path, initial_fields:List[pa.Field]=None, serialize_python_objects:bool=SERIALIZE_PYTHON_OBJECTS):
         """
         Initializes the ParquetDB object.
 
@@ -133,7 +140,8 @@ class ParquetDB:
         """
         self._db_path=db_path
         os.makedirs(self._db_path, exist_ok=True)
-        
+        self._serialize_python_objects=serialize_python_objects
+
         if initial_fields is None:
             initial_fields=[]
         initial_fields= [pa.field('id', pa.int64())] + initial_fields
@@ -164,6 +172,7 @@ class ParquetDB:
                data:Union[List[dict],dict,pd.DataFrame],
                schema:pa.Schema=None,
                metadata:dict=None,
+               fields_metadata:dict=None,
                treat_fields_as_ragged:List[str]=None,
                convert_to_fixed_shape:bool=True,
                normalize_dataset:bool=False,
@@ -180,6 +189,8 @@ class ParquetDB:
             The schema for the incoming data.
         metadata : dict, optional
             Metadata to be attached to the table.
+        fields_metadata : dict, optional
+            Metadata to be attached to the fields.
         normalize_dataset : bool, optional
             If True, the dataset will be normalized after the data is added (default is True).
         treat_fields_as_ragged : list of str, optional
@@ -197,7 +208,8 @@ class ParquetDB:
         os.makedirs(self.db_path, exist_ok=True)
         
         # Construct incoming table from the data
-        incoming_table = ParquetDB.construct_table(data, schema=schema, metadata=metadata)
+        incoming_table = ParquetDB.construct_table(data, schema=schema, metadata=metadata, fields_metadata=fields_metadata, 
+                                                   serialize_python_objects=self._serialize_python_objects)
         
         
         if 'id' in incoming_table.column_names:
@@ -323,6 +335,7 @@ class ParquetDB:
                data: Union[List[dict], dict, pd.DataFrame], 
                schema:pa.Schema=None, 
                metadata:dict=None,
+               fields_metadata:dict=None,
                update_keys:Union[List[str], str] =['id'],
                treat_fields_as_ragged=None,
                convert_to_fixed_shape:bool=True,
@@ -338,6 +351,8 @@ class ParquetDB:
         schema : pyarrow.Schema, optional
             The schema for the data being added. If not provided, it will be inferred.
         metadata : dict, optional
+            Additional metadata to store alongside the data.
+        fields_metadata : dict, optional
             Additional metadata to store alongside the data.
         update_key : list of str or str, optional
             The keys to use for the update. If a list, the update will be performed on the intersection of the existing data and the incoming data.
@@ -359,7 +374,8 @@ class ParquetDB:
         logger.info("Updating data")
         
         # Construct incoming table from the data
-        incoming_table = ParquetDB.construct_table(data, schema=schema, metadata=metadata)
+        incoming_table = ParquetDB.construct_table(data, schema=schema, metadata=metadata, fields_metadata=fields_metadata, 
+                                                   serialize_python_objects=self._serialize_python_objects)
         
         incoming_table = ParquetDB.preprocess_table(incoming_table, 
                                                 treat_fields_as_ragged=treat_fields_as_ragged, 
@@ -1478,47 +1494,81 @@ class ParquetDB:
             raise ValueError(f"load_format must be one of the following: {self.load_formats}")
     
     @staticmethod
-    def construct_table(data, schema=None, metadata=None):
-            logger.info("Validating data")
-            if isinstance(data, dict):
-                logger.info("The incoming data is a dictonary of arrays")
-                for key, value in data.items():
-                    if not isinstance(value, List):
-                        data[key]=[value]
-                table=pa.Table.from_pydict(data)
-                incoming_array=table.to_struct_array()
-                incoming_array=incoming_array.flatten()
-                incoming_schema=table.schema
-                
-            elif isinstance(data, list):
-                logger.info("Incoming data is a list of dictionaries")
-                # Convert to pyarrow array to get the schema. This method is faster than .from_pylist
-                # As from_pylist iterates through record in a python loop, but pa.array handles this in C++/cython
-                incoming_array=pa.array(data)
-                incoming_schema=pa.schema(incoming_array.type)
-                incoming_array=incoming_array.flatten()
-                
-            elif isinstance(data, pd.DataFrame):
-                logger.info("Incoming data is a pandas dataframe")
-                table=pa.Table.from_pandas(data)
-                incoming_array=table.to_struct_array()
-                incoming_array=incoming_array.flatten()
-                incoming_schema=table.schema
-                
-            elif isinstance(data, pa.lib.Table):
-                incoming_schema=data.schema
-                incoming_array=data.to_struct_array()
-                incoming_array=incoming_array.flatten()
-                
-            else:
-                raise TypeError("Data must be a dictionary or a list of dictionaries.")
+    def construct_table(data, schema=None, metadata=None, fields_metadata=None, serialize_python_objects:bool=SERIALIZE_PYTHON_OBJECTS):
+        
+        if isinstance(data, pa.Table):
             
+            incoming_schema=data.schema
             if schema is None:
                 schema=incoming_schema
-            schema=schema.with_metadata(metadata)
+            incoming_array=data.to_struct_array()
+            incoming_array=incoming_array.flatten()
+        elif isinstance(data, pd.DataFrame) or isinstance(data, dict) or isinstance(data, list):
+            incoming_array, schema = ParquetDB.process_data_with_python_objects(data, schema, serialize_python_objects)
+        else:
+            raise ValueError("Data must be a dictionary of arrays, a list of dictionaries, a pandas dataframe, or a pyarrow table")
+        
+        # Add metadata to the schema
+        if fields_metadata is not None:
+            incoming_fields_metadata=set(fields_metadata.keys())
+            existing_fields_metadata=set(schema.names)
+            if incoming_fields_metadata != existing_fields_metadata:
+                raise ValueError(f"The following fields are not in the schema: {incoming_fields_metadata - existing_fields_metadata}")
+        
+            for field_name, custom_field_metadata in fields_metadata.items():
+                field = schema.field(field_name)
+                field_metadata = field.metadata
+                if field_metadata is None:
+                    field_metadata = {}
+                field_metadata.update(custom_field_metadata)
+                
+                field=field.with_metadata(field_metadata)
+                field_index = schema.get_field_index(field_name)
+                schema = schema.set(field_index, field)
+    
+        # Add metadata to the schema
+        schema=schema.with_metadata(metadata)
 
-            incoming_table=pa.Table.from_arrays(incoming_array,schema=schema)
-            return incoming_table
+        return pa.Table.from_arrays(incoming_array,schema=schema)
+
+    @staticmethod
+    def process_data_with_python_objects(data, schema=None, serialize_python_objects:bool=SERIALIZE_PYTHON_OBJECTS):
+        if isinstance(data, dict):
+            print(data)
+            df = pd.DataFrame.from_records(data)
+        elif isinstance(data, list):
+            df = pd.DataFrame.from_dict(data)
+        elif isinstance(data, pd.DataFrame):
+            df = data
+        else:
+            raise ValueError("Data must be a dictionary of arrays, a list of dictionaries, or a pandas dataframe.")
+        data=None
+        
+        
+        if serialize_python_objects:
+            # Check for python objects and serialize them
+            python_object_columns=[]
+            for column in df.columns:
+                values=df[column].values
+                if data_utils.has_python_object(values):
+                    logger.debug(f"Serializing {column}")
+                    python_object_columns.append(column)
+                    
+            for column in python_object_columns:
+                df[column]=types.PythonObjectPandasArray(df[column])
+        
+        # Convert to pyarrow table
+        table=pa.Table.from_pandas(df)
+        incoming_array=table.to_struct_array()
+        incoming_array=incoming_array.flatten()
+        incoming_schema=table.schema
+
+        # If schema is not provided, use the incoming schema
+        if schema is None:
+            schema=incoming_schema
+        
+        return incoming_array, schema
+        
 
 def generator_schema_cast(generator, new_schema):
     for record_batch in generator:
@@ -1532,10 +1582,6 @@ def table_schema_cast(current_table, new_schema):
         
 def table_update(current_table, incoming_table, update_keys:Union[List[str], str] =['id']):
     updated_table=pyarrow_utils.update_flattend_table(current_table, incoming_table, update_keys=update_keys)
-    # print(current_table.to_pandas())
-    # print(incoming_table.to_pandas())
-    # updated_table=pyarrow_utils.join_tables(current_table, incoming_table, left_keys=update_keys,right_keys=update_keys,join_type='left outer')
-    # print(updated_table.to_pandas())
     return updated_table
         
 def generator_update(generator, incoming_table, update_keys:Union[List[str], str] =['id']):

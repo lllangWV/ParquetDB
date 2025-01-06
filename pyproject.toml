@@ -36,7 +36,10 @@ dependencies = [
     "variconfig",
     "matplotlib",
     "beautifulsoup4",
-    "requests"
+    "requests",
+    "dill",
+    "pathos"
+
 ]
 
 [project.optional-dependencies]

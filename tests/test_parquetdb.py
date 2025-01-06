@@ -14,6 +14,7 @@ import pandas as pd
 
 from parquetdb import ParquetDB, config
 from parquetdb.core.parquetdb import LoadConfig, NormalizeConfig
+from parquetdb.core import types
 from parquetdb.utils import pyarrow_utils
 
 logger=logging.getLogger('tests')
@@ -393,7 +394,7 @@ class TestParquetDB(unittest.TestCase):
         self.db.create(data)
 
         # Update the 'Mia' record to include a new field and change age to 60
-        data = {'id':0, 'age': 60, 'state':'NY'}
+        data = [{'id':0, 'age': 60, 'state':'NY'}]
         self.db.update(data)
 
         # Read back the data
@@ -622,8 +623,8 @@ class TestParquetDB(unittest.TestCase):
             {'id_1': 12, 'id_2': 13},
         ]
 
-        current_table = pa.Table.from_pylist(current_data)
-        self.db.create(current_table)
+        
+        self.db.create(current_data)
         
         # Create second table with salary data 
         incoming_data = [
@@ -850,6 +851,47 @@ class TestParquetDB(unittest.TestCase):
         for name in full_outer_table_sorted.column_names:
             assert full_outer_table_pyarrow_sorted[name].to_pylist()==full_outer_table_sorted[name].to_pylist()
 
+    def test_python_objects(self):
+        self.db._serialize_python_objects=True
+        
+        from pymatgen.core import Structure
+        structure = Structure(
+            lattice=[[0, 2.13, 2.13], [2.13, 0, 2.13], [2.13, 2.13, 0]],
+            species=["Mg", "O"],
+            coords=[[0, 0, 0], [0.5, 0.5, 0.5]],
+        )
+        data=[
+            {'name': 'Alice', 'age': 30, 'time': pd.Timestamp('20180310'),'structure':structure},
+            {'name': 'Alice', 'age': 30, 'time': pd.Timestamp('20180310'),'structure':structure},
+        ]
+        self.db.create(data)
+        
+        table=self.db.read()
+        df=table.to_pandas()
+
+        assert isinstance(df['structure'][0], Structure)
+
+        self.db.create(data)
+        
+        table=self.db.read()
+        df=table.to_pandas()
+        assert isinstance(df['structure'][1], Structure)
+
+        
+        data=[
+            {'id':1, 'new_field':1},
+        ]
+        self.db.update(data)
+        
+        table=self.db.read()
+        df=table.to_pandas()
+        assert df['new_field'][1]==1
+        
+        assert table['structure'].type==types.PythonObjectArrowType()
+        
+        
+
+        
 
 if __name__ == '__main__':
     # unittest.TextTestRunner().run(TestParquetDB('test_nested_data_handling'))
@@ -865,20 +907,27 @@ if __name__ == '__main__':
     # unittest.TextTestRunner().run(TestParquetDB('test_update_multi_keys'))
     # unittest.TextTestRunner().run(TestParquetDB('test_fixed_shape_tensor'))
     # unittest.TextTestRunner().run(TestParquetDB('test_rename_dataset'))
+    # unittest.TextTestRunner().run(TestParquetDB('test_update_with_new_field_included'))
+    # unittest.TextTestRunner().run(TestParquetDB('test_python_objects'))
+    # unittest.TextTestRunner().run(TestParquetDB('test_update_multi_keys'))
     unittest.main()
     
     
 # if __name__ == '__main__':
-#     for x in range(50):
+#     for x in range(100):
 #         print(f"Iteration {x+1}")
         
-        # # Create a test suite and add your test case
-        # suite = unittest.TestLoader().run(TestParquetDB('test_nested_data_handling'))
+        # Create a test suite and add your test case
+        # suite = unittest.TestLoader().run(TestParquetDB('test_update_multi_keys'))
         # Create a test suite and add your test case
         # suite = unittest.TestLoader().loadTestsFromTestCase(TestParquetDB)
         
         # Run the tests
         # unittest.TextTestRunner().run(suite)
-        # unittest.TextTestRunner().run(TestParquetDB('test_add_new_field'))
+        # try:
+        #     unittest.TextTestRunner().run(TestParquetDB('test_update_multi_keys'))
+        # except Exception as e:
+        #     break
+
 
 
