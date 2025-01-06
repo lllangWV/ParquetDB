@@ -1,6 +1,26 @@
 
 ___
 
+# 0.21.0 (01-06-2025)
+
+##### Bugs
+- None identified
+
+##### New Features
+- Enhanced ParquetDB to support Python object serialization.
+- Added new utility functions for multiprocessing and plotting.
+
+##### Documentation updates
+- Updated `_version.py` and `CHANGELOG.md` for new release.
+
+##### Maintenance
+- Removed redundant utility files to improve maintainability.
+- Updated unit tests to align with changes in `rename_dataset` functionality.
+
+___
+
+___
+
 # 0.20.0 (01-06-2025)
 
 ##### Bugs
