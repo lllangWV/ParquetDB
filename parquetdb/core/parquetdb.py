@@ -32,7 +32,7 @@ logger = logging.getLogger(__name__)
 
 # TODO: Issue when updating structs with new fields that are inside of ListArrays
 # TODO: Creating empty table does not work for extenstions
-
+# TODO: Add support for serializationg and deserializing for nested python object
 
 @dataclass
 class NormalizeConfig:
