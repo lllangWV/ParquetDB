@@ -1,6 +1,24 @@
 
 ___
 
+# 0.23.1 (01-08-2025)
+
+##### Bugs
+- None identified
+
+##### New features
+- Enhanced the `parallel_apply` function in `mp_utils.py` to allow the specification of a `processes` parameter, improving flexibility in multiprocessing for large datasets.
+
+##### Documentation updates
+- Updated `_version.py` and `CHANGELOG.md` to reflect the latest release.
+
+##### Maintenance
+- Merged changes from the main branch of the repository on GitHub.
+
+___
+
+___
+
 # 0.23.0 (01-08-2025)
 
 ##### Bugs
