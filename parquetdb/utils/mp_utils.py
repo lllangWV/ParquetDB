@@ -33,9 +33,12 @@ logger = logging.getLogger(__name__)
 #         return results
 
 
-def parallel_apply(func, data):
+def parallel_apply(func, data, processes=False):
     if len(data) > 2000 and config.use_multiprocessing:
-        with Client(silence_logs=logging.ERROR) as client:
+        with Client(
+            silence_logs=logging.ERROR,
+            processes=processes,
+        ) as client:
             serialized_futures = client.map(func, data)
             results = client.gather(serialized_futures)
     else:
