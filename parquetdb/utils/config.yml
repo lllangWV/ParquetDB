@@ -4,7 +4,8 @@ external_data_dir: "{{ data_dir }}/external"
 log_dir: "{{ root_dir }}/logs"
 tests_dir: "{{ root_dir }}/tests"
 db_name: 'ParquetDB'
-n_cores: 
+use_multiprocessing: False
+serialize_python_objects: True
 
 numpy_config:
   np_printoptions:
@@ -47,11 +48,11 @@ logging_config:
       formatter: simple
       stream: ext://sys.stdout
 
-    file:
-      class: logging.FileHandler
-      formatter: simple
-      filename: "{{ log_dir }}/parquetdb.log"
-      mode: a
+    # file:
+    #   class: logging.FileHandler
+    #   formatter: simple
+    #   filename: "{{ log_dir }}/parquetdb.log"
+    #   mode: a
 
   loggers:
     parquetdb:

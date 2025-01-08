@@ -2,8 +2,11 @@ import logging
 from concurrent.futures import ProcessPoolExecutor, ThreadPoolExecutor
 from functools import partial
 
+from dask.distributed import Client
 from pathos.pools import ProcessPool
 from pathos.threading import ThreadPool
+
+from parquetdb.utils.config import config
 
 logger = logging.getLogger(__name__)
 
@@ -16,18 +19,28 @@ logger = logging.getLogger(__name__)
 #         return future.result()
 
 
-def parallel_apply(func, data, executor=None):
+# def parallel_apply(func, data, executor=None):
 
-    if executor is None:
-        executor = ProcessPool()
+#     if executor is None:
+#         executor = ProcessPool()
 
-    if len(data) > 3500:
-        with executor:
-            future = executor.map(func, data)
-            return future
+#     if len(data) > 3500:
+#         with executor:
+#             future = executor.map(func, data)
+#             return future
+#     else:
+#         results = [func(item) for item in data]
+#         return results
+
+
+def parallel_apply(func, data):
+    if len(data) > 2000 and config.use_multiprocessing:
+        with Client(silence_logs=logging.ERROR) as client:
+            serialized_futures = client.map(func, data)
+            results = client.gather(serialized_futures)
     else:
         results = [func(item) for item in data]
-        return results
+    return results
 
 
 def mp_task(func, list, n_cores=None, **kwargs):
