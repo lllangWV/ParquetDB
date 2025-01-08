@@ -1,6 +1,25 @@
 
 ___
 
+# 0.22.0 (01-07-2025)
+
+##### Bugs
+- None identified
+
+##### New Features
+- None identified
+
+##### Documentation updates
+- Updated `_version.py` and `CHANGELOG.md` to reflect the new release
+
+##### Maintenance
+- Ensured consistent formatting and spacing throughout the codebase for improved readability
+- Merged updates from the main branch of the repository
+
+___
+
+___
+
 # 0.21.0 (01-06-2025)
 
 ##### Bugs
