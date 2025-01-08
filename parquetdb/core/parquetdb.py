@@ -161,7 +161,7 @@ class ParquetDB:
         logger.info(f"db_path: {self.db_path}")
         logger.info(f"load_formats: {self.load_formats}")
 
-        if self.is_empty():
+        if self.is_empty() and len(os.listdir(self.db_path)) == 0:
             logger.info(
                 f"Dataset {self.dataset_name} is empty. Creating empty dataset."
             )
@@ -287,6 +287,10 @@ class ParquetDB:
                 )
                 os.remove(initial_file_path)
                 os.rename(incoming_file_path, initial_file_path)
+                self._normalize(
+                    schema=modified_incoming_table.schema,
+                    normalize_config=normalize_config,
+                )
         except Exception as e:
             logger.exception(f"exception writing table: {e}")
 

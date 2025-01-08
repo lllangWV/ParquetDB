@@ -1084,7 +1084,6 @@ class TestParquetDB(unittest.TestCase):
 
     def test_python_objects(self):
         self.db._serialize_python_objects = True
-
         from pymatgen.core import Structure
 
         structure = Structure(
@@ -1146,7 +1145,7 @@ if __name__ == "__main__":
     # unittest.TextTestRunner().run(TestParquetDB('test_fixed_shape_tensor'))
     # unittest.TextTestRunner().run(TestParquetDB('test_rename_dataset'))
     # unittest.TextTestRunner().run(TestParquetDB('test_update_with_new_field_included'))
-    # unittest.TextTestRunner().run(TestParquetDB('test_python_objects'))
+    # unittest.TextTestRunner().run(TestParquetDB("test_python_objects"))
     # unittest.TextTestRunner().run(TestParquetDB('test_update_multi_keys'))
     unittest.main()
 
