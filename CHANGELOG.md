@@ -1,6 +1,24 @@
 
 ___
 
+# 0.23.2 (01-08-2025)
+
+##### Bugs
+- None identified
+
+##### New features
+- Enhanced the ParquetDB class to more robustly check for empty datasets and normalize incoming table schemas.
+
+##### Documentation updates
+- Updated the CHANGELOG.md and _version.py to reflect the new release.
+
+##### Maintenance
+- Merged the latest changes from the main branch of the repository.
+
+___
+
+___
+
 # 0.23.1 (01-08-2025)
 
 ##### Bugs
