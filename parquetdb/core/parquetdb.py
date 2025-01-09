@@ -30,6 +30,9 @@ logger = logging.getLogger(__name__)
 # TODO: Creating empty table does not work for extenstions
 # TODO: Add support for serializationg and deserializing for nested python object
 # TODO: Add support to delete specific data
+# TODO: There is not way to update a column to a null value
+
+
 @dataclass
 class NormalizeConfig:
     """

@@ -20,7 +20,7 @@ from parquetdb.utils import pyarrow_utils
 logger = logging.getLogger("tests")
 
 # config.logging_config.loggers.timing.level='ERROR'
-# config.logging_config.loggers.parquetdb.level='DEBUG'
+config.logging_config.loggers.parquetdb.level = "DEBUG"
 # config.logging_config.loggers.tests.level='ERROR'
 # config.apply()
 
@@ -1096,7 +1096,7 @@ class TestParquetDB(unittest.TestCase):
                 "name": "Alice",
                 "age": 30,
                 "time": pd.Timestamp("20180310"),
-                "structure": structure,
+                "structure": None,
             },
             {
                 "name": "Alice",
@@ -1110,7 +1110,7 @@ class TestParquetDB(unittest.TestCase):
         table = self.db.read()
         df = table.to_pandas()
 
-        assert isinstance(df["structure"][0], Structure)
+        assert df["structure"][0] is None
 
         self.db.create(data)
 
@@ -1119,12 +1119,15 @@ class TestParquetDB(unittest.TestCase):
         assert isinstance(df["structure"][1], Structure)
 
         data = [
-            {"id": 1, "new_field": 1},
+            {"id": 1, "new_field": 1, "structure": None},
+            {"id": 0, "new_field": 2, "structure": structure},
         ]
         self.db.update(data)
 
         table = self.db.read()
         df = table.to_pandas()
+        # print(df)
+        # print(df["structure"][1])
         assert df["new_field"][1] == 1
 
         assert table["structure"].type == types.PythonObjectArrowType()

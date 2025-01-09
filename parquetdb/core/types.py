@@ -39,6 +39,9 @@ class PythonObjectArrowScalar(pa.ExtensionScalar):
     def as_py(self):
         return data_utils.load_python_object(self.value.as_py())
 
+    def equal(self, other):
+        return self.value == other.value
+
 
 class PythonObjectArrowArray(pa.ExtensionArray):
 
