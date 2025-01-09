@@ -1,6 +1,27 @@
 
 ___
 
+# 0.23.3 (01-09-2025)
+
+##### Bugs
+- None identified
+
+##### New Features
+- Enhanced ParquetDB functionality by adding new dependencies: `dask` and `distributed`.
+- Improved equality check in `PythonObjectArrowScalar` class for better accuracy.
+  
+##### Documentation updates
+- Updated `CHANGELOG.md` to reflect the new release.
+
+##### Maintenance
+- Refactored `pyarrow_utils.py` for better readability and organization.
+- Revised test cases to manage `None` values in structure fields.
+- Updated `pyproject.toml` to include new dependencies.
+
+___
+
+___
+
 # 0.23.2 (01-08-2025)
 
 ##### Bugs
