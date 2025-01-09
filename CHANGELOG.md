@@ -1,6 +1,24 @@
 
 ___
 
+# 0.23.4 (01-09-2025)
+
+##### Bugs
+- None identified
+
+##### New features
+- Enhanced the `PythonObjectPandasArray` class with a new `__setitem__` method for improved array manipulation.
+
+##### Documentation updates
+- Updated `_version.py` and `CHANGELOG.md` to reflect the new release.
+
+##### Maintenance
+- Merged updates from the main branch of the repository.
+
+___
+
+___
+
 # 0.23.3 (01-09-2025)
 
 ##### Bugs
