@@ -180,6 +180,26 @@ class PythonObjectPandasArray(ExtensionArray):
             # For example:
             return PythonObjectPandasArray([self._data[i] for i in item])
 
+    def __setitem__(self, key, value):
+        """
+        Set one or more values in the array.
+
+        Parameters
+        ----------
+        key : int, slice, or array-like
+            Index or indices to set
+        value : object or array-like
+            Value(s) to set at specified indices
+        """
+        if isinstance(key, slice):
+            self._data[key] = value
+        elif isinstance(key, int):
+            self._data[key] = value
+        else:
+            # Handle array-like indices
+            for i, v in zip(key, value):
+                self._data[i] = v
+
     def __len__(self):
         return len(self._data)
 
