@@ -372,10 +372,12 @@ class ParquetDB:
 
         dataset_dir = None
         if rebuild_nested_struct:
-            dataset_dir = self.db_path + "_nested"
-            if not os.path.exists(dataset_dir) or rebuild_nested_from_scratch:
+            nested_dataset_dir = os.path.join(self.db_path, "nested")
+            dataset_dir = nested_dataset_dir
+            if not os.path.exists(nested_dataset_dir) or rebuild_nested_from_scratch:
                 self.to_nested(
                     normalize_config=normalize_config,
+                    nested_dataset_dir=nested_dataset_dir,
                     rebuild_nested_from_scratch=rebuild_nested_from_scratch,
                 )
         data = self._load_data(
@@ -593,7 +595,7 @@ class ParquetDB:
         Parameters
         ----------
         nested_dataset_dir : str, optional
-            The directory where the nested dataset will be saved. If not provided, it will be inferred from the existing data (default: None).
+            The directory of the nested dataset. If not provided, it will be inferred from the existing data (default: None).
         incoming_table : pa.Table, optional
             The table to use for the update normalization. If not provided, it will be inferred from the existing data (default: None).
         schema : Schema, optional
@@ -1338,6 +1340,7 @@ class ParquetDB:
 
     def to_nested(
         self,
+        nested_dataset_dir: str = None,
         normalize_config: NormalizeConfig = NormalizeConfig(),
         rebuild_nested_from_scratch: bool = False,
     ):
@@ -1346,6 +1349,8 @@ class ParquetDB:
 
         Parameters
         ----------
+        nested_dataset_dir : str, optional
+            The directory of the nested dataset. If not provided, it will be inferred from the existing data (default: None).
         normalize_config : NormalizeConfig, optional
             Configuration for the normalization process, optimizing performance by managing row distribution and file structure.
         rebuild_nested_from_scratch : bool, optional
@@ -1360,12 +1365,6 @@ class ParquetDB:
         --------
         >>> db.to_nested()
         """
-
-        dataset_name = self.dataset_name
-        nested_dataset_name = f"{dataset_name}_nested"
-
-        dir = os.path.dirname(self.db_path)
-        nested_dataset_dir = os.path.join(dir, nested_dataset_name)
 
         if os.path.exists(nested_dataset_dir) and rebuild_nested_from_scratch:
             shutil.rmtree(nested_dataset_dir)
