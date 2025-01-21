@@ -1,6 +1,25 @@
 
 ___
 
+# 0.23.5 (01-16-2025)
+
+##### Bugs
+- None identified
+
+##### New features
+- Enhanced the 'ParquetDB' class to improve handling of nested datasets.
+- Introduced a dedicated directory for nested datasets within the database path.
+
+##### Documentation updates
+- Updated '_version.py' and 'CHANGELOG.md' to reflect the new release.
+
+##### Maintenance
+- Merged latest changes from the main branch of the remote repository.
+
+___
+
+___
+
 # 0.23.4 (01-09-2025)
 
 ##### Bugs
