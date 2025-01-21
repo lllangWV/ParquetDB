@@ -677,6 +677,15 @@ class ParquetDB:
             )
             retrieved_data = delete_columns_func(retrieved_data, columns)
 
+            # Must update the schema on record batch update as that is an argument to write dataset
+            if not isinstance(retrieved_data, pa.lib.Table):
+                logger.debug("retrieved_data is a record batch")
+                retrieved_data, tmp_generator = itertools.tee(retrieved_data)
+                record_batch = next(tmp_generator)
+                schema = record_batch.schema
+                del tmp_generator
+                del record_batch
+
         # If schema is provided this is a schema update
         elif schema:
             logger.info(
@@ -685,9 +694,6 @@ class ParquetDB:
             logger.debug(f"current schema metadata : {schema.metadata}")
             logger.debug(f"current schema names : {schema.names}")
             retrieved_data = schema_cast_func(retrieved_data, schema)
-
-            logger.debug(f"updated schema metadata : {retrieved_data.schema.metadata}")
-            logger.debug(f"updated schema names : {retrieved_data.schema.names}")
 
         dataset_dir = self.db_path
         basename_template = f"tmp_{self.dataset_name}_{{i}}.parquet"
