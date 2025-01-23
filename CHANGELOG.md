@@ -1,6 +1,26 @@
 
 ___
 
+# 0.23.7 (01-23-2025)
+
+##### Bugs
+- None identified
+
+##### New features
+- Enhanced dataset loading to ignore temporary files.
+- Improved data type checks in loading methods.
+
+##### Documentation updates
+- Updated version number and changelog for new release.
+
+##### Maintenance
+- Refactored ParquetDB class methods for better dataset handling.
+- Updated methods to accurately check for data presence.
+
+___
+
+___
+
 # 0.23.6 (01-21-2025)
 
 ##### Bugs
