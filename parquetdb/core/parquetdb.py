@@ -834,12 +834,12 @@ class ParquetDB:
 
     def is_empty(self):
         if self.dataset_exists():
-            return (
-                self._load_data(columns=["id"], load_format="dataset")
-                .head(num_rows=1)
-                .num_rows
-                == 0
+            ds = self._load_data(load_format="dataset")
+            parquet_file = pq.ParquetFile(
+                os.path.join(self.db_path, f"{self.dataset_name}_0.parquet")
             )
+            num_rows = parquet_file.metadata.num_rows
+            return num_rows == 0
         else:
             return True
 
@@ -1078,9 +1078,9 @@ class ParquetDB:
         if dataset_name:
             dir = os.path.dirname(self.db_path)
             dataset_dir = os.path.join(dir, dataset_name)
-            return os.path.exists(dataset_dir)
+            return os.path.exists(dataset_dir) and len(os.listdir(dataset_dir)) > 0
         else:
-            return os.path.exists(self.db_path)
+            return os.path.exists(self.db_path) and len(os.listdir(self.db_path)) > 0
 
     def drop_dataset(self):
         """
@@ -1421,7 +1421,7 @@ class ParquetDB:
         logger.info(f"Loading only columns: {columns}")
         logger.info(f"Using filter: {filter}")
 
-        dataset = ds.dataset(dataset_dir, format="parquet")
+        dataset = ds.dataset(dataset_dir, format="parquet", ignore_prefixes=["tmp_"])
         if load_format == "batches":
             return self._load_batches(dataset, columns, filter, load_config=load_config)
         elif load_format == "table":
@@ -1696,7 +1696,7 @@ class ParquetDB:
         serialize_python_objects: bool = config.serialize_python_objects,
     ):
 
-        if isinstance(data, pa.Table):
+        if isinstance(data, pa.Table) or isinstance(data, pa.RecordBatch):
 
             incoming_schema = data.schema
             if schema is None:
