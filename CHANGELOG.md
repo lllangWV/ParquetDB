@@ -1,6 +1,24 @@
 
 ___
 
+# 0.23.6 (01-21-2025)
+
+##### Bugs
+- Fixed issue with batch deletion of columns by updating the schema before writing the dataset.
+
+##### New features
+- None identified
+
+##### Documentation updates
+- None identified
+
+##### Maintenance
+- Updated version information in `_version.py` and `CHANGELOG.md` for the new release.
+
+___
+
+___
+
 # 0.23.5 (01-16-2025)
 
 ##### Bugs
