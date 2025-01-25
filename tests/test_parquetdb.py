@@ -1132,6 +1132,25 @@ class TestParquetDB(unittest.TestCase):
 
         assert table["structure"].type == types.PythonObjectArrowType()
 
+    def test_transform(self):
+        self.db.create(data=self.test_data)
+        self.db.transform(lambda table: table.drop_columns(columns=["age"]))
+
+        table = self.db.read()
+
+        assert table.column_names == ["id", "name"]
+
+        new_db_path = os.path.join(self.db.db_path, "test_transform_new")
+        self.db.transform(
+            lambda table: table.drop_columns(columns=["name"]),
+            in_place=False,
+            new_db_path=new_db_path,
+        )
+
+        db = ParquetDB(new_db_path)
+        table = db.read()
+        assert table.column_names == ["id"]
+
 
 if __name__ == "__main__":
     # unittest.TextTestRunner().run(TestParquetDB('test_nested_data_handling'))
@@ -1150,6 +1169,7 @@ if __name__ == "__main__":
     # unittest.TextTestRunner().run(TestParquetDB('test_update_with_new_field_included'))
     # unittest.TextTestRunner().run(TestParquetDB("test_python_objects"))
     # unittest.TextTestRunner().run(TestParquetDB('test_update_multi_keys'))
+    # unittest.TextTestRunner().run(TestParquetDB("test_transform"))
     unittest.main()
 
 

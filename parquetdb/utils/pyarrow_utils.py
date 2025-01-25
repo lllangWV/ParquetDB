@@ -1626,3 +1626,15 @@ def is_extension_type(type):
 
 def is_fixed_shape_tensor(type):
     return is_extension_type(type) and type.extension_name == "arrow.fixed_shape_tensor"
+
+
+def delete_columns(table, columns):
+    return table.drop_columns(columns)
+
+
+def delete_ids(table, ids):
+    return table.filter(~pc.field("id").isin(ids))
+
+
+def delete_field_values(table, values, field_name):
+    return table.filter(~pc.field(field_name).isin(values))

@@ -4,6 +4,7 @@ import logging
 import os
 import shutil
 import time
+import types
 from dataclasses import dataclass
 from glob import glob
 from typing import Callable, Dict, List, Optional, Union
@@ -539,6 +540,58 @@ class ParquetDB:
 
         logger.info(f"Deleted data from {self.dataset_name} dataset.")
 
+    def transform(
+        self,
+        transform_callable: Callable[[pa.Table], pa.Table],
+        new_db_path: Optional[str] = None,
+        in_place: bool = True,
+        normalize_config: NormalizeConfig = NormalizeConfig(),
+    ) -> Optional["ParquetDB"]:
+        """
+        Transform the entire dataset using a user-provided callable.
+
+        This function:
+        1. Reads the entire dataset as a PyArrow table.
+        2. Applies the `transform_callable`, which should accept a `pa.Table`
+            and return another `pa.Table`.
+        3. Writes out the transformed data:
+            - Overwrites this ParquetDB in-place (if `in_place=True`), or
+            - Creates a new ParquetDB at `new_db_path` (if `in_place=False`).
+
+        Parameters
+        ----------
+        transform_callable : Callable[[pa.Table], pa.Table]
+            A function that takes a PyArrow Table and returns a transformed PyArrow Table.
+        new_db_path : str, optional
+            If provided and `in_place=False`, the transformed dataset will be written
+            to this new directory as a fresh ParquetDB.
+        in_place : bool, default True
+            Whether to overwrite the current ParquetDB in-place with the transformed data.
+            If `False`, `new_db_path` must be provided.
+        normalize_config : NormalizeConfig, optional
+            Configuration for the normalization process, optimizing performance by managing row distribution and file structure.
+
+        Returns
+        -------
+        ParquetDB or None
+            - If `in_place=False`, returns the newly created ParquetDB instance.
+            - If `in_place=True`, returns None (in-place transformation).
+        """
+
+        if not in_place and not new_db_path:
+            raise ValueError(
+                "When in_place=False, you must provide a 'new_db_path' to write the "
+                "transformed ParquetDB."
+            )
+        if in_place and new_db_path:
+            raise ValueError(
+                "When in_place=True, you cannot provide a 'new_db_path' to write the "
+                "transformed ParquetDB."
+            )
+        self._normalize(
+            transform_callable=transform_callable, normalize_config=normalize_config
+        )
+
     def normalize(self, normalize_config: NormalizeConfig = NormalizeConfig()):
         """
         Normalize the dataset by restructuring files for consistent row distribution.
@@ -581,6 +634,8 @@ class ParquetDB:
         schema=None,
         ids=None,
         columns=None,
+        transform_callable=None,
+        new_db_path=None,
         update_keys: Union[List[str], str] = ["id"],
         normalize_config: NormalizeConfig = NormalizeConfig(),
     ):
@@ -615,21 +670,14 @@ class ParquetDB:
             This function does not return anything but modifies the dataset directory in place.
 
         """
-
-        if normalize_config.load_format == "batches":
-            logger.debug(f"Writing data in batches")
-            schema = self.get_schema() if schema is None else schema
-            update_func = generator_update
-            delete_func = generator_delete
-            schema_cast_func = generator_schema_cast
-            rebuild_nested_func = generator_rebuild_nested_struct
-            delete_columns_func = generator_delete_columns
-        elif normalize_config.load_format == "table":
-            update_func = table_update
-            delete_func = table_delete
-            delete_columns_func = table_delete_columns
-            schema_cast_func = table_schema_cast
-            rebuild_nested_func = table_rebuild_nested_struct
+        if new_db_path:
+            dataset_dir = new_db_path
+            dataset_name = os.path.basename(new_db_path)
+            basename_template = f"tmp_{dataset_name}_{{i}}.parquet"
+        else:
+            dataset_dir = self.db_path
+            dataset_name = self.dataset_name
+            basename_template = f"tmp_{self.dataset_name}_{{i}}.parquet"
 
         try:
             retrieved_data = self._load_data(
@@ -649,141 +697,132 @@ class ParquetDB:
             raise ValueError(
                 "The incoming data does not match the schema of the existing data."
             ) from e
-        # If incoming data is provided this is an update
+
         if incoming_table:
             logger.info(
                 "This normalization is an update. Applying update function, then normalizing."
             )
-            retrieved_data = update_func(
-                retrieved_data, incoming_table, update_keys=update_keys
+            retrieved_data = data_transform(
+                retrieved_data,
+                pyarrow_utils.update_flattend_table,
+                incoming_table=incoming_table,
+                update_keys=update_keys,
             )
-
-            if schema:
-                schema = pyarrow_utils.unify_schemas(
-                    [schema, incoming_table.schema], promote_options="default"
-                )
-                schema = pyarrow_utils.sort_schema(schema)
-
-        # If ids are provided this is a delete
         elif ids:
             logger.info(
                 "This normalization is an id delete. Applying delete function, then normalizing."
             )
-            retrieved_data = delete_func(retrieved_data, ids)
+            retrieved_data = data_transform(
+                retrieved_data,
+                pyarrow_utils.delete_field_values,
+                values=ids,
+                field_name="id",
+            )
 
         elif columns:
             logger.info(
                 "This normalization is a column delete. Applying delete function, then normalizing."
             )
-            retrieved_data = delete_columns_func(retrieved_data, columns)
-
-            # Must update the schema on record batch update as that is an argument to write dataset
-            if not isinstance(retrieved_data, pa.lib.Table):
-                logger.debug("retrieved_data is a record batch")
-                retrieved_data, tmp_generator = itertools.tee(retrieved_data)
-                record_batch = next(tmp_generator)
-                schema = record_batch.schema
-                del tmp_generator
-                del record_batch
-
-        # If schema is provided this is a schema update
+            retrieved_data = data_transform(
+                retrieved_data, pyarrow_utils.delete_columns, columns=columns
+            )
         elif schema:
             logger.info(
                 "This normalization is a schema update. Applying schema cast function, then normalizing."
             )
-            logger.debug(f"current schema metadata : {schema.metadata}")
-            logger.debug(f"current schema names : {schema.names}")
-            retrieved_data = schema_cast_func(retrieved_data, schema)
+            retrieved_data = data_transform(
+                retrieved_data, pyarrow_utils.table_schema_cast, new_schema=schema
+            )
 
-        dataset_dir = self.db_path
-        basename_template = f"tmp_{self.dataset_name}_{{i}}.parquet"
-        if nested_dataset_dir:
+        elif transform_callable:
+            logger.info(
+                "This normalization is a transform. Applying transform function, then normalizing."
+            )
+            retrieved_data = data_transform(retrieved_data, transform_callable)
+        elif nested_dataset_dir:
             logger.info(
                 "This normalization is a nested rebuild. Applying rebuild function, then normalizing."
             )
             dataset_dir = nested_dataset_dir
-            basename_template = f"{self.dataset_name}_{{i}}.parquet"
-            retrieved_data = rebuild_nested_func(retrieved_data)
-            if not isinstance(retrieved_data, pa.lib.Table):
-                logger.debug("retrieved_data is a record batch")
-                retrieved_data, tmp_generator = itertools.tee(retrieved_data)
-                record_batch = next(tmp_generator)
-                schema = record_batch.schema
-                del tmp_generator
-                del record_batch
+            basename_template = f"{dataset_name}_{{i}}.parquet"
+            retrieved_data = data_transform(
+                retrieved_data,
+                pyarrow_utils.rebuild_nested_table,
+                load_format=normalize_config.load_format,
+            )
+
+        retrieved_data, schema = extract_generator_schema(retrieved_data)
 
         if isinstance(retrieved_data, pa.lib.Table):
             schema = None
 
-        # logger.debug(f"Schema: {schema}")
-
+        # Handles case when table is empty
         if self.is_empty():
             # Handles case when table is empty
-            # os.remove(os.path.join(dataset_dir, f'{self.dataset_name}_0.parquet'))
             pq.write_table(
                 retrieved_data,
-                os.path.join(dataset_dir, f"{self.dataset_name}_0.parquet"),
+                os.path.join(dataset_dir, f"{dataset_name}_0.parquet"),
             )
-        else:
-            # Handles case when table is not empty
-            try:
-                logger.info(f"Writing dataset to {dataset_dir}")
-                logger.info(f"Basename template: {basename_template}")
+            return None
 
-                ds.write_dataset(
-                    retrieved_data,
-                    dataset_dir,
-                    basename_template=basename_template,
-                    schema=schema,
-                    format="parquet",
-                    filesystem=normalize_config.filesystem,
-                    file_options=normalize_config.file_options,
-                    use_threads=normalize_config.use_threads,
-                    max_partitions=normalize_config.max_partitions,
-                    max_open_files=normalize_config.max_open_files,
-                    max_rows_per_file=normalize_config.max_rows_per_file,
-                    min_rows_per_group=normalize_config.min_rows_per_group,
-                    max_rows_per_group=normalize_config.max_rows_per_group,
-                    file_visitor=normalize_config.file_visitor,
-                    existing_data_behavior=normalize_config.existing_data_behavior,
-                    create_dir=normalize_config.create_dir,
+        # Handles case when table is not empty
+        try:
+            logger.info(f"Writing dataset to {dataset_dir}")
+            logger.info(f"Basename template: {basename_template}")
+
+            ds.write_dataset(
+                retrieved_data,
+                dataset_dir,
+                basename_template=basename_template,
+                schema=schema,
+                format="parquet",
+                filesystem=normalize_config.filesystem,
+                file_options=normalize_config.file_options,
+                use_threads=normalize_config.use_threads,
+                max_partitions=normalize_config.max_partitions,
+                max_open_files=normalize_config.max_open_files,
+                max_rows_per_file=normalize_config.max_rows_per_file,
+                min_rows_per_group=normalize_config.min_rows_per_group,
+                max_rows_per_group=normalize_config.max_rows_per_group,
+                file_visitor=normalize_config.file_visitor,
+                existing_data_behavior=normalize_config.existing_data_behavior,
+                create_dir=normalize_config.create_dir,
+            )
+            schema = self.get_schema()
+
+            # If any happen goes missing due to a transform do an error
+            if "id" not in schema.names:
+                a = 1 / 0
+
+            # Remove main files to replace with tmp files
+            tmp_files = glob(os.path.join(dataset_dir, f"tmp_{dataset_name}_*.parquet"))
+            if len(tmp_files) != 0:
+                main_files = glob(
+                    os.path.join(dataset_dir, f"{dataset_name}_*.parquet")
                 )
-                # Remove main files to replace with tmp files
-                tmp_files = glob(
-                    os.path.join(dataset_dir, f"tmp_{self.dataset_name}_*.parquet")
-                )
+                for file_path in main_files:
+                    if os.path.isfile(file_path):
+                        os.remove(file_path)
 
-                if len(tmp_files) != 0:
-                    main_files = glob(
-                        os.path.join(dataset_dir, f"{self.dataset_name}_*.parquet")
-                    )
-                    for file_path in main_files:
-                        if os.path.isfile(file_path):
-                            os.remove(file_path)
+            tmp_files = glob(os.path.join(dataset_dir, f"tmp_{dataset_name}_*.parquet"))
+            for file_path in tmp_files:
+                file_name = os.path.basename(file_path).replace("tmp_", "")
+                new_file_path = os.path.join(dataset_dir, file_name)
+                os.rename(file_path, new_file_path)
+        except Exception as e:
+            logger.exception(f"exception writing final table to {dataset_dir}: {e}")
 
-                tmp_files = glob(
-                    os.path.join(dataset_dir, f"tmp_{self.dataset_name}_*.parquet")
-                )
-                for file_path in tmp_files:
+            tmp_files = glob(os.path.join(dataset_dir, f"tmp_{dataset_name}_*.parquet"))
+            for file_path in tmp_files:
 
-                    file_name = os.path.basename(file_path).replace("tmp_", "")
-                    new_file_path = os.path.join(dataset_dir, file_name)
-                    os.rename(file_path, new_file_path)
-            except Exception as e:
-                logger.exception(
-                    f"exception writing final table to {self.db_path}: {e}"
-                )
+                file_name = os.path.basename(file_path).replace("tmp_", "")
+                new_file_path = os.path.join(dataset_dir, file_name)
+                os.rename(file_path, new_file_path)
 
-                tmp_files = glob(
-                    os.path.join(dataset_dir, f"tmp_{self.dataset_name}_*.parquet")
-                )
-                for file_path in tmp_files:
+            if new_db_path:
+                os.rmdir(dataset_dir)
 
-                    file_name = os.path.basename(file_path).replace("tmp_", "")
-                    new_file_path = os.path.join(dataset_dir, file_name)
-                    os.rename(file_path, new_file_path)
-
-                raise Exception(f"Exception normalizing table. Error Message: {e}")
+            raise Exception(f"Exception normalizing table. Error Message: {e}")
 
     def update_schema(
         self,
@@ -1784,65 +1823,38 @@ class ParquetDB:
         return incoming_array, schema
 
 
-def generator_schema_cast(generator, new_schema):
-    for record_batch in generator:
-        updated_record_batch = pyarrow_utils.table_schema_cast(record_batch, new_schema)
-        yield updated_record_batch
+def generator_transform(data, callable: Callable, *args, **kwargs):
+    for record_batch in data:
+        yield callable(record_batch, *args, **kwargs)
 
 
-def table_schema_cast(current_table, new_schema):
-    updated_table = pyarrow_utils.table_schema_cast(current_table, new_schema)
-    return updated_table
+def table_transform(table, callable: Callable, *args, **kwargs):
+    return callable(table, *args, **kwargs)
 
 
-def table_update(
-    current_table, incoming_table, update_keys: Union[List[str], str] = ["id"]
-):
-    updated_table = pyarrow_utils.update_flattend_table(
-        current_table, incoming_table, update_keys=update_keys
-    )
-    return updated_table
+def is_generator(data):
+    return "generator" in data.__class__.__name__
 
 
-def generator_update(
-    generator, incoming_table, update_keys: Union[List[str], str] = ["id"]
-):
-    for record_batch in generator:
-        updated_record_batch = pyarrow_utils.update_flattend_table(
-            record_batch, incoming_table, update_keys=update_keys
+def extract_generator_schema(data):
+    if not isinstance(data, pa.lib.Table):
+        logger.debug("retrieved_data is a record batch")
+        data, tmp_generator = itertools.tee(data)
+        record_batch = next(tmp_generator)
+        schema = record_batch.schema
+        del tmp_generator
+        del record_batch
+        return data, schema
+    else:
+        return data, data.schema
+
+
+def data_transform(data, callable: Callable, *args, **kwargs):
+    if isinstance(data, pa.lib.Table):
+        return table_transform(data, callable, *args, **kwargs)
+    elif is_generator(data):
+        return generator_transform(data, callable, *args, **kwargs)
+    else:
+        raise ValueError(
+            "Data must be a PyArrow Table or a PyArrow RecordBatch generator"
         )
-        yield updated_record_batch
-
-
-def table_delete(current_table, ids):
-    updated_table = current_table.filter(~pc.field("id").isin(ids))
-    return updated_table
-
-
-def generator_delete(generator, ids):
-    for record_batch in generator:
-        updated_record_batch = record_batch.filter(~pc.field("id").isin(ids))
-        yield updated_record_batch
-
-
-def table_delete_columns(current_table, columns):
-    updated_table = current_table.drop_columns(columns)
-    return updated_table
-
-
-def generator_delete_columns(generator, columns):
-    for record_batch in generator:
-        updated_record_batch = record_batch.drop_columns(columns)
-        yield updated_record_batch
-
-
-def table_rebuild_nested_struct(current_table):
-    return pyarrow_utils.rebuild_nested_table(current_table)
-
-
-def generator_rebuild_nested_struct(generator):
-    for record_batch in generator:
-        updated_record_batch = pyarrow_utils.rebuild_nested_table(
-            record_batch, load_format="batches"
-        )
-        yield updated_record_batch
