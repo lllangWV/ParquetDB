@@ -544,7 +544,6 @@ class ParquetDB:
         self,
         transform_callable: Callable[[pa.Table], pa.Table],
         new_db_path: Optional[str] = None,
-        in_place: bool = True,
         normalize_config: NormalizeConfig = NormalizeConfig(),
     ) -> Optional["ParquetDB"]:
         """
@@ -578,18 +577,13 @@ class ParquetDB:
             - If `in_place=True`, returns None (in-place transformation).
         """
 
-        if not in_place and not new_db_path:
-            raise ValueError(
-                "When in_place=False, you must provide a 'new_db_path' to write the "
-                "transformed ParquetDB."
-            )
-        if in_place and new_db_path:
-            raise ValueError(
-                "When in_place=True, you cannot provide a 'new_db_path' to write the "
-                "transformed ParquetDB."
-            )
+        if new_db_path:
+            print(f"Writing transformation to new dir: {new_db_path}")
+
         self._normalize(
-            transform_callable=transform_callable, normalize_config=normalize_config
+            transform_callable=transform_callable,
+            normalize_config=normalize_config,
+            new_db_path=new_db_path,
         )
 
     def normalize(self, normalize_config: NormalizeConfig = NormalizeConfig()):

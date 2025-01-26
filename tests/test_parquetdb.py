@@ -32,6 +32,7 @@ class TestParquetDB(unittest.TestCase):
     def setUp(self):
         # Create a temporary directory for the database
         self.temp_dir = tempfile.mkdtemp()
+        self.temp_dir_2 = tempfile.mkdtemp()
 
         self.db = ParquetDB(db_path=os.path.join(self.temp_dir, "test_db"))
 
@@ -1137,19 +1138,23 @@ class TestParquetDB(unittest.TestCase):
         self.db.transform(lambda table: table.drop_columns(columns=["age"]))
 
         table = self.db.read()
-
         assert table.column_names == ["id", "name"]
 
-        new_db_path = os.path.join(self.db.db_path, "test_transform_new")
+        new_db_path = os.path.join(self.temp_dir_2)
         self.db.transform(
             lambda table: table.drop_columns(columns=["name"]),
-            in_place=False,
-            new_db_path=new_db_path,
+            new_db_path=self.temp_dir_2,
         )
 
-        db = ParquetDB(new_db_path)
+        db = ParquetDB(self.temp_dir_2)
         table = db.read()
+
         assert table.column_names == ["id"]
+        assert table.shape == (3, 1)
+
+        table = self.db.read()
+        assert table.column_names == ["id", "name"]
+        assert table.shape == (3, 2)
 
 
 if __name__ == "__main__":
@@ -1169,8 +1174,8 @@ if __name__ == "__main__":
     # unittest.TextTestRunner().run(TestParquetDB('test_update_with_new_field_included'))
     # unittest.TextTestRunner().run(TestParquetDB("test_python_objects"))
     # unittest.TextTestRunner().run(TestParquetDB('test_update_multi_keys'))
-    # unittest.TextTestRunner().run(TestParquetDB("test_transform"))
-    unittest.main()
+    unittest.TextTestRunner().run(TestParquetDB("test_transform"))
+    # unittest.main()
 
 
 # if __name__ == '__main__':
