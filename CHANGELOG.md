@@ -1,6 +1,24 @@
 
 ___
 
+# 0.24.0 (01-25-2025)
+
+##### Bugs
+- None identified
+
+##### New Features
+- Implemented a transform method in ParquetDB for flexible dataset transformations
+
+##### Documentation updates
+- Updated version information in _version.py and CHANGELOG.md due to a new release
+
+##### Maintenance
+- Merged latest changes from the main branch of the repository
+
+___
+
+___
+
 # 0.23.7 (01-23-2025)
 
 ##### Bugs
