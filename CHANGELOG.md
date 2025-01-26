@@ -1,6 +1,25 @@
 
 ___
 
+# 0.24.1 (01-26-2025)
+
+##### Bugs
+- None identified
+
+##### New Features
+- None identified
+
+##### Documentation updates
+- Updated `_version.py` and `CHANGELOG.md` for the new release
+
+##### Maintenance
+- Merged changes from the main branch of the remote repository
+- Ensured the original dataset remains unchanged during transformation to a new path
+
+___
+
+___
+
 # 0.24.0 (01-25-2025)
 
 ##### Bugs
