@@ -1174,8 +1174,8 @@ if __name__ == "__main__":
     # unittest.TextTestRunner().run(TestParquetDB('test_update_with_new_field_included'))
     # unittest.TextTestRunner().run(TestParquetDB("test_python_objects"))
     # unittest.TextTestRunner().run(TestParquetDB('test_update_multi_keys'))
-    unittest.TextTestRunner().run(TestParquetDB("test_transform"))
-    # unittest.main()
+    # unittest.TextTestRunner().run(TestParquetDB("test_transform"))
+    unittest.main()
 
 
 # if __name__ == '__main__':
