@@ -742,6 +742,7 @@ class TestParquetDB(unittest.TestCase):
             {"id_1": 55, "id_2": 11},
             {"id_1": 33, "id_2": 12},
             {"id_1": 12, "id_2": 13},
+            {"id_1": 33, "id_2": 50},
         ]
 
         self.db.create(current_data)
@@ -770,17 +771,20 @@ class TestParquetDB(unittest.TestCase):
             None,
             None,
             None,
+            None,
         ]
         assert table["field_2"].combine_chunks().to_pylist() == [
             "there",
             None,
             "field_2",
             None,
+            None,
         ]
         assert table["field_3"].combine_chunks().to_pylist() == [
             None,
             None,
             "field_3",
+            None,
             None,
         ]
 
@@ -1167,7 +1171,7 @@ if __name__ == "__main__":
     # unittest.TextTestRunner().run(TestParquetDB('test_metadata'))
     # unittest.TextTestRunner().run(TestParquetDB('test_initialize_empty_table'))
     # unittest.TextTestRunner().run(TestParquetDB('test_batch_reading'))
-    #  unittest.TextTestRunner().run(TestParquetDB('test_create_and_read'))
+    # unittest.TextTestRunner().run(TestParquetDB('test_create_and_read'))
     # unittest.TextTestRunner().run(TestParquetDB('test_update_multi_keys'))
     # unittest.TextTestRunner().run(TestParquetDB('test_fixed_shape_tensor'))
     # unittest.TextTestRunner().run(TestParquetDB('test_rename_dataset'))
@@ -1176,6 +1180,10 @@ if __name__ == "__main__":
     # unittest.TextTestRunner().run(TestParquetDB('test_update_multi_keys'))
     # unittest.TextTestRunner().run(TestParquetDB("test_transform"))
     unittest.main()
+
+    # for x in range(500):
+    #     print(f"Iteration {x+1}")
+    #     unittest.TextTestRunner().run(TestParquetDB("test_update_multi_keys"))
 
 
 # if __name__ == '__main__':

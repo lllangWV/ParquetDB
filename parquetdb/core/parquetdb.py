@@ -17,9 +17,9 @@ import pyarrow.dataset as ds
 import pyarrow.fs as fs
 import pyarrow.parquet as pq
 
-from parquetdb import config
 from parquetdb.core import types
 from parquetdb.utils import data_utils, mp_utils, pyarrow_utils
+from parquetdb.utils.config import config
 from parquetdb.utils.general_utils import is_directory_empty, timeit
 
 dill.settings["recurse"] = True
@@ -32,6 +32,7 @@ logger = logging.getLogger(__name__)
 # TODO: Add support for serializationg and deserializing for nested python object
 # TODO: Add support to delete specific data
 # TODO: There is not way to update a column to a null value
+# TODO: Rare bug where update on multiple keys will not work happens 1/1000 times. Check test_update_multi_keys
 
 
 @dataclass
@@ -177,6 +178,9 @@ class ParquetDB:
         config.serialize_python_objects = serialize_python_objects
         config.apply()
 
+    def __repr__(self):
+        return self.summary(show_column_names=True)
+
     @property
     def db_path(self):
         return self._db_path
@@ -188,6 +192,88 @@ class ParquetDB:
     @property
     def basename_template(self):
         return f"{self.dataset_name}_{{i}}.parquet"
+
+    @property
+    def n_columns(self):
+        return len(self.columns)
+
+    @property
+    def columns(self):
+        return self.get_field_names()
+
+    @property
+    def n_rows(self):
+        ds = self.read(load_format="dataset")
+        return ds.count_rows()
+
+    @property
+    def n_files(self):
+        return len(self.get_current_files())
+
+    @property
+    def n_rows_per_file(self):
+        return self.get_number_of_rows_per_file()
+
+    @property
+    def n_row_groups_per_file(self):
+        return self.get_number_of_row_groups_per_file()
+
+    @property
+    def n_rows_per_row_group_per_file(self):
+        return self.get_n_rows_per_row_group_per_file(as_dict=True)
+
+    @property
+    def serialized_metadata_size_per_file(self):
+        return self.get_serialized_metadata_size_per_file()
+
+    def summary(
+        self, show_column_names: bool = False, show_row_group_metadata: bool = False
+    ):
+        fields_metadata = self.get_field_metadata()
+        metadata = self.get_metadata()
+        # Header section
+        tmp_str = f"{'=' * 60}\n"
+        tmp_str += f"PARQUETDB SUMMARY\n"
+        tmp_str += f"{'=' * 60}\n"
+        tmp_str += f"Database path: {os.path.relpath(self.db_path)}\n\n"
+        tmp_str += f"• Number of columns: {self.n_columns}\n"
+        tmp_str += f"• Number of rows: {self.n_rows}\n"
+        tmp_str += f"• Number of files: {self.n_files}\n"
+        tmp_str += f"• Number of rows per file: {self.n_rows_per_file}\n"
+        tmp_str += f"• Number of row groups per file: {self.n_row_groups_per_file}\n"
+        if show_row_group_metadata:
+            tmp_str += f"• Number of rows per row group per file: \n"
+            for (
+                filename,
+                row_group_metadata,
+            ) in self.n_rows_per_row_group_per_file.items():
+                tmp_str += f"    - {filename}:\n"
+                for row_group_idx, n_rows in row_group_metadata.items():
+                    tmp_str += f"        - Row group {row_group_idx}: {n_rows} rows\n"
+        tmp_str += f"• Serialized metadata size per file: {self.serialized_metadata_size_per_file} Bytes\n"
+
+        # Metadata section
+        tmp_str += f"\n{'#' * 60}\n"
+        tmp_str += f"METADATA\n"
+        tmp_str += f"{'#' * 60}\n"
+        for key, value in metadata.items():
+            tmp_str += f"• {key}: {value}\n"
+
+        # Node details
+        tmp_str += f"\n{'#' * 60}\n"
+        tmp_str += f"COLUMN DETAILS\n"
+        tmp_str += f"{'#' * 60}\n"
+        if show_column_names:
+            tmp_str += f"• Columns:\n"
+            for col in self.columns:
+                tmp_str += f"    - {col}\n"
+
+                if fields_metadata[col]:
+                    tmp_str += f"       - Field metadata\n"
+                    for key, value in fields_metadata[col].items():
+                        tmp_str += f"           - {key}: {value}\n"
+
+        return tmp_str
 
     def create(
         self,
@@ -362,8 +448,10 @@ class ParquetDB:
             load_config.batch_size = batch_size
 
         logger.info("Reading data")
-        if columns:
-            columns = self.get_field_names(columns=columns, include_cols=include_cols)
+
+        read_columns = self.get_field_names(columns=columns, include_cols=include_cols)
+        if not include_cols:
+            columns = read_columns
 
         if filters is None:
             filters = []
@@ -529,9 +617,9 @@ class ParquetDB:
 
         # if filters:
         #     for filter in filters:
-        #         current_id_table=self._load_data(columns=['id'], load_format='table')
+        #         current_id_table = self._load_data(columns=["id"], load_format="table")
         #         filtered_id_table = current_id_table.filter(filter)
-        #         if filtered_id_table.num_rows==0:
+        #         if filtered_id_table.num_rows == 0:
         #             logger.info(f"No data found to delete.")
         #             return None
 
@@ -554,8 +642,8 @@ class ParquetDB:
         2. Applies the `transform_callable`, which should accept a `pa.Table`
             and return another `pa.Table`.
         3. Writes out the transformed data:
-            - Overwrites this ParquetDB in-place (if `in_place=True`), or
-            - Creates a new ParquetDB at `new_db_path` (if `in_place=False`).
+            - Overwrites this ParquetDB in-place (if `new_db_path=None`), or
+            - Creates a new ParquetDB at `new_db_path` (if `new_db_path!=None`).
 
         Parameters
         ----------
@@ -564,9 +652,6 @@ class ParquetDB:
         new_db_path : str, optional
             If provided and `in_place=False`, the transformed dataset will be written
             to this new directory as a fresh ParquetDB.
-        in_place : bool, default True
-            Whether to overwrite the current ParquetDB in-place with the transformed data.
-            If `False`, `new_db_path` must be provided.
         normalize_config : NormalizeConfig, optional
             Configuration for the normalization process, optimizing performance by managing row distribution and file structure.
 
@@ -913,20 +998,12 @@ class ParquetDB:
         -------
         >>> fields = db.get_field_names(columns=['name', 'age'], include_cols=False)
         """
+        schema = self.get_schema()
+        existing_columns = set(schema.names)
         if not include_cols:
-            schema = self.get_schema()
-            all_columns = []
-            for filed_schema in schema:
-
-                # Only want top column names
-                max_defintion_level = filed_schema.max_definition_level
-                if max_defintion_level != 1:
-                    continue
-
-                all_columns.append(filed_schema.name)
-
-            columns = [col for col in all_columns if col not in columns]
-        return columns
+            return list(existing_columns - set(columns))
+        else:
+            return list(existing_columns)
 
     def get_metadata(self, return_bytes: bool = False):
         """
@@ -1044,6 +1121,125 @@ class ParquetDB:
                 }
 
         return fields_metadata
+
+    def get_number_of_rows_per_file(self):
+        """
+        Retrieves the number of rows per file in the dataset.
+        """
+        return [
+            pq.ParquetFile(file).metadata.num_rows for file in self.get_current_files()
+        ]
+
+    def get_number_of_row_groups_per_file(self):
+        """
+        Retrieves the number of row groups per file in the dataset.
+        """
+        return [
+            pq.ParquetFile(file).metadata.num_row_groups
+            for file in self.get_current_files()
+        ]
+
+    def get_parquet_file_metadata_per_file(self, as_dict: bool = False):
+        """
+        Retrieves the metadata of each Parquet file in the dataset.
+        """
+        if as_dict:
+            return [
+                pq.ParquetFile(file).metadata.to_dict()
+                for file in self.get_current_files()
+            ]
+        else:
+            return [pq.ParquetFile(file).metadata for file in self.get_current_files()]
+
+    def get_parquet_file_row_group_metadata_per_file(self, as_dict: bool = False):
+        """
+        Retrieves the row group metadata of each Parquet file in the dataset.
+        """
+        row_group_metadata = {}
+        for file in self.get_current_files():
+            filename = os.path.basename(file)
+            parquet_file = pq.ParquetFile(file)
+            metadata = parquet_file.metadata
+            n_row_groups = metadata.num_row_groups
+            row_group_metadata[filename] = {}
+            if n_row_groups == 0:
+                break
+
+            for row_group_idx in range(n_row_groups):
+                row_group = metadata.row_group(row_group_idx)
+                if as_dict:
+                    row_group_metadata[filename][row_group_idx] = row_group.to_dict()
+                else:
+                    row_group_metadata[filename][row_group_idx] = row_group
+
+        return row_group_metadata
+
+    def get_parquet_column_metadata_per_file(self, as_dict: bool = False):
+        column_metadata = {}
+        for file in self.get_current_files():
+            filename = os.path.basename(file)
+            parquet_file = pq.ParquetFile(file)
+            metadata = parquet_file.metadata
+            n_row_groups = metadata.num_row_groups
+            column_metadata[filename] = {}
+            if n_row_groups == 0:
+                break
+            for row_group_idx in range(n_row_groups):
+                row_group = metadata.row_group(row_group_idx)
+                n_columns = row_group.num_columns
+                column_metadata[filename][row_group_idx] = {}
+                if n_columns == 0:
+                    break
+                for column_idx in range(n_columns):
+                    column = row_group.column(column_idx)
+                    if as_dict:
+                        column_metadata[filename][row_group_idx][
+                            column_idx
+                        ] = column.to_dict()
+                    else:
+                        column_metadata[filename][row_group_idx][column_idx] = column
+        return column_metadata
+
+    def get_n_rows_per_row_group_per_file(self, as_dict: bool = False):
+        """
+        Retrieves the number of rows per row group per file in the dataset.
+        """
+        row_group_metadata = self.get_parquet_file_row_group_metadata_per_file(
+            as_dict=True
+        )
+        if row_group_metadata:
+            if as_dict:
+                n_row_group_metadata = {}
+
+                for filename in row_group_metadata:
+                    n_row_group_metadata[filename] = {}
+                    for row_group_idx in row_group_metadata[filename]:
+                        n_row_group_metadata[filename][row_group_idx] = (
+                            row_group_metadata[filename][row_group_idx]["num_rows"]
+                        )
+            else:
+                n_row_group_metadata = []
+                for filename in row_group_metadata:
+                    tmp_list = []
+                    for row_group_idx in row_group_metadata[filename]:
+                        tmp_list.append(
+                            row_group_metadata[filename][row_group_idx]["num_rows"]
+                        )
+                    n_row_group_metadata.append(tmp_list)
+
+            return n_row_group_metadata
+
+        else:
+            return {}
+
+    def get_serialized_metadata_size_per_file(self):
+        """
+        Retrieves the serialized size of each Parquet file in the dataset.
+        """
+        return [
+            pq.ParquetFile(file).metadata.serialized_size
+            for file in self.get_current_files()
+        ]
 
     def rename_fields(
         self, name_map: dict, normalize_config: NormalizeConfig = NormalizeConfig()
