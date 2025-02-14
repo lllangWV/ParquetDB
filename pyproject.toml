@@ -53,6 +53,9 @@ dev = [
 ]
 
 docs= [
+    "ipython",
+    "pymongo",
+    "pymatgen",
     "sphinx", 
     "sphinx_rtd_theme",
     "sphinx-copybutton",

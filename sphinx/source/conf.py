@@ -83,6 +83,7 @@ extensions = [
     "sphinxcontrib.youtube",
     "sphinxcontrib.video",
     "sphinx_design",
+    "sphinx.ext.githubpages",
     # "sphinx-nbexamples",
     # "sphinx_gallery.gen_gallery",
     # 'sphinx.youtube',
@@ -129,7 +130,7 @@ exclude_patterns = ["_build", "Thumbs.db", ".DS_Store"]
 
 html_title = f"ParquetDB Docs: v{version}"
 html_theme = "furo"
-html_logo = "media/images/Parquetdb_logo.png"
+html_logo = os.path.join("media","images", "ParquetDB_logo.png")
 html_static_path = []
 # html_theme_options = {
 #     # "logo": {"logo_link": "index.html"}  # Links to the root of your documentation
