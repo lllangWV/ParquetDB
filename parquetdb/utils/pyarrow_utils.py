@@ -1642,23 +1642,22 @@ def delete_field_values(table, values, field_name):
 
 def drop_duplicates(table, keys):
     """
-    Drops duplicate rows from a PyArrow Table based on four specified keys, keeping the first occurrence.
+    Drops duplicate rows from a PyArrow Table based specified keys, keeping the first occurrence.
 
     Parameters:
     - table: pyarrow.Table
         The input table from which duplicates will be removed.
     - keys: list of str
-        A list of four column names that determine the uniqueness of rows.
+        A list of column names that determine the uniqueness of rows.
 
     Returns:
     - pyarrow.Table
         A new table with duplicates removed, keeping the first occurrence of each unique key combination.
     """
-    keys.append("id")
+    # keys.append("id")
     groupby_keys = list(set(keys).union(set(["id"])))
     # Add an index column to track the original row positions
     table_dup = table.group_by(groupby_keys).aggregate([])
-    print(table_dup.shape)
     t2 = table_dup.group_by(keys).aggregate([("id", "min")]).column("id_min")
 
     new_table = pc.take(table, t2)

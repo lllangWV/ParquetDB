@@ -48,11 +48,23 @@ dependencies = [
 
 
 dev = [
-    "sphinx", 
-    "sphinx_rtd_theme",
     "pymongo",
     "pymatgen"
 ]
+
+docs= [
+    "sphinx", 
+    "sphinx_rtd_theme",
+    "sphinx-copybutton",
+    "nbsphinx",
+    "sphinx_design",
+    "sphinx-new-tab-link",
+    "sphinxcontrib-youtube",
+    "sphinxcontrib-video",
+    "pandoc",
+    "furo",
+]
+
 
 
 [project.urls]

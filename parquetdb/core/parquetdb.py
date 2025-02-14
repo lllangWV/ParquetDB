@@ -235,7 +235,7 @@ class ParquetDB:
         tmp_str = f"{'=' * 60}\n"
         tmp_str += f"PARQUETDB SUMMARY\n"
         tmp_str += f"{'=' * 60}\n"
-        tmp_str += f"Database path: {os.path.relpath(self.db_path)}\n\n"
+        tmp_str += f"Database path: {os.path.abspath(self.db_path)}\n\n"
         tmp_str += f"• Number of columns: {self.n_columns}\n"
         tmp_str += f"• Number of rows: {self.n_rows}\n"
         tmp_str += f"• Number of files: {self.n_files}\n"
@@ -615,13 +615,17 @@ class ParquetDB:
                 logger.info(f"No data found to delete.")
                 return None
 
-        # if filters:
-        #     for filter in filters:
-        #         current_id_table = self._load_data(columns=["id"], load_format="table")
-        #         filtered_id_table = current_id_table.filter(filter)
-        #         if filtered_id_table.num_rows == 0:
-        #             logger.info(f"No data found to delete.")
-        #             return None
+        if filters:
+            filter_expression = self._build_filter_expression(filters=filters)
+
+            current_id_table = self._load_data(
+                columns=["id"], filter=filter_expression, load_format="table"
+            )
+            ids = current_id_table["id"].combine_chunks()
+
+            if len(ids) == 0:
+                logger.info(f"No data found to delete.")
+                return None
 
         # Apply delete normalization
         self._normalize(ids=ids, columns=columns, normalize_config=normalize_config)
@@ -1814,7 +1818,9 @@ class ParquetDB:
         logger.info("New ids generated")
         return new_ids
 
-    def _build_filter_expression(self, ids: List[int], filters: List[pc.Expression]):
+    def _build_filter_expression(
+        self, ids: List[int] = None, filters: List[pc.Expression] = None
+    ):
         """
         Builds a filter expression from provided IDs and additional filters.
 

@@ -765,7 +765,6 @@ class TestParquetDB(unittest.TestCase):
         self.db.update(incoming_table, update_keys=["id_1", "id_2"])
 
         table = self.db.read()
-        print(table.to_pandas())
         assert table["field_1"].combine_chunks().to_pylist() == [
             "here",
             None,
@@ -1160,6 +1159,52 @@ class TestParquetDB(unittest.TestCase):
         assert table.column_names == ["id", "name"]
         assert table.shape == (3, 2)
 
+    def test_filter_delete(self):
+
+        data = [
+            {"name": "John", "age": 30},
+            {"name": "Jane", "age": 25},
+            {"name": "Jim", "age": 35},
+            {"name": "Jill", "age": 30},
+        ]
+
+        self.db.create(data)
+
+        table = self.db.read()
+        assert table.shape == (4, 3)
+
+        self.db.delete(filters=[pc.field("age") == 30])
+
+        table = self.db.read()
+        assert table.shape == (2, 3)
+
+        df = table.to_pandas()
+
+        assert df.iloc[0]["name"] == "Jane"
+        assert df.iloc[0]["age"] == 25
+        assert df.iloc[1]["name"] == "Jim"
+        assert df.iloc[1]["age"] == 35
+
+    def test_drop_duplicates(self):
+        data = [
+            {"id": 0, "name": "Alice", "category": 1},
+            {"id": 1, "name": "Bob", "category": 1},
+            {
+                "id": 2,
+                "name": "Bob",
+                "category": 1,
+            },  # Duplicate combination of (name, category)
+            {"id": 3, "name": "Charlie", "category": 2},
+        ]
+
+        table = pa.Table.from_pylist(data)
+
+        unique_keys = ["name", "category"]
+
+        deduplicated_table = pyarrow_utils.drop_duplicates(table, unique_keys)
+
+        assert deduplicated_table.shape == (3, 3)
+
 
 if __name__ == "__main__":
     # unittest.TextTestRunner().run(TestParquetDB('test_nested_data_handling'))
@@ -1179,7 +1224,11 @@ if __name__ == "__main__":
     # unittest.TextTestRunner().run(TestParquetDB("test_python_objects"))
     # unittest.TextTestRunner().run(TestParquetDB('test_update_multi_keys'))
     # unittest.TextTestRunner().run(TestParquetDB("test_transform"))
+
+    # unittest.TextTestRunner().run(TestParquetDB("test_filter_delete"))
     unittest.main()
+
+    # unittest.TextTestRunner().run(TestParquetDB("test_drop_duplicates"))
 
     # for x in range(500):
     #     print(f"Iteration {x+1}")

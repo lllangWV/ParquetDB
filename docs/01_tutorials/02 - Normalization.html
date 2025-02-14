@@ -1,0 +1,1763 @@
+<!doctype html>
+<html class="no-js" lang="en" data-content_root="../">
+  <head><meta charset="utf-8"/>
+    <meta name="viewport" content="width=device-width,initial-scale=1"/>
+    <meta name="color-scheme" content="light dark"><meta name="viewport" content="width=device-width, initial-scale=1" />
+<link rel="index" title="Index" href="../genindex.html" /><link rel="search" title="Search" href="../search.html" /><link rel="next" title="Advanced Read Operations" href="03%20-%20Advanced%20Reads.html" /><link rel="prev" title="Getting Started" href="01%20-%20Getting%20Started.html" />
+
+    <!-- Generated with Sphinx 7.4.7 and Furo 2024.08.06 -->
+        <title>Normalization - ParquetDB Docs: v0.24.1</title>
+      <link rel="stylesheet" type="text/css" href="../_static/pygments.css?v=fa44fd50" />
+    <link rel="stylesheet" type="text/css" href="../_static/styles/furo.css?v=354aac6f" />
+    <link rel="stylesheet" type="text/css" href="../_static/copybutton.css?v=76b2166b" />
+    <link rel="stylesheet" type="text/css" href="../_static/sphinx-design.min.css?v=95c83b7e" />
+    <link rel="stylesheet" type="text/css" href="../_static/nbsphinx-code-cells.css?v=2aa19091" />
+    <link rel="stylesheet" type="text/css" href="../_static/styles/furo-extensions.css?v=302659d7" />
+    <link rel="stylesheet" type="text/css" href="../_static/css/custom.css" />
+    
+    
+
+
+<style>
+  body {
+    --color-code-background: #eeffcc;
+  --color-code-foreground: black;
+  
+  }
+  @media not print {
+    body[data-theme="dark"] {
+      --color-code-background: #272822;
+  --color-code-foreground: #f8f8f2;
+  
+    }
+    @media (prefers-color-scheme: dark) {
+      body:not([data-theme="light"]) {
+        --color-code-background: #272822;
+  --color-code-foreground: #f8f8f2;
+  
+      }
+    }
+  }
+</style></head>
+  <body>
+    
+    <script>
+      document.body.dataset.theme = localStorage.getItem("theme") || "auto";
+    </script>
+    
+
+<svg xmlns="http://www.w3.org/2000/svg" style="display: none;">
+  <symbol id="svg-toc" viewBox="0 0 24 24">
+    <title>Contents</title>
+    <svg stroke="currentColor" fill="currentColor" stroke-width="0" viewBox="0 0 1024 1024">
+      <path d="M408 442h480c4.4 0 8-3.6 8-8v-56c0-4.4-3.6-8-8-8H408c-4.4 0-8 3.6-8 8v56c0 4.4 3.6 8 8 8zm-8 204c0 4.4 3.6 8 8 8h480c4.4 0 8-3.6 8-8v-56c0-4.4-3.6-8-8-8H408c-4.4 0-8 3.6-8 8v56zm504-486H120c-4.4 0-8 3.6-8 8v56c0 4.4 3.6 8 8 8h784c4.4 0 8-3.6 8-8v-56c0-4.4-3.6-8-8-8zm0 632H120c-4.4 0-8 3.6-8 8v56c0 4.4 3.6 8 8 8h784c4.4 0 8-3.6 8-8v-56c0-4.4-3.6-8-8-8zM115.4 518.9L271.7 642c5.8 4.6 14.4.5 14.4-6.9V388.9c0-7.4-8.5-11.5-14.4-6.9L115.4 505.1a8.74 8.74 0 0 0 0 13.8z"/>
+    </svg>
+  </symbol>
+  <symbol id="svg-menu" viewBox="0 0 24 24">
+    <title>Menu</title>
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+      stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="feather-menu">
+      <line x1="3" y1="12" x2="21" y2="12"></line>
+      <line x1="3" y1="6" x2="21" y2="6"></line>
+      <line x1="3" y1="18" x2="21" y2="18"></line>
+    </svg>
+  </symbol>
+  <symbol id="svg-arrow-right" viewBox="0 0 24 24">
+    <title>Expand</title>
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+      stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="feather-chevron-right">
+      <polyline points="9 18 15 12 9 6"></polyline>
+    </svg>
+  </symbol>
+  <symbol id="svg-sun" viewBox="0 0 24 24">
+    <title>Light mode</title>
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+      stroke-width="1" stroke-linecap="round" stroke-linejoin="round" class="feather-sun">
+      <circle cx="12" cy="12" r="5"></circle>
+      <line x1="12" y1="1" x2="12" y2="3"></line>
+      <line x1="12" y1="21" x2="12" y2="23"></line>
+      <line x1="4.22" y1="4.22" x2="5.64" y2="5.64"></line>
+      <line x1="18.36" y1="18.36" x2="19.78" y2="19.78"></line>
+      <line x1="1" y1="12" x2="3" y2="12"></line>
+      <line x1="21" y1="12" x2="23" y2="12"></line>
+      <line x1="4.22" y1="19.78" x2="5.64" y2="18.36"></line>
+      <line x1="18.36" y1="5.64" x2="19.78" y2="4.22"></line>
+    </svg>
+  </symbol>
+  <symbol id="svg-moon" viewBox="0 0 24 24">
+    <title>Dark mode</title>
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+      stroke-width="1" stroke-linecap="round" stroke-linejoin="round" class="icon-tabler-moon">
+      <path stroke="none" d="M0 0h24v24H0z" fill="none" />
+      <path d="M12 3c.132 0 .263 0 .393 0a7.5 7.5 0 0 0 7.92 12.446a9 9 0 1 1 -8.313 -12.454z" />
+    </svg>
+  </symbol>
+  <symbol id="svg-sun-with-moon" viewBox="0 0 24 24">
+    <title>Auto light/dark, in light mode</title>
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+      stroke-width="1" stroke-linecap="round" stroke-linejoin="round"
+      class="icon-custom-derived-from-feather-sun-and-tabler-moon">
+      <path style="opacity: 50%" d="M 5.411 14.504 C 5.471 14.504 5.532 14.504 5.591 14.504 C 3.639 16.319 4.383 19.569 6.931 20.352 C 7.693 20.586 8.512 20.551 9.25 20.252 C 8.023 23.207 4.056 23.725 2.11 21.184 C 0.166 18.642 1.702 14.949 4.874 14.536 C 5.051 14.512 5.231 14.5 5.411 14.5 L 5.411 14.504 Z"/>
+      <line x1="14.5" y1="3.25" x2="14.5" y2="1.25"/>
+      <line x1="14.5" y1="15.85" x2="14.5" y2="17.85"/>
+      <line x1="10.044" y1="5.094" x2="8.63" y2="3.68"/>
+      <line x1="19" y1="14.05" x2="20.414" y2="15.464"/>
+      <line x1="8.2" y1="9.55" x2="6.2" y2="9.55"/>
+      <line x1="20.8" y1="9.55" x2="22.8" y2="9.55"/>
+      <line x1="10.044" y1="14.006" x2="8.63" y2="15.42"/>
+      <line x1="19" y1="5.05" x2="20.414" y2="3.636"/>
+      <circle cx="14.5" cy="9.55" r="3.6"/>
+    </svg>
+  </symbol>
+  <symbol id="svg-moon-with-sun" viewBox="0 0 24 24">
+    <title>Auto light/dark, in dark mode</title>
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+      stroke-width="1" stroke-linecap="round" stroke-linejoin="round"
+      class="icon-custom-derived-from-feather-sun-and-tabler-moon">
+      <path d="M 8.282 7.007 C 8.385 7.007 8.494 7.007 8.595 7.007 C 5.18 10.184 6.481 15.869 10.942 17.24 C 12.275 17.648 13.706 17.589 15 17.066 C 12.851 22.236 5.91 23.143 2.505 18.696 C -0.897 14.249 1.791 7.786 7.342 7.063 C 7.652 7.021 7.965 7 8.282 7 L 8.282 7.007 Z"/>
+      <line style="opacity: 50%" x1="18" y1="3.705" x2="18" y2="2.5"/>
+      <line style="opacity: 50%" x1="18" y1="11.295" x2="18" y2="12.5"/>
+      <line style="opacity: 50%" x1="15.316" y1="4.816" x2="14.464" y2="3.964"/>
+      <line style="opacity: 50%" x1="20.711" y1="10.212" x2="21.563" y2="11.063"/>
+      <line style="opacity: 50%" x1="14.205" y1="7.5" x2="13.001" y2="7.5"/>
+      <line style="opacity: 50%" x1="21.795" y1="7.5" x2="23" y2="7.5"/>
+      <line style="opacity: 50%" x1="15.316" y1="10.184" x2="14.464" y2="11.036"/>
+      <line style="opacity: 50%" x1="20.711" y1="4.789" x2="21.563" y2="3.937"/>
+      <circle style="opacity: 50%" cx="18" cy="7.5" r="2.169"/>
+    </svg>
+  </symbol>
+  <symbol id="svg-pencil" viewBox="0 0 24 24">
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+      stroke-width="1" stroke-linecap="round" stroke-linejoin="round" class="icon-tabler-pencil-code">
+      <path d="M4 20h4l10.5 -10.5a2.828 2.828 0 1 0 -4 -4l-10.5 10.5v4" />
+      <path d="M13.5 6.5l4 4" />
+      <path d="M20 21l2 -2l-2 -2" />
+      <path d="M17 17l-2 2l2 2" />
+    </svg>
+  </symbol>
+  <symbol id="svg-eye" viewBox="0 0 24 24">
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+      stroke-width="1" stroke-linecap="round" stroke-linejoin="round" class="icon-tabler-eye-code">
+      <path stroke="none" d="M0 0h24v24H0z" fill="none" />
+      <path d="M10 12a2 2 0 1 0 4 0a2 2 0 0 0 -4 0" />
+      <path
+        d="M11.11 17.958c-3.209 -.307 -5.91 -2.293 -8.11 -5.958c2.4 -4 5.4 -6 9 -6c3.6 0 6.6 2 9 6c-.21 .352 -.427 .688 -.647 1.008" />
+      <path d="M20 21l2 -2l-2 -2" />
+      <path d="M17 17l-2 2l2 2" />
+    </svg>
+  </symbol>
+</svg>
+
+<input type="checkbox" class="sidebar-toggle" name="__navigation" id="__navigation">
+<input type="checkbox" class="sidebar-toggle" name="__toc" id="__toc">
+<label class="overlay sidebar-overlay" for="__navigation">
+  <div class="visually-hidden">Hide navigation sidebar</div>
+</label>
+<label class="overlay toc-overlay" for="__toc">
+  <div class="visually-hidden">Hide table of contents sidebar</div>
+</label>
+
+<a class="skip-to-content muted-link" href="#furo-main-content">Skip to content</a>
+
+
+
+<div class="page">
+  <header class="mobile-header">
+    <div class="header-left">
+      <label class="nav-overlay-icon" for="__navigation">
+        <div class="visually-hidden">Toggle site navigation sidebar</div>
+        <i class="icon"><svg><use href="#svg-menu"></use></svg></i>
+      </label>
+    </div>
+    <div class="header-center">
+      <a href="../index.html"><div class="brand">ParquetDB Docs: v0.24.1</div></a>
+    </div>
+    <div class="header-right">
+      <div class="theme-toggle-container theme-toggle-header">
+        <button class="theme-toggle">
+          <div class="visually-hidden">Toggle Light / Dark / Auto color theme</div>
+          <svg class="theme-icon-when-auto-light"><use href="#svg-sun-with-moon"></use></svg>
+          <svg class="theme-icon-when-auto-dark"><use href="#svg-moon-with-sun"></use></svg>
+          <svg class="theme-icon-when-dark"><use href="#svg-moon"></use></svg>
+          <svg class="theme-icon-when-light"><use href="#svg-sun"></use></svg>
+        </button>
+      </div>
+      <label class="toc-overlay-icon toc-header-icon" for="__toc">
+        <div class="visually-hidden">Toggle table of contents sidebar</div>
+        <i class="icon"><svg><use href="#svg-toc"></use></svg></i>
+      </label>
+    </div>
+  </header>
+  <aside class="sidebar-drawer">
+    <div class="sidebar-container">
+      
+      <div class="sidebar-sticky"><a class="sidebar-brand" href="../index.html">
+  
+  <div class="sidebar-logo-container">
+    <img class="sidebar-logo" src="../_static/Parquetdb_logo.png" alt="Logo"/>
+  </div>
+  
+  <span class="sidebar-brand-text">ParquetDB Docs: v0.24.1</span>
+  
+</a><form class="sidebar-search-container" method="get" action="../search.html" role="search">
+  <input class="sidebar-search" placeholder="Search" name="q" aria-label="Search">
+  <input type="hidden" name="check_keywords" value="yes">
+  <input type="hidden" name="area" value="default">
+</form>
+<div id="searchbox"></div><div class="sidebar-scroll"><div class="sidebar-tree">
+  <ul class="current">
+<li class="toctree-l1 current has-children"><a class="reference internal" href="index.html">Tutorials</a><input checked="" class="toctree-checkbox" id="toctree-checkbox-1" name="toctree-checkbox-1" role="switch" type="checkbox"/><label for="toctree-checkbox-1"><div class="visually-hidden">Toggle navigation of Tutorials</div><i class="icon"><svg><use href="#svg-arrow-right"></use></svg></i></label><ul class="current">
+<li class="toctree-l2"><a class="reference internal" href="01%20-%20Getting%20Started.html">Getting Started</a></li>
+<li class="toctree-l2 current current-page"><a class="current reference internal" href="#">Normalization</a></li>
+<li class="toctree-l2"><a class="reference internal" href="03%20-%20Advanced%20Reads.html">Advanced Read Operations</a></li>
+<li class="toctree-l2"><a class="reference internal" href="04%20-%20Supported%20Data%20Types.html">Supported Data Types</a></li>
+<li class="toctree-l2"><a class="reference internal" href="05%20-%20Advanced%20Updates.html">Advanced Update Operations</a></li>
+<li class="toctree-l2"><a class="reference internal" href="06%20-%20Adding%20Metadata.html">Manipulating Metadata</a></li>
+<li class="toctree-l2"><a class="reference internal" href="07%20-%20Helper%20Methods.html">Other Helper Methods</a></li>
+</ul>
+</li>
+<li class="toctree-l1 has-children"><a class="reference internal" href="../02_internal/index.html">Internals of ParquetDB</a><input class="toctree-checkbox" id="toctree-checkbox-2" name="toctree-checkbox-2" role="switch" type="checkbox"/><label for="toctree-checkbox-2"><div class="visually-hidden">Toggle navigation of Internals of ParquetDB</div><i class="icon"><svg><use href="#svg-arrow-right"></use></svg></i></label><ul>
+<li class="toctree-l2"><a class="reference internal" href="../02_internal/01%20-%20parquetdb_internals.html">ParquetDB Internals</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../02_internal/01%20-%20parquetdb_internals.html#input-data-formats">Input Data Formats</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../02_internal/01%20-%20parquetdb_internals.html#preprocessing-incoming-data">Preprocessing Incoming Data</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../02_internal/02%20-%20parquet_file_format.html">Parquet File Format</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../02_internal/02%20-%20parquet_file_format.html#parquet-file-layout">Parquet File Layout</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../02_internal/02%20-%20parquet_file_format.html#how-parquet-files-are-written">How Parquet Files are Written</a></li>
+</ul>
+</li>
+<li class="toctree-l1 has-children"><a class="reference internal" href="../examples/index.html">Examples for the ParquetDB package</a><input class="toctree-checkbox" id="toctree-checkbox-3" name="toctree-checkbox-3" role="switch" type="checkbox"/><label for="toctree-checkbox-3"><div class="visually-hidden">Toggle navigation of Examples for the ParquetDB package</div><i class="icon"><svg><use href="#svg-arrow-right"></use></svg></i></label><ul>
+<li class="toctree-l2"><a class="reference internal" href="../examples/notebooks/Example%201%20-%203D%20Alexandria%20Database.html">3D Alexandria Database</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="../CONTRIBUTING.html">Contributing</a></li>
+</ul>
+
+</div>
+</div>
+
+      </div>
+      
+    </div>
+  </aside>
+  <div class="main">
+    <div class="content">
+      <div class="article-container">
+        <a href="#" class="back-to-top muted-link">
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">
+            <path d="M13 20h-2V8l-5.5 5.5-1.42-1.42L12 4.16l7.92 7.92-1.42 1.42L13 8v12z"></path>
+          </svg>
+          <span>Back to top</span>
+        </a>
+        <div class="content-icon-container">
+          <div class="view-this-page">
+  <a class="muted-link" href="../_sources/01_tutorials/02 - Normalization.ipynb.txt" title="View this page">
+    <svg><use href="#svg-eye"></use></svg>
+    <span class="visually-hidden">View this page</span>
+  </a>
+</div>
+<div class="theme-toggle-container theme-toggle-content">
+            <button class="theme-toggle">
+              <div class="visually-hidden">Toggle Light / Dark / Auto color theme</div>
+              <svg class="theme-icon-when-auto-light"><use href="#svg-sun-with-moon"></use></svg>
+              <svg class="theme-icon-when-auto-dark"><use href="#svg-moon-with-sun"></use></svg>
+              <svg class="theme-icon-when-dark"><use href="#svg-moon"></use></svg>
+              <svg class="theme-icon-when-light"><use href="#svg-sun"></use></svg>
+            </button>
+          </div>
+          <label class="toc-overlay-icon toc-content-icon" for="__toc">
+            <div class="visually-hidden">Toggle table of contents sidebar</div>
+            <i class="icon"><svg><use href="#svg-toc"></use></svg></i>
+          </label>
+        </div>
+        <article role="main" id="furo-main-content">
+          <section id="Normalization">
+<h1>Normalization<a class="headerlink" href="#Normalization" title="Link to this heading">¶</a></h1>
+<p>Normalization is a crucial process for ensuring optimal performance and efficient management of data in file-based database systems like ParquetDB. In traditional databases, normalization typically refers to structuring relational tables to reduce redundancy. In ParquetDB’s context, <strong>normalization</strong> helps balance the distribution of data across multiple Parquet files, avoiding situations where files have uneven row counts.</p>
+<p>Without proper normalization, data skew can lead to performance bottlenecks in operations such as queries, inserts, updates, or deletions. By normalizing your dataset, ParquetDB rewrites and restructures your files to have a more consistent number of rows, improving parallelization and read/write speeds.</p>
+<p>In this notebook, we will:</p>
+<ol class="arabic simple">
+<li><p>Generate an example dataset using <code class="docutils literal notranslate"><span class="pre">generate_similar_data</span></code>.</p></li>
+<li><p>Demonstrate how to normalize data in ParquetDB using <code class="docutils literal notranslate"><span class="pre">NormalizeConfig</span></code>.</p></li>
+<li><p>Show how normalization can improve performance by ensuring each file has a balanced distribution of rows.</p></li>
+</ol>
+<div class="nbinput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[2]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="kn">import</span> <span class="nn">pprint</span>
+<span class="kn">import</span> <span class="nn">os</span>
+<span class="kn">import</span> <span class="nn">shutil</span>
+<span class="kn">from</span> <span class="nn">parquetdb.utils.general_utils</span> <span class="kn">import</span> <span class="n">generate_similar_data</span>
+<span class="kn">from</span> <span class="nn">parquetdb.core.parquetdb</span> <span class="kn">import</span> <span class="n">ParquetDB</span><span class="p">,</span> <span class="n">NormalizeConfig</span>
+</pre></div>
+</div>
+</div>
+<section id="Generate-Example-Data">
+<h2>Generate Example Data<a class="headerlink" href="#Generate-Example-Data" title="Link to this heading">¶</a></h2>
+<p>Below, we’ll generate a dataset that imitates real-world data variations using the <code class="docutils literal notranslate"><span class="pre">generate_similar_data</span></code> utility function. This function creates new data entries based on the structure of a provided template.</p>
+<div class="nbinput docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[3]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="c1"># Define a simple template data entry</span>
+<span class="n">template_dict</span> <span class="o">=</span> <span class="p">{</span>
+    <span class="s2">&quot;float_field&quot;</span><span class="p">:</span> <span class="mi">10</span><span class="p">,</span>
+    <span class="s2">&quot;int_field&quot;</span><span class="p">:</span> <span class="mi">10</span><span class="p">,</span>
+    <span class="s2">&quot;name&quot;</span><span class="p">:</span> <span class="s2">&quot;item&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;nested_value&quot;</span><span class="p">:</span> <span class="p">{</span><span class="s2">&quot;value&quot;</span><span class="p">:</span> <span class="mi">10</span><span class="p">,</span> <span class="s2">&quot;name&quot;</span><span class="p">:</span> <span class="s2">&quot;item&quot;</span><span class="p">},</span>
+    <span class="s2">&quot;list_field&quot;</span><span class="p">:</span> <span class="p">[</span><span class="mi">1</span><span class="p">,</span> <span class="mi">2</span><span class="p">,</span> <span class="mi">3</span><span class="p">],</span>
+<span class="p">}</span>
+<span class="k">for</span> <span class="n">x</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="mi">500</span><span class="p">):</span>
+    <span class="n">template_dict</span><span class="p">[</span><span class="sa">f</span><span class="s2">&quot;column_</span><span class="si">{</span><span class="n">x</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="s2">&quot;test&quot;</span>
+
+<span class="n">template</span> <span class="o">=</span> <span class="p">[</span><span class="n">template_dict</span><span class="p">]</span>
+
+<span class="c1"># Generate multiple data entries</span>
+<span class="n">num_entries</span> <span class="o">=</span> <span class="mi">100000</span>  <span class="c1"># Feel free to adjust this</span>
+<span class="n">data</span> <span class="o">=</span> <span class="n">generate_similar_data</span><span class="p">(</span><span class="n">template</span><span class="p">,</span> <span class="n">num_entries</span><span class="p">)</span>
+
+<span class="nb">print</span><span class="p">(</span><span class="s2">&quot;Generated Data:&quot;</span><span class="p">)</span>
+<span class="n">pprint</span><span class="o">.</span><span class="n">pprint</span><span class="p">(</span><span class="n">data</span><span class="p">[</span><span class="mi">0</span><span class="p">])</span>
+</pre></div>
+</div>
+</div>
+<div class="nboutput nblast docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<div class="highlight"><pre>
+Generated Data:
+{&#39;column_0&#39;: &#39;test_74&#39;,
+ &#39;column_1&#39;: &#39;test_16&#39;,
+ &#39;column_10&#39;: &#39;test_64&#39;,
+ &#39;column_100&#39;: &#39;test_84&#39;,
+ &#39;column_101&#39;: &#39;test_76&#39;,
+ &#39;column_102&#39;: &#39;test_78&#39;,
+ &#39;column_103&#39;: &#39;test_26&#39;,
+ &#39;column_104&#39;: &#39;test_16&#39;,
+ &#39;column_105&#39;: &#39;test_70&#39;,
+ &#39;column_106&#39;: &#39;test_19&#39;,
+ &#39;column_107&#39;: &#39;test_5&#39;,
+ &#39;column_108&#39;: &#39;test_82&#39;,
+ &#39;column_109&#39;: &#39;test_54&#39;,
+ &#39;column_11&#39;: &#39;test_72&#39;,
+ &#39;column_110&#39;: &#39;test_94&#39;,
+ &#39;column_111&#39;: &#39;test_59&#39;,
+ &#39;column_112&#39;: &#39;test_31&#39;,
+ &#39;column_113&#39;: &#39;test_33&#39;,
+ &#39;column_114&#39;: &#39;test_30&#39;,
+ &#39;column_115&#39;: &#39;test_82&#39;,
+ &#39;column_116&#39;: &#39;test_2&#39;,
+ &#39;column_117&#39;: &#39;test_20&#39;,
+ &#39;column_118&#39;: &#39;test_82&#39;,
+ &#39;column_119&#39;: &#39;test_31&#39;,
+ &#39;column_12&#39;: &#39;test_26&#39;,
+ &#39;column_120&#39;: &#39;test_89&#39;,
+ &#39;column_121&#39;: &#39;test_84&#39;,
+ &#39;column_122&#39;: &#39;test_85&#39;,
+ &#39;column_123&#39;: &#39;test_81&#39;,
+ &#39;column_124&#39;: &#39;test_37&#39;,
+ &#39;column_125&#39;: &#39;test_100&#39;,
+ &#39;column_126&#39;: &#39;test_95&#39;,
+ &#39;column_127&#39;: &#39;test_54&#39;,
+ &#39;column_128&#39;: &#39;test_86&#39;,
+ &#39;column_129&#39;: &#39;test_82&#39;,
+ &#39;column_13&#39;: &#39;test_5&#39;,
+ &#39;column_130&#39;: &#39;test_62&#39;,
+ &#39;column_131&#39;: &#39;test_94&#39;,
+ &#39;column_132&#39;: &#39;test_87&#39;,
+ &#39;column_133&#39;: &#39;test_99&#39;,
+ &#39;column_134&#39;: &#39;test_73&#39;,
+ &#39;column_135&#39;: &#39;test_56&#39;,
+ &#39;column_136&#39;: &#39;test_98&#39;,
+ &#39;column_137&#39;: &#39;test_36&#39;,
+ &#39;column_138&#39;: &#39;test_4&#39;,
+ &#39;column_139&#39;: &#39;test_88&#39;,
+ &#39;column_14&#39;: &#39;test_1&#39;,
+ &#39;column_140&#39;: &#39;test_71&#39;,
+ &#39;column_141&#39;: &#39;test_35&#39;,
+ &#39;column_142&#39;: &#39;test_71&#39;,
+ &#39;column_143&#39;: &#39;test_76&#39;,
+ &#39;column_144&#39;: &#39;test_55&#39;,
+ &#39;column_145&#39;: &#39;test_55&#39;,
+ &#39;column_146&#39;: &#39;test_15&#39;,
+ &#39;column_147&#39;: &#39;test_99&#39;,
+ &#39;column_148&#39;: &#39;test_80&#39;,
+ &#39;column_149&#39;: &#39;test_61&#39;,
+ &#39;column_15&#39;: &#39;test_91&#39;,
+ &#39;column_150&#39;: &#39;test_33&#39;,
+ &#39;column_151&#39;: &#39;test_58&#39;,
+ &#39;column_152&#39;: &#39;test_75&#39;,
+ &#39;column_153&#39;: &#39;test_51&#39;,
+ &#39;column_154&#39;: &#39;test_46&#39;,
+ &#39;column_155&#39;: &#39;test_20&#39;,
+ &#39;column_156&#39;: &#39;test_44&#39;,
+ &#39;column_157&#39;: &#39;test_49&#39;,
+ &#39;column_158&#39;: &#39;test_51&#39;,
+ &#39;column_159&#39;: &#39;test_2&#39;,
+ &#39;column_16&#39;: &#39;test_4&#39;,
+ &#39;column_160&#39;: &#39;test_25&#39;,
+ &#39;column_161&#39;: &#39;test_29&#39;,
+ &#39;column_162&#39;: &#39;test_54&#39;,
+ &#39;column_163&#39;: &#39;test_3&#39;,
+ &#39;column_164&#39;: &#39;test_23&#39;,
+ &#39;column_165&#39;: &#39;test_84&#39;,
+ &#39;column_166&#39;: &#39;test_41&#39;,
+ &#39;column_167&#39;: &#39;test_45&#39;,
+ &#39;column_168&#39;: &#39;test_65&#39;,
+ &#39;column_169&#39;: &#39;test_34&#39;,
+ &#39;column_17&#39;: &#39;test_99&#39;,
+ &#39;column_170&#39;: &#39;test_60&#39;,
+ &#39;column_171&#39;: &#39;test_57&#39;,
+ &#39;column_172&#39;: &#39;test_99&#39;,
+ &#39;column_173&#39;: &#39;test_67&#39;,
+ &#39;column_174&#39;: &#39;test_25&#39;,
+ &#39;column_175&#39;: &#39;test_97&#39;,
+ &#39;column_176&#39;: &#39;test_62&#39;,
+ &#39;column_177&#39;: &#39;test_30&#39;,
+ &#39;column_178&#39;: &#39;test_21&#39;,
+ &#39;column_179&#39;: &#39;test_70&#39;,
+ &#39;column_18&#39;: &#39;test_41&#39;,
+ &#39;column_180&#39;: &#39;test_59&#39;,
+ &#39;column_181&#39;: &#39;test_15&#39;,
+ &#39;column_182&#39;: &#39;test_67&#39;,
+ &#39;column_183&#39;: &#39;test_20&#39;,
+ &#39;column_184&#39;: &#39;test_41&#39;,
+ &#39;column_185&#39;: &#39;test_41&#39;,
+ &#39;column_186&#39;: &#39;test_42&#39;,
+ &#39;column_187&#39;: &#39;test_60&#39;,
+ &#39;column_188&#39;: &#39;test_51&#39;,
+ &#39;column_189&#39;: &#39;test_93&#39;,
+ &#39;column_19&#39;: &#39;test_62&#39;,
+ &#39;column_190&#39;: &#39;test_16&#39;,
+ &#39;column_191&#39;: &#39;test_60&#39;,
+ &#39;column_192&#39;: &#39;test_32&#39;,
+ &#39;column_193&#39;: &#39;test_94&#39;,
+ &#39;column_194&#39;: &#39;test_56&#39;,
+ &#39;column_195&#39;: &#39;test_91&#39;,
+ &#39;column_196&#39;: &#39;test_29&#39;,
+ &#39;column_197&#39;: &#39;test_65&#39;,
+ &#39;column_198&#39;: &#39;test_3&#39;,
+ &#39;column_199&#39;: &#39;test_5&#39;,
+ &#39;column_2&#39;: &#39;test_36&#39;,
+ &#39;column_20&#39;: &#39;test_12&#39;,
+ &#39;column_200&#39;: &#39;test_43&#39;,
+ &#39;column_201&#39;: &#39;test_25&#39;,
+ &#39;column_202&#39;: &#39;test_25&#39;,
+ &#39;column_203&#39;: &#39;test_31&#39;,
+ &#39;column_204&#39;: &#39;test_70&#39;,
+ &#39;column_205&#39;: &#39;test_5&#39;,
+ &#39;column_206&#39;: &#39;test_24&#39;,
+ &#39;column_207&#39;: &#39;test_8&#39;,
+ &#39;column_208&#39;: &#39;test_6&#39;,
+ &#39;column_209&#39;: &#39;test_81&#39;,
+ &#39;column_21&#39;: &#39;test_66&#39;,
+ &#39;column_210&#39;: &#39;test_88&#39;,
+ &#39;column_211&#39;: &#39;test_7&#39;,
+ &#39;column_212&#39;: &#39;test_98&#39;,
+ &#39;column_213&#39;: &#39;test_83&#39;,
+ &#39;column_214&#39;: &#39;test_5&#39;,
+ &#39;column_215&#39;: &#39;test_83&#39;,
+ &#39;column_216&#39;: &#39;test_62&#39;,
+ &#39;column_217&#39;: &#39;test_70&#39;,
+ &#39;column_218&#39;: &#39;test_6&#39;,
+ &#39;column_219&#39;: &#39;test_42&#39;,
+ &#39;column_22&#39;: &#39;test_44&#39;,
+ &#39;column_220&#39;: &#39;test_68&#39;,
+ &#39;column_221&#39;: &#39;test_57&#39;,
+ &#39;column_222&#39;: &#39;test_93&#39;,
+ &#39;column_223&#39;: &#39;test_5&#39;,
+ &#39;column_224&#39;: &#39;test_20&#39;,
+ &#39;column_225&#39;: &#39;test_8&#39;,
+ &#39;column_226&#39;: &#39;test_85&#39;,
+ &#39;column_227&#39;: &#39;test_70&#39;,
+ &#39;column_228&#39;: &#39;test_72&#39;,
+ &#39;column_229&#39;: &#39;test_9&#39;,
+ &#39;column_23&#39;: &#39;test_98&#39;,
+ &#39;column_230&#39;: &#39;test_60&#39;,
+ &#39;column_231&#39;: &#39;test_76&#39;,
+ &#39;column_232&#39;: &#39;test_88&#39;,
+ &#39;column_233&#39;: &#39;test_20&#39;,
+ &#39;column_234&#39;: &#39;test_42&#39;,
+ &#39;column_235&#39;: &#39;test_33&#39;,
+ &#39;column_236&#39;: &#39;test_63&#39;,
+ &#39;column_237&#39;: &#39;test_78&#39;,
+ &#39;column_238&#39;: &#39;test_21&#39;,
+ &#39;column_239&#39;: &#39;test_11&#39;,
+ &#39;column_24&#39;: &#39;test_87&#39;,
+ &#39;column_240&#39;: &#39;test_79&#39;,
+ &#39;column_241&#39;: &#39;test_25&#39;,
+ &#39;column_242&#39;: &#39;test_82&#39;,
+ &#39;column_243&#39;: &#39;test_70&#39;,
+ &#39;column_244&#39;: &#39;test_77&#39;,
+ &#39;column_245&#39;: &#39;test_4&#39;,
+ &#39;column_246&#39;: &#39;test_30&#39;,
+ &#39;column_247&#39;: &#39;test_13&#39;,
+ &#39;column_248&#39;: &#39;test_29&#39;,
+ &#39;column_249&#39;: &#39;test_24&#39;,
+ &#39;column_25&#39;: &#39;test_42&#39;,
+ &#39;column_250&#39;: &#39;test_37&#39;,
+ &#39;column_251&#39;: &#39;test_77&#39;,
+ &#39;column_252&#39;: &#39;test_53&#39;,
+ &#39;column_253&#39;: &#39;test_52&#39;,
+ &#39;column_254&#39;: &#39;test_26&#39;,
+ &#39;column_255&#39;: &#39;test_43&#39;,
+ &#39;column_256&#39;: &#39;test_3&#39;,
+ &#39;column_257&#39;: &#39;test_4&#39;,
+ &#39;column_258&#39;: &#39;test_23&#39;,
+ &#39;column_259&#39;: &#39;test_55&#39;,
+ &#39;column_26&#39;: &#39;test_39&#39;,
+ &#39;column_260&#39;: &#39;test_66&#39;,
+ &#39;column_261&#39;: &#39;test_47&#39;,
+ &#39;column_262&#39;: &#39;test_24&#39;,
+ &#39;column_263&#39;: &#39;test_16&#39;,
+ &#39;column_264&#39;: &#39;test_78&#39;,
+ &#39;column_265&#39;: &#39;test_49&#39;,
+ &#39;column_266&#39;: &#39;test_36&#39;,
+ &#39;column_267&#39;: &#39;test_74&#39;,
+ &#39;column_268&#39;: &#39;test_31&#39;,
+ &#39;column_269&#39;: &#39;test_62&#39;,
+ &#39;column_27&#39;: &#39;test_66&#39;,
+ &#39;column_270&#39;: &#39;test_27&#39;,
+ &#39;column_271&#39;: &#39;test_2&#39;,
+ &#39;column_272&#39;: &#39;test_71&#39;,
+ &#39;column_273&#39;: &#39;test_64&#39;,
+ &#39;column_274&#39;: &#39;test_33&#39;,
+ &#39;column_275&#39;: &#39;test_83&#39;,
+ &#39;column_276&#39;: &#39;test_73&#39;,
+ &#39;column_277&#39;: &#39;test_44&#39;,
+ &#39;column_278&#39;: &#39;test_25&#39;,
+ &#39;column_279&#39;: &#39;test_79&#39;,
+ &#39;column_28&#39;: &#39;test_77&#39;,
+ &#39;column_280&#39;: &#39;test_84&#39;,
+ &#39;column_281&#39;: &#39;test_16&#39;,
+ &#39;column_282&#39;: &#39;test_42&#39;,
+ &#39;column_283&#39;: &#39;test_69&#39;,
+ &#39;column_284&#39;: &#39;test_76&#39;,
+ &#39;column_285&#39;: &#39;test_94&#39;,
+ &#39;column_286&#39;: &#39;test_75&#39;,
+ &#39;column_287&#39;: &#39;test_81&#39;,
+ &#39;column_288&#39;: &#39;test_55&#39;,
+ &#39;column_289&#39;: &#39;test_63&#39;,
+ &#39;column_29&#39;: &#39;test_45&#39;,
+ &#39;column_290&#39;: &#39;test_12&#39;,
+ &#39;column_291&#39;: &#39;test_71&#39;,
+ &#39;column_292&#39;: &#39;test_9&#39;,
+ &#39;column_293&#39;: &#39;test_5&#39;,
+ &#39;column_294&#39;: &#39;test_9&#39;,
+ &#39;column_295&#39;: &#39;test_44&#39;,
+ &#39;column_296&#39;: &#39;test_33&#39;,
+ &#39;column_297&#39;: &#39;test_70&#39;,
+ &#39;column_298&#39;: &#39;test_97&#39;,
+ &#39;column_299&#39;: &#39;test_84&#39;,
+ &#39;column_3&#39;: &#39;test_28&#39;,
+ &#39;column_30&#39;: &#39;test_91&#39;,
+ &#39;column_300&#39;: &#39;test_64&#39;,
+ &#39;column_301&#39;: &#39;test_97&#39;,
+ &#39;column_302&#39;: &#39;test_30&#39;,
+ &#39;column_303&#39;: &#39;test_28&#39;,
+ &#39;column_304&#39;: &#39;test_70&#39;,
+ &#39;column_305&#39;: &#39;test_60&#39;,
+ &#39;column_306&#39;: &#39;test_44&#39;,
+ &#39;column_307&#39;: &#39;test_7&#39;,
+ &#39;column_308&#39;: &#39;test_14&#39;,
+ &#39;column_309&#39;: &#39;test_50&#39;,
+ &#39;column_31&#39;: &#39;test_10&#39;,
+ &#39;column_310&#39;: &#39;test_72&#39;,
+ &#39;column_311&#39;: &#39;test_62&#39;,
+ &#39;column_312&#39;: &#39;test_95&#39;,
+ &#39;column_313&#39;: &#39;test_68&#39;,
+ &#39;column_314&#39;: &#39;test_77&#39;,
+ &#39;column_315&#39;: &#39;test_52&#39;,
+ &#39;column_316&#39;: &#39;test_40&#39;,
+ &#39;column_317&#39;: &#39;test_27&#39;,
+ &#39;column_318&#39;: &#39;test_6&#39;,
+ &#39;column_319&#39;: &#39;test_47&#39;,
+ &#39;column_32&#39;: &#39;test_75&#39;,
+ &#39;column_320&#39;: &#39;test_78&#39;,
+ &#39;column_321&#39;: &#39;test_98&#39;,
+ &#39;column_322&#39;: &#39;test_24&#39;,
+ &#39;column_323&#39;: &#39;test_7&#39;,
+ &#39;column_324&#39;: &#39;test_74&#39;,
+ &#39;column_325&#39;: &#39;test_4&#39;,
+ &#39;column_326&#39;: &#39;test_51&#39;,
+ &#39;column_327&#39;: &#39;test_69&#39;,
+ &#39;column_328&#39;: &#39;test_25&#39;,
+ &#39;column_329&#39;: &#39;test_33&#39;,
+ &#39;column_33&#39;: &#39;test_15&#39;,
+ &#39;column_330&#39;: &#39;test_68&#39;,
+ &#39;column_331&#39;: &#39;test_14&#39;,
+ &#39;column_332&#39;: &#39;test_12&#39;,
+ &#39;column_333&#39;: &#39;test_27&#39;,
+ &#39;column_334&#39;: &#39;test_85&#39;,
+ &#39;column_335&#39;: &#39;test_41&#39;,
+ &#39;column_336&#39;: &#39;test_92&#39;,
+ &#39;column_337&#39;: &#39;test_73&#39;,
+ &#39;column_338&#39;: &#39;test_66&#39;,
+ &#39;column_339&#39;: &#39;test_92&#39;,
+ &#39;column_34&#39;: &#39;test_2&#39;,
+ &#39;column_340&#39;: &#39;test_93&#39;,
+ &#39;column_341&#39;: &#39;test_68&#39;,
+ &#39;column_342&#39;: &#39;test_36&#39;,
+ &#39;column_343&#39;: &#39;test_35&#39;,
+ &#39;column_344&#39;: &#39;test_78&#39;,
+ &#39;column_345&#39;: &#39;test_44&#39;,
+ &#39;column_346&#39;: &#39;test_55&#39;,
+ &#39;column_347&#39;: &#39;test_87&#39;,
+ &#39;column_348&#39;: &#39;test_33&#39;,
+ &#39;column_349&#39;: &#39;test_80&#39;,
+ &#39;column_35&#39;: &#39;test_52&#39;,
+ &#39;column_350&#39;: &#39;test_81&#39;,
+ &#39;column_351&#39;: &#39;test_8&#39;,
+ &#39;column_352&#39;: &#39;test_52&#39;,
+ &#39;column_353&#39;: &#39;test_73&#39;,
+ &#39;column_354&#39;: &#39;test_23&#39;,
+ &#39;column_355&#39;: &#39;test_10&#39;,
+ &#39;column_356&#39;: &#39;test_96&#39;,
+ &#39;column_357&#39;: &#39;test_25&#39;,
+ &#39;column_358&#39;: &#39;test_33&#39;,
+ &#39;column_359&#39;: &#39;test_5&#39;,
+ &#39;column_36&#39;: &#39;test_1&#39;,
+ &#39;column_360&#39;: &#39;test_2&#39;,
+ &#39;column_361&#39;: &#39;test_67&#39;,
+ &#39;column_362&#39;: &#39;test_30&#39;,
+ &#39;column_363&#39;: &#39;test_23&#39;,
+ &#39;column_364&#39;: &#39;test_92&#39;,
+ &#39;column_365&#39;: &#39;test_12&#39;,
+ &#39;column_366&#39;: &#39;test_5&#39;,
+ &#39;column_367&#39;: &#39;test_43&#39;,
+ &#39;column_368&#39;: &#39;test_94&#39;,
+ &#39;column_369&#39;: &#39;test_21&#39;,
+ &#39;column_37&#39;: &#39;test_92&#39;,
+ &#39;column_370&#39;: &#39;test_29&#39;,
+ &#39;column_371&#39;: &#39;test_92&#39;,
+ &#39;column_372&#39;: &#39;test_11&#39;,
+ &#39;column_373&#39;: &#39;test_50&#39;,
+ &#39;column_374&#39;: &#39;test_90&#39;,
+ &#39;column_375&#39;: &#39;test_3&#39;,
+ &#39;column_376&#39;: &#39;test_45&#39;,
+ &#39;column_377&#39;: &#39;test_78&#39;,
+ &#39;column_378&#39;: &#39;test_58&#39;,
+ &#39;column_379&#39;: &#39;test_47&#39;,
+ &#39;column_38&#39;: &#39;test_70&#39;,
+ &#39;column_380&#39;: &#39;test_8&#39;,
+ &#39;column_381&#39;: &#39;test_94&#39;,
+ &#39;column_382&#39;: &#39;test_74&#39;,
+ &#39;column_383&#39;: &#39;test_98&#39;,
+ &#39;column_384&#39;: &#39;test_7&#39;,
+ &#39;column_385&#39;: &#39;test_49&#39;,
+ &#39;column_386&#39;: &#39;test_47&#39;,
+ &#39;column_387&#39;: &#39;test_38&#39;,
+ &#39;column_388&#39;: &#39;test_16&#39;,
+ &#39;column_389&#39;: &#39;test_70&#39;,
+ &#39;column_39&#39;: &#39;test_50&#39;,
+ &#39;column_390&#39;: &#39;test_28&#39;,
+ &#39;column_391&#39;: &#39;test_18&#39;,
+ &#39;column_392&#39;: &#39;test_70&#39;,
+ &#39;column_393&#39;: &#39;test_72&#39;,
+ &#39;column_394&#39;: &#39;test_59&#39;,
+ &#39;column_395&#39;: &#39;test_1&#39;,
+ &#39;column_396&#39;: &#39;test_56&#39;,
+ &#39;column_397&#39;: &#39;test_1&#39;,
+ &#39;column_398&#39;: &#39;test_11&#39;,
+ &#39;column_399&#39;: &#39;test_28&#39;,
+ &#39;column_4&#39;: &#39;test_33&#39;,
+ &#39;column_40&#39;: &#39;test_47&#39;,
+ &#39;column_400&#39;: &#39;test_72&#39;,
+ &#39;column_401&#39;: &#39;test_8&#39;,
+ &#39;column_402&#39;: &#39;test_7&#39;,
+ &#39;column_403&#39;: &#39;test_52&#39;,
+ &#39;column_404&#39;: &#39;test_13&#39;,
+ &#39;column_405&#39;: &#39;test_61&#39;,
+ &#39;column_406&#39;: &#39;test_58&#39;,
+ &#39;column_407&#39;: &#39;test_42&#39;,
+ &#39;column_408&#39;: &#39;test_82&#39;,
+ &#39;column_409&#39;: &#39;test_58&#39;,
+ &#39;column_41&#39;: &#39;test_48&#39;,
+ &#39;column_410&#39;: &#39;test_51&#39;,
+ &#39;column_411&#39;: &#39;test_46&#39;,
+ &#39;column_412&#39;: &#39;test_81&#39;,
+ &#39;column_413&#39;: &#39;test_49&#39;,
+ &#39;column_414&#39;: &#39;test_83&#39;,
+ &#39;column_415&#39;: &#39;test_88&#39;,
+ &#39;column_416&#39;: &#39;test_16&#39;,
+ &#39;column_417&#39;: &#39;test_76&#39;,
+ &#39;column_418&#39;: &#39;test_42&#39;,
+ &#39;column_419&#39;: &#39;test_30&#39;,
+ &#39;column_42&#39;: &#39;test_56&#39;,
+ &#39;column_420&#39;: &#39;test_11&#39;,
+ &#39;column_421&#39;: &#39;test_71&#39;,
+ &#39;column_422&#39;: &#39;test_47&#39;,
+ &#39;column_423&#39;: &#39;test_28&#39;,
+ &#39;column_424&#39;: &#39;test_95&#39;,
+ &#39;column_425&#39;: &#39;test_54&#39;,
+ &#39;column_426&#39;: &#39;test_47&#39;,
+ &#39;column_427&#39;: &#39;test_55&#39;,
+ &#39;column_428&#39;: &#39;test_11&#39;,
+ &#39;column_429&#39;: &#39;test_91&#39;,
+ &#39;column_43&#39;: &#39;test_18&#39;,
+ &#39;column_430&#39;: &#39;test_67&#39;,
+ &#39;column_431&#39;: &#39;test_86&#39;,
+ &#39;column_432&#39;: &#39;test_35&#39;,
+ &#39;column_433&#39;: &#39;test_90&#39;,
+ &#39;column_434&#39;: &#39;test_88&#39;,
+ &#39;column_435&#39;: &#39;test_61&#39;,
+ &#39;column_436&#39;: &#39;test_18&#39;,
+ &#39;column_437&#39;: &#39;test_100&#39;,
+ &#39;column_438&#39;: &#39;test_22&#39;,
+ &#39;column_439&#39;: &#39;test_25&#39;,
+ &#39;column_44&#39;: &#39;test_36&#39;,
+ &#39;column_440&#39;: &#39;test_6&#39;,
+ &#39;column_441&#39;: &#39;test_35&#39;,
+ &#39;column_442&#39;: &#39;test_41&#39;,
+ &#39;column_443&#39;: &#39;test_91&#39;,
+ &#39;column_444&#39;: &#39;test_47&#39;,
+ &#39;column_445&#39;: &#39;test_25&#39;,
+ &#39;column_446&#39;: &#39;test_87&#39;,
+ &#39;column_447&#39;: &#39;test_22&#39;,
+ &#39;column_448&#39;: &#39;test_73&#39;,
+ &#39;column_449&#39;: &#39;test_32&#39;,
+ &#39;column_45&#39;: &#39;test_48&#39;,
+ &#39;column_450&#39;: &#39;test_3&#39;,
+ &#39;column_451&#39;: &#39;test_11&#39;,
+ &#39;column_452&#39;: &#39;test_40&#39;,
+ &#39;column_453&#39;: &#39;test_83&#39;,
+ &#39;column_454&#39;: &#39;test_28&#39;,
+ &#39;column_455&#39;: &#39;test_10&#39;,
+ &#39;column_456&#39;: &#39;test_12&#39;,
+ &#39;column_457&#39;: &#39;test_83&#39;,
+ &#39;column_458&#39;: &#39;test_51&#39;,
+ &#39;column_459&#39;: &#39;test_90&#39;,
+ &#39;column_46&#39;: &#39;test_43&#39;,
+ &#39;column_460&#39;: &#39;test_26&#39;,
+ &#39;column_461&#39;: &#39;test_91&#39;,
+ &#39;column_462&#39;: &#39;test_34&#39;,
+ &#39;column_463&#39;: &#39;test_66&#39;,
+ &#39;column_464&#39;: &#39;test_13&#39;,
+ &#39;column_465&#39;: &#39;test_13&#39;,
+ &#39;column_466&#39;: &#39;test_65&#39;,
+ &#39;column_467&#39;: &#39;test_90&#39;,
+ &#39;column_468&#39;: &#39;test_21&#39;,
+ &#39;column_469&#39;: &#39;test_11&#39;,
+ &#39;column_47&#39;: &#39;test_56&#39;,
+ &#39;column_470&#39;: &#39;test_15&#39;,
+ &#39;column_471&#39;: &#39;test_24&#39;,
+ &#39;column_472&#39;: &#39;test_1&#39;,
+ &#39;column_473&#39;: &#39;test_85&#39;,
+ &#39;column_474&#39;: &#39;test_79&#39;,
+ &#39;column_475&#39;: &#39;test_91&#39;,
+ &#39;column_476&#39;: &#39;test_51&#39;,
+ &#39;column_477&#39;: &#39;test_2&#39;,
+ &#39;column_478&#39;: &#39;test_10&#39;,
+ &#39;column_479&#39;: &#39;test_77&#39;,
+ &#39;column_48&#39;: &#39;test_15&#39;,
+ &#39;column_480&#39;: &#39;test_26&#39;,
+ &#39;column_481&#39;: &#39;test_16&#39;,
+ &#39;column_482&#39;: &#39;test_100&#39;,
+ &#39;column_483&#39;: &#39;test_9&#39;,
+ &#39;column_484&#39;: &#39;test_19&#39;,
+ &#39;column_485&#39;: &#39;test_31&#39;,
+ &#39;column_486&#39;: &#39;test_39&#39;,
+ &#39;column_487&#39;: &#39;test_65&#39;,
+ &#39;column_488&#39;: &#39;test_37&#39;,
+ &#39;column_489&#39;: &#39;test_32&#39;,
+ &#39;column_49&#39;: &#39;test_28&#39;,
+ &#39;column_490&#39;: &#39;test_35&#39;,
+ &#39;column_491&#39;: &#39;test_61&#39;,
+ &#39;column_492&#39;: &#39;test_56&#39;,
+ &#39;column_493&#39;: &#39;test_29&#39;,
+ &#39;column_494&#39;: &#39;test_93&#39;,
+ &#39;column_495&#39;: &#39;test_49&#39;,
+ &#39;column_496&#39;: &#39;test_24&#39;,
+ &#39;column_497&#39;: &#39;test_76&#39;,
+ &#39;column_498&#39;: &#39;test_63&#39;,
+ &#39;column_499&#39;: &#39;test_19&#39;,
+ &#39;column_5&#39;: &#39;test_94&#39;,
+ &#39;column_50&#39;: &#39;test_76&#39;,
+ &#39;column_51&#39;: &#39;test_88&#39;,
+ &#39;column_52&#39;: &#39;test_24&#39;,
+ &#39;column_53&#39;: &#39;test_84&#39;,
+ &#39;column_54&#39;: &#39;test_27&#39;,
+ &#39;column_55&#39;: &#39;test_89&#39;,
+ &#39;column_56&#39;: &#39;test_78&#39;,
+ &#39;column_57&#39;: &#39;test_27&#39;,
+ &#39;column_58&#39;: &#39;test_33&#39;,
+ &#39;column_59&#39;: &#39;test_42&#39;,
+ &#39;column_6&#39;: &#39;test_88&#39;,
+ &#39;column_60&#39;: &#39;test_94&#39;,
+ &#39;column_61&#39;: &#39;test_51&#39;,
+ &#39;column_62&#39;: &#39;test_62&#39;,
+ &#39;column_63&#39;: &#39;test_93&#39;,
+ &#39;column_64&#39;: &#39;test_53&#39;,
+ &#39;column_65&#39;: &#39;test_6&#39;,
+ &#39;column_66&#39;: &#39;test_73&#39;,
+ &#39;column_67&#39;: &#39;test_94&#39;,
+ &#39;column_68&#39;: &#39;test_20&#39;,
+ &#39;column_69&#39;: &#39;test_4&#39;,
+ &#39;column_7&#39;: &#39;test_16&#39;,
+ &#39;column_70&#39;: &#39;test_7&#39;,
+ &#39;column_71&#39;: &#39;test_97&#39;,
+ &#39;column_72&#39;: &#39;test_38&#39;,
+ &#39;column_73&#39;: &#39;test_61&#39;,
+ &#39;column_74&#39;: &#39;test_58&#39;,
+ &#39;column_75&#39;: &#39;test_99&#39;,
+ &#39;column_76&#39;: &#39;test_71&#39;,
+ &#39;column_77&#39;: &#39;test_97&#39;,
+ &#39;column_78&#39;: &#39;test_19&#39;,
+ &#39;column_79&#39;: &#39;test_45&#39;,
+ &#39;column_8&#39;: &#39;test_20&#39;,
+ &#39;column_80&#39;: &#39;test_59&#39;,
+ &#39;column_81&#39;: &#39;test_2&#39;,
+ &#39;column_82&#39;: &#39;test_77&#39;,
+ &#39;column_83&#39;: &#39;test_51&#39;,
+ &#39;column_84&#39;: &#39;test_38&#39;,
+ &#39;column_85&#39;: &#39;test_92&#39;,
+ &#39;column_86&#39;: &#39;test_84&#39;,
+ &#39;column_87&#39;: &#39;test_69&#39;,
+ &#39;column_88&#39;: &#39;test_83&#39;,
+ &#39;column_89&#39;: &#39;test_95&#39;,
+ &#39;column_9&#39;: &#39;test_69&#39;,
+ &#39;column_90&#39;: &#39;test_36&#39;,
+ &#39;column_91&#39;: &#39;test_60&#39;,
+ &#39;column_92&#39;: &#39;test_59&#39;,
+ &#39;column_93&#39;: &#39;test_28&#39;,
+ &#39;column_94&#39;: &#39;test_37&#39;,
+ &#39;column_95&#39;: &#39;test_54&#39;,
+ &#39;column_96&#39;: &#39;test_86&#39;,
+ &#39;column_97&#39;: &#39;test_100&#39;,
+ &#39;column_98&#39;: &#39;test_29&#39;,
+ &#39;column_99&#39;: &#39;test_81&#39;,
+ &#39;float_field&#39;: 12,
+ &#39;int_field&#39;: 9,
+ &#39;list_field&#39;: [1, 2, 3],
+ &#39;name&#39;: &#39;item_66&#39;,
+ &#39;nested_value&#39;: {&#39;name&#39;: &#39;item_6&#39;, &#39;value&#39;: 0}}
+</pre></div></div>
+</div>
+<p>Next, we import the data into our database</p>
+<div class="nbinput docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[4]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">db_path</span> <span class="o">=</span> <span class="s2">&quot;ParquetDB&quot;</span>
+<span class="k">if</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">exists</span><span class="p">(</span><span class="n">db_path</span><span class="p">):</span>
+    <span class="n">shutil</span><span class="o">.</span><span class="n">rmtree</span><span class="p">(</span><span class="n">db_path</span><span class="p">)</span>
+<span class="n">db</span> <span class="o">=</span> <span class="n">ParquetDB</span><span class="p">(</span><span class="n">db_path</span><span class="o">=</span><span class="n">db_path</span><span class="p">)</span>
+
+<span class="n">db</span><span class="o">.</span><span class="n">create</span><span class="p">(</span><span class="n">data</span><span class="p">)</span>
+<span class="nb">print</span><span class="p">(</span><span class="n">db</span><span class="p">)</span>
+</pre></div>
+</div>
+</div>
+<div class="nboutput nblast docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<div class="highlight"><pre>
+============================================================
+PARQUETDB SUMMARY
+============================================================
+Database path: ParquetDB
+
+• Number of columns: 507
+• Number of rows: 100000
+• Number of files: 1
+• Number of rows per file: [100000]
+• Number of row groups per file: [4]
+• Serialized metadata size per file: [225147] Bytes
+
+############################################################
+METADATA
+############################################################
+
+############################################################
+COLUMN DETAILS
+############################################################
+• Columns:
+    - column_296
+    - column_302
+    - column_370
+    - column_0
+    - column_80
+    - column_367
+    - column_344
+    - column_216
+    - column_151
+    - column_61
+    - column_439
+    - column_87
+    - column_379
+    - column_351
+    - column_329
+    - column_423
+    - column_97
+    - column_42
+    - column_401
+    - column_355
+    - column_171
+    - column_261
+    - column_125
+    - column_270
+    - column_398
+    - column_17
+    - column_18
+    - column_479
+    - column_186
+    - column_471
+    - column_274
+    - column_236
+    - column_421
+    - column_394
+    - column_369
+    - column_397
+    - column_417
+    - column_432
+    - column_258
+    - column_120
+    - column_178
+    - column_415
+    - column_126
+    - column_477
+    - column_124
+    - column_105
+    - column_360
+    - column_374
+    - column_99
+    - column_314
+    - column_380
+    - column_154
+    - column_320
+    - name
+    - column_459
+    - column_78
+    - column_15
+    - column_291
+    - column_189
+    - column_229
+    - column_412
+    - column_276
+    - column_96
+    - column_123
+    - column_495
+    - column_358
+    - column_354
+    - column_169
+    - column_156
+    - column_452
+    - column_483
+    - column_170
+    - column_163
+    - column_119
+    - column_180
+    - column_463
+    - column_176
+    - column_349
+    - column_106
+    - column_316
+    - column_442
+    - column_338
+    - column_206
+    - float_field
+    - column_68
+    - column_444
+    - column_222
+    - column_16
+    - column_324
+    - column_58
+    - list_field
+    - column_364
+    - column_226
+    - column_366
+    - column_82
+    - column_323
+    - column_95
+    - column_248
+    - column_437
+    - column_204
+    - column_275
+    - column_160
+    - column_307
+    - column_37
+    - column_116
+    - column_333
+    - column_143
+    - column_436
+    - column_46
+    - column_148
+    - column_376
+    - column_164
+    - column_277
+    - column_278
+    - column_357
+    - column_365
+    - column_212
+    - column_361
+    - column_499
+    - column_85
+    - column_217
+    - column_402
+    - column_157
+    - column_272
+    - column_285
+    - column_426
+    - column_57
+    - column_400
+    - column_240
+    - nested_value.value
+    - column_127
+    - column_89
+    - column_468
+    - id
+    - column_118
+    - column_469
+    - column_418
+    - column_490
+    - column_150
+    - column_430
+    - column_152
+    - column_455
+    - column_475
+    - column_172
+    - column_146
+    - column_8
+    - column_359
+    - column_420
+    - column_408
+    - column_84
+    - column_210
+    - column_309
+    - column_482
+    - column_102
+    - column_195
+    - column_223
+    - column_194
+    - column_200
+    - column_29
+    - column_158
+    - column_336
+    - column_207
+    - column_414
+    - column_22
+    - column_228
+    - column_407
+    - column_454
+    - column_234
+    - column_322
+    - column_64
+    - column_45
+    - column_310
+    - column_147
+    - column_348
+    - column_38
+    - column_115
+    - column_269
+    - column_167
+    - column_179
+    - column_447
+    - column_330
+    - column_419
+    - column_32
+    - column_94
+    - column_187
+    - column_203
+    - column_14
+    - column_337
+    - column_498
+    - column_98
+    - column_67
+    - column_263
+    - column_235
+    - column_249
+    - column_292
+    - column_63
+    - column_27
+    - column_53
+    - column_26
+    - column_450
+    - column_243
+    - column_44
+    - column_306
+    - column_331
+    - column_315
+    - column_108
+    - column_428
+    - column_383
+    - column_453
+    - column_232
+    - column_460
+    - column_413
+    - column_441
+    - column_3
+    - column_390
+    - column_60
+    - column_117
+    - column_303
+    - column_215
+    - column_91
+    - column_434
+    - column_52
+    - column_145
+    - column_294
+    - column_256
+    - column_470
+    - column_75
+    - column_202
+    - column_451
+    - column_347
+    - column_262
+    - column_144
+    - column_31
+    - column_472
+    - column_213
+    - column_218
+    - column_363
+    - column_456
+    - column_155
+    - column_73
+    - column_484
+    - column_23
+    - column_404
+    - column_431
+    - column_133
+    - column_221
+    - column_440
+    - column_279
+    - column_438
+    - column_429
+    - column_327
+    - column_231
+    - column_350
+    - column_392
+    - column_49
+    - column_25
+    - column_230
+    - column_142
+    - column_284
+    - column_191
+    - column_445
+    - column_140
+    - column_405
+    - column_55
+    - column_93
+    - column_461
+    - column_254
+    - column_340
+    - column_136
+    - column_39
+    - column_138
+    - column_435
+    - column_252
+    - column_128
+    - column_237
+    - column_192
+    - column_188
+    - column_406
+    - column_488
+    - column_224
+    - column_209
+    - column_250
+    - column_121
+    - column_389
+    - column_403
+    - column_50
+    - column_70
+    - column_290
+    - column_198
+    - column_388
+    - column_199
+    - column_36
+    - column_334
+    - column_35
+    - column_377
+    - column_40
+    - column_395
+    - column_185
+    - column_386
+    - column_100
+    - column_111
+    - column_10
+    - column_114
+    - column_239
+    - column_113
+    - column_433
+    - column_473
+    - column_326
+    - column_465
+    - column_7
+    - column_72
+    - column_51
+    - column_2
+    - column_165
+    - column_448
+    - column_183
+    - column_257
+    - column_308
+    - column_384
+    - column_131
+    - column_266
+    - column_5
+    - column_282
+    - column_493
+    - column_104
+    - column_181
+    - column_30
+    - column_491
+    - column_287
+    - column_153
+    - column_242
+    - column_298
+    - column_149
+    - column_265
+    - column_139
+    - column_339
+    - column_385
+    - column_168
+    - column_372
+    - column_411
+    - column_166
+    - column_141
+    - column_11
+    - column_83
+    - column_4
+    - column_47
+    - column_424
+    - column_362
+    - column_214
+    - column_244
+    - column_368
+    - column_474
+    - column_54
+    - column_409
+    - column_174
+    - column_271
+    - column_9
+    - column_129
+    - column_335
+    - column_356
+    - column_299
+    - column_325
+    - column_79
+    - column_193
+    - column_253
+    - column_137
+    - column_328
+    - column_173
+    - column_76
+    - column_56
+    - column_134
+    - column_159
+    - column_24
+    - column_297
+    - column_283
+    - column_449
+    - column_288
+    - column_494
+    - column_422
+    - column_496
+    - column_6
+    - column_74
+    - column_268
+    - column_427
+    - column_382
+    - column_462
+    - column_311
+    - column_273
+    - column_289
+    - column_373
+    - column_247
+    - column_238
+    - column_211
+    - nested_value.name
+    - column_280
+    - column_196
+    - column_487
+    - column_458
+    - column_225
+    - column_295
+    - column_425
+    - column_62
+    - column_457
+    - column_313
+    - column_378
+    - column_109
+    - column_175
+    - column_13
+    - column_182
+    - column_342
+    - column_343
+    - column_12
+    - column_321
+    - column_201
+    - column_485
+    - column_197
+    - column_1
+    - column_177
+    - column_161
+    - column_259
+    - column_305
+    - column_341
+    - column_416
+    - column_130
+    - column_345
+    - column_381
+    - column_208
+    - column_135
+    - column_300
+    - column_66
+    - column_241
+    - column_264
+    - column_467
+    - column_317
+    - column_286
+    - column_86
+    - column_41
+    - column_122
+    - column_255
+    - column_92
+    - column_486
+    - column_69
+    - column_393
+    - column_107
+    - column_466
+    - column_28
+    - column_301
+    - column_220
+    - column_245
+    - column_219
+    - column_375
+    - column_480
+    - column_190
+    - column_112
+    - column_371
+    - column_481
+    - column_132
+    - column_101
+    - column_246
+    - column_332
+    - column_267
+    - column_65
+    - column_353
+    - column_464
+    - column_293
+    - column_48
+    - column_103
+    - column_205
+    - column_19
+    - column_446
+    - column_492
+    - column_43
+    - column_318
+    - column_443
+    - column_59
+    - int_field
+    - column_20
+    - column_281
+    - column_489
+    - column_312
+    - column_184
+    - column_34
+    - column_81
+    - column_77
+    - column_33
+    - column_71
+    - column_497
+    - column_88
+    - column_387
+    - column_319
+    - column_304
+    - column_399
+    - column_227
+    - column_410
+    - column_233
+    - column_260
+    - column_391
+    - column_352
+    - column_110
+    - column_476
+    - column_90
+    - column_21
+    - column_251
+    - column_346
+    - column_396
+    - column_478
+    - column_162
+
+</pre></div></div>
+</div>
+<div class="nbinput docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[5]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">data</span> <span class="o">=</span> <span class="kc">None</span>
+<span class="n">df</span> <span class="o">=</span> <span class="n">db</span><span class="o">.</span><span class="n">read</span><span class="p">()</span><span class="o">.</span><span class="n">to_pandas</span><span class="p">()</span>
+<span class="nb">print</span><span class="p">(</span><span class="n">df</span><span class="p">)</span>
+</pre></div>
+</div>
+</div>
+<div class="nboutput nblast docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<div class="highlight"><pre>
+      column_296 column_302 column_370  column_0 column_80 column_367  \
+0        test_33    test_30    test_29   test_74   test_59    test_43
+1        test_62    test_97    test_10   test_29   test_59    test_47
+2         test_6    test_65    test_28   test_29    test_6    test_81
+3        test_35    test_61    test_57   test_61   test_71    test_92
+4        test_56    test_44    test_70   test_18   test_75    test_77
+...          ...        ...        ...       ...       ...        ...
+99995    test_43    test_48    test_46   test_77   test_26    test_20
+99996     test_6    test_45    test_36  test_100   test_47    test_58
+99997     test_2    test_33    test_61   test_99   test_64    test_44
+99998    test_96    test_15    test_26   test_58   test_35    test_77
+99999    test_63    test_87    test_39   test_38   test_59    test_83
+
+      column_344 column_216 column_151 column_61  ... column_352 column_110  \
+0        test_78    test_62    test_58   test_51  ...    test_52    test_94
+1        test_21    test_39    test_50   test_78  ...    test_32    test_57
+2        test_32    test_21    test_34   test_25  ...    test_70    test_46
+3        test_66     test_7    test_18    test_3  ...    test_42     test_4
+4        test_75    test_51    test_76   test_76  ...    test_16    test_36
+...          ...        ...        ...       ...  ...        ...        ...
+99995    test_71    test_11    test_43   test_73  ...    test_89    test_27
+99996    test_38    test_33    test_82   test_99  ...    test_90     test_3
+99997    test_26    test_29    test_19   test_74  ...    test_70    test_50
+99998    test_43    test_16    test_54   test_40  ...     test_5    test_15
+99999    test_82    test_53    test_46   test_71  ...    test_97    test_74
+
+      column_476 column_90 column_21 column_251 column_346 column_396  \
+0        test_51   test_36   test_66    test_77    test_55    test_56
+1        test_23   test_36   test_48    test_77    test_86    test_81
+2        test_66   test_63   test_71    test_82    test_89    test_16
+3        test_26   test_71   test_30    test_56    test_17    test_32
+4         test_6   test_66   test_14    test_43    test_23    test_16
+...          ...       ...       ...        ...        ...        ...
+99995    test_55    test_9   test_38    test_15    test_98    test_99
+99996    test_67    test_9   test_61    test_13    test_39    test_25
+99997     test_9    test_5   test_48    test_69    test_44    test_11
+99998    test_10   test_92    test_5    test_31    test_44    test_84
+99999    test_82   test_13   test_54    test_39    test_84    test_51
+
+      column_478 column_162
+0        test_10    test_54
+1         test_4    test_44
+2        test_90    test_75
+3        test_17    test_29
+4        test_68    test_50
+...          ...        ...
+99995    test_28    test_58
+99996    test_89     test_4
+99997    test_95    test_74
+99998    test_61    test_23
+99999     test_7    test_53
+
+[100000 rows x 507 columns]
+</pre></div></div>
+</div>
+<section id="Normalize-Data-Using-ParquetDB">
+<h3>Normalize Data Using ParquetDB<a class="headerlink" href="#Normalize-Data-Using-ParquetDB" title="Link to this heading">¶</a></h3>
+<p>Next, we’ll introduce the <code class="docutils literal notranslate"><span class="pre">NormalizeConfig</span></code> class, which allows you to fine-tune how normalization is performed over the various operations in ParquetDB.</p>
+<section id="The-NormalizeConfig-Class">
+<h4>The <code class="docutils literal notranslate"><span class="pre">NormalizeConfig</span></code> Class<a class="headerlink" href="#The-NormalizeConfig-Class" title="Link to this heading">¶</a></h4>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="nd">@dataclass</span>
+<span class="k">class</span> <span class="nc">NormalizeConfig</span><span class="p">:</span>
+    <span class="n">load_format</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s2">&quot;table&quot;</span>
+    <span class="n">batch_size</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">131_072</span>
+    <span class="n">batch_readahead</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">16</span>
+    <span class="n">fragment_readahead</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">4</span>
+    <span class="n">fragment_scan_options</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">pa</span><span class="o">.</span><span class="n">dataset</span><span class="o">.</span><span class="n">FragmentScanOptions</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span>
+    <span class="n">use_threads</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">True</span>
+    <span class="n">memory_pool</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">pa</span><span class="o">.</span><span class="n">MemoryPool</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span>
+    <span class="n">filesystem</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">fs</span><span class="o">.</span><span class="n">FileSystem</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span>
+    <span class="n">file_options</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">ds</span><span class="o">.</span><span class="n">FileWriteOptions</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span>
+    <span class="n">use_threads</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="n">config</span><span class="o">.</span><span class="n">parquetdb_config</span><span class="o">.</span><span class="n">normalize_kwargs</span><span class="o">.</span><span class="n">use_threads</span>
+    <span class="n">max_partitions</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="n">config</span><span class="o">.</span><span class="n">parquetdb_config</span><span class="o">.</span><span class="n">normalize_kwargs</span><span class="o">.</span><span class="n">max_partitions</span>
+    <span class="n">max_open_files</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="n">config</span><span class="o">.</span><span class="n">parquetdb_config</span><span class="o">.</span><span class="n">normalize_kwargs</span><span class="o">.</span><span class="n">max_open_files</span>
+    <span class="n">max_rows_per_file</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="n">config</span><span class="o">.</span><span class="n">parquetdb_config</span><span class="o">.</span><span class="n">normalize_kwargs</span><span class="o">.</span><span class="n">max_rows_per_file</span>
+    <span class="n">min_rows_per_group</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="p">(</span>
+        <span class="n">config</span><span class="o">.</span><span class="n">parquetdb_config</span><span class="o">.</span><span class="n">normalize_kwargs</span><span class="o">.</span><span class="n">min_rows_per_group</span>
+    <span class="p">)</span>
+    <span class="n">max_rows_per_group</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="p">(</span>
+        <span class="n">config</span><span class="o">.</span><span class="n">parquetdb_config</span><span class="o">.</span><span class="n">normalize_kwargs</span><span class="o">.</span><span class="n">max_rows_per_group</span>
+    <span class="p">)</span>
+    <span class="n">file_visitor</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">Callable</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span>
+    <span class="n">existing_data_behavior</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="p">(</span>
+        <span class="n">config</span><span class="o">.</span><span class="n">parquetdb_config</span><span class="o">.</span><span class="n">normalize_kwargs</span><span class="o">.</span><span class="n">existing_data_behavior</span>
+    <span class="p">)</span>
+    <span class="n">create_dir</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">True</span>
+</pre></div>
+</div>
+<p>The <code class="docutils literal notranslate"><span class="pre">NormalizeConfig</span></code> data class allows you to fine-tune how normalization is performed. The most important parameters are the following:</p>
+<ul class="simple">
+<li><p><strong>``load_format : str``</strong> The format of the output dataset. Supported formats are <code class="docutils literal notranslate"><span class="pre">'table'</span></code> and <code class="docutils literal notranslate"><span class="pre">'batches'</span></code> (default: <code class="docutils literal notranslate"><span class="pre">'table'</span></code>).</p></li>
+<li><p><strong>``batch_size : int, optional``</strong> The number of rows to process in each batch (default: <code class="docutils literal notranslate"><span class="pre">None</span></code>).</p></li>
+<li><p><strong>``batch_readahead : int, optional``</strong> The number of batches to read ahead in a file (default: <code class="docutils literal notranslate"><span class="pre">16</span></code>).</p></li>
+<li><p><strong>``fragment_readahead : int, optional``</strong> The number of files to read ahead, improving IO utilization at the cost of RAM usage (default: <code class="docutils literal notranslate"><span class="pre">4</span></code>).</p></li>
+<li><p><strong>``max_open_files : int``</strong> Maximum open files for dataset writing (default: <code class="docutils literal notranslate"><span class="pre">1024</span></code>).</p></li>
+<li><p><strong>``max_rows_per_file : int``</strong> Maximum rows per file (default: <code class="docutils literal notranslate"><span class="pre">10,000</span></code>).</p></li>
+<li><p><strong>``min_rows_per_group : int``</strong> Minimum rows per row group within each file (default: <code class="docutils literal notranslate"><span class="pre">0</span></code>).</p></li>
+<li><p><strong>``max_rows_per_group : int``</strong> Maximum rows per row group within each file (default: <code class="docutils literal notranslate"><span class="pre">10,000</span></code>).</p></li>
+</ul>
+<p>In parquet files, it stores the data in row groups, this allows for batching and parallelization.</p>
+<p>Below is a diagram of what your data will look like in memory.</p>
+<ul class="simple">
+<li><p>Csv files use a row based system, which is inefficient as it does not store similar data contiguously in memory.</p></li>
+<li><p>Columnar storage is more efficient as it stores similar data contiguously in memory, however batching the data is not so great as data is not stored in chunks.</p></li>
+<li><p>Parquet files use a Row Group based system, which is more efficient as it stores similar data contiguously, but it also stores in chunks which is great for parallelization.</p></li>
+</ul>
+<p><img alt="Row Group Storage" src="../_images/row_group_storage.png" /></p>
+<p>Optimizing parameters like the number of rows per row group, how many row groups per file, and how many files to read ahead can help significantly improve speed and memory performance.</p>
+<p>Let’s look at the details of the row groups of our current dataset. We can do this by using the <code class="docutils literal notranslate"><span class="pre">summary</span></code></p>
+<div class="nbinput docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[6]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="nb">print</span><span class="p">(</span><span class="n">db</span><span class="o">.</span><span class="n">summary</span><span class="p">(</span><span class="n">show_row_group_metadata</span><span class="o">=</span><span class="kc">True</span><span class="p">))</span>
+</pre></div>
+</div>
+</div>
+<div class="nboutput nblast docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<div class="highlight"><pre>
+============================================================
+PARQUETDB SUMMARY
+============================================================
+Database path: ParquetDB
+
+• Number of columns: 507
+• Number of rows: 100000
+• Number of files: 1
+• Number of rows per file: [100000]
+• Number of row groups per file: [4]
+• Number of rows per row group per file:
+    - ParquetDB_0.parquet:
+        - Row group 0: 32768 rows
+        - Row group 1: 32768 rows
+        - Row group 2: 32768 rows
+        - Row group 3: 1696 rows
+• Serialized metadata size per file: [225147] Bytes
+
+############################################################
+METADATA
+############################################################
+
+############################################################
+COLUMN DETAILS
+############################################################
+
+</pre></div></div>
+</div>
+<p>Here we can see that in our first file, we have 4 row groups where there is a maximum rows per group of 32,768. Typically, this is fine but if your system can handle it, it is best the chunk the data into larger groups.</p>
+<p>A good rule of thumb for these settings should be about 2 GB per file and about 200MB per row group size. This will require some trial and error to find the best settings for your system.</p>
+<p>Let’s normalize the data with <code class="docutils literal notranslate"><span class="pre">NormalizeConfig</span></code> and change it so it is 50000 rows per row group.</p>
+<div class="nbinput docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[25]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span> <span class="nn">parquetdb.core.parquetdb</span> <span class="kn">import</span> <span class="n">NormalizeConfig</span>
+
+<span class="n">normalize_config</span> <span class="o">=</span> <span class="n">NormalizeConfig</span><span class="p">(</span><span class="n">min_rows_per_group</span><span class="o">=</span><span class="mi">50000</span><span class="p">,</span> <span class="n">max_rows_per_group</span><span class="o">=</span><span class="mi">50000</span><span class="p">)</span>
+
+<span class="n">db</span><span class="o">.</span><span class="n">normalize</span><span class="p">(</span><span class="n">normalize_config</span><span class="o">=</span><span class="n">normalize_config</span><span class="p">)</span>
+
+<span class="nb">print</span><span class="p">(</span><span class="n">db</span><span class="o">.</span><span class="n">summary</span><span class="p">(</span><span class="n">show_row_group_metadata</span><span class="o">=</span><span class="kc">True</span><span class="p">))</span>
+</pre></div>
+</div>
+</div>
+<div class="nboutput nblast docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<div class="highlight"><pre>
+============================================================
+PARQUETDB SUMMARY
+============================================================
+Database path: ParquetDB
+
+• Number of columns: 507
+• Number of rows: 100000
+• Number of files: 1
+• Number of rows per file: [100000]
+• Number of row groups per file: [2]
+• Number of rows per row group per file:
+    - ParquetDB_0.parquet:
+        - Row group 0: 50000 rows
+        - Row group 1: 50000 rows
+• Serialized metadata size per file: [136357] Bytes
+
+############################################################
+METADATA
+############################################################
+
+############################################################
+COLUMN DETAILS
+############################################################
+
+</pre></div></div>
+</div>
+<p>Now we have two row groups, each with a maximum of 50,000 rows.</p>
+<p>In some cases, however, this might be too large—especially if you’re working with a wide dataset (e.g., ~4,000 columns). To handle such cases, we can reduce the number of rows per group to 10,000 for better performance.</p>
+<p>For particularly large datasets, it’s also important to fine-tune additional parameters, such as <code class="docutils literal notranslate"><span class="pre">batch_readahead</span></code>, <code class="docutils literal notranslate"><span class="pre">fragment_readahead</span></code>, <code class="docutils literal notranslate"><span class="pre">load_format=&quot;batches&quot;</span></code>, and <code class="docutils literal notranslate"><span class="pre">batch_size</span></code>.</p>
+<p>By default, ParquetDB uses <code class="docutils literal notranslate"><span class="pre">load_format=&quot;table&quot;</span></code> and <code class="docutils literal notranslate"><span class="pre">batch_size=None</span></code>, meaning it will attempt to write and read all the data at once. While this approach works well for smaller datasets, it can cause performance bottlenecks when handling larger datasets.</p>
+<p>To address this, we can set <code class="docutils literal notranslate"><span class="pre">load_format=&quot;batches&quot;</span></code> and define <code class="docutils literal notranslate"><span class="pre">batch_size=5000</span></code>. This configuration ensures that data is processed in chunks of 5,000 rows at a time, improving memory management. Additionally, setting <code class="docutils literal notranslate"><span class="pre">batch_readahead=2</span></code> allows ParquetDB to load two batches into memory ahead of processing, further enhancing performance by reducing waiting times.</p>
+<p>When reading data, ParquetDB processes files sequentially. To optimize this process, we can control how many files are opened and read ahead by setting <code class="docutils literal notranslate"><span class="pre">fragment_readahead=2</span></code>. This ensures that the system reads two files ahead, balancing I/O performance and memory usage.</p>
+<blockquote>
+<div><p>Note: The batch size can only go as high as the number of rows in a row group.</p>
+</div></blockquote>
+<div class="nbinput docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[26]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">normalize_config</span> <span class="o">=</span> <span class="n">NormalizeConfig</span><span class="p">(</span>
+    <span class="n">load_format</span><span class="o">=</span><span class="s2">&quot;batches&quot;</span><span class="p">,</span>
+    <span class="n">batch_size</span><span class="o">=</span><span class="mi">100</span><span class="p">,</span>
+    <span class="n">batch_readahead</span><span class="o">=</span><span class="mi">16</span><span class="p">,</span>
+    <span class="n">fragment_readahead</span><span class="o">=</span><span class="mi">4</span><span class="p">,</span>
+    <span class="n">max_rows_per_group</span><span class="o">=</span><span class="mi">10000</span><span class="p">,</span>
+    <span class="n">min_rows_per_group</span><span class="o">=</span><span class="mi">10000</span><span class="p">,</span>
+<span class="p">)</span>
+
+<span class="n">db</span><span class="o">.</span><span class="n">normalize</span><span class="p">(</span><span class="n">normalize_config</span><span class="o">=</span><span class="n">normalize_config</span><span class="p">)</span>
+
+<span class="nb">print</span><span class="p">(</span><span class="n">db</span><span class="o">.</span><span class="n">summary</span><span class="p">(</span><span class="n">show_row_group_metadata</span><span class="o">=</span><span class="kc">True</span><span class="p">))</span>
+</pre></div>
+</div>
+</div>
+<div class="nboutput nblast docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<div class="highlight"><pre>
+============================================================
+PARQUETDB SUMMARY
+============================================================
+Database path: ParquetDB
+
+• Number of columns: 507
+• Number of rows: 100000
+• Number of files: 1
+• Number of rows per file: [100000]
+• Number of row groups per file: [10]
+• Number of rows per row group per file:
+    - ParquetDB_0.parquet:
+        - Row group 0: 10000 rows
+        - Row group 1: 10000 rows
+        - Row group 2: 10000 rows
+        - Row group 3: 10000 rows
+        - Row group 4: 10000 rows
+        - Row group 5: 10000 rows
+        - Row group 6: 10000 rows
+        - Row group 7: 10000 rows
+        - Row group 8: 10000 rows
+        - Row group 9: 10000 rows
+• Serialized metadata size per file: [497366] Bytes
+
+############################################################
+METADATA
+############################################################
+
+############################################################
+COLUMN DETAILS
+############################################################
+
+</pre></div></div>
+</div>
+</section>
+<section id="Finishing">
+<h4>Finishing<a class="headerlink" href="#Finishing" title="Link to this heading">¶</a></h4>
+<p>Now that we normalized the data, we can see that the data is more evenly distributed across the row groups. Many methods, such as (<code class="docutils literal notranslate"><span class="pre">read</span></code>, <code class="docutils literal notranslate"><span class="pre">update</span></code>, <code class="docutils literal notranslate"><span class="pre">delete</span></code>, <code class="docutils literal notranslate"><span class="pre">transform</span></code>, <code class="docutils literal notranslate"><span class="pre">update_schema</span></code>), in ParquetDB take as an argument a <code class="docutils literal notranslate"><span class="pre">normalize_config</span></code> which allows you to fine-tune the normalization process during these operations.</p>
+</section>
+</section>
+</section>
+</section>
+
+        </article>
+      </div>
+      <footer>
+        
+        <div class="related-pages">
+          <a class="next-page" href="03%20-%20Advanced%20Reads.html">
+              <div class="page-info">
+                <div class="context">
+                  <span>Next</span>
+                </div>
+                <div class="title">Advanced Read Operations</div>
+              </div>
+              <svg class="furo-related-icon"><use href="#svg-arrow-right"></use></svg>
+            </a>
+          <a class="prev-page" href="01%20-%20Getting%20Started.html">
+              <svg class="furo-related-icon"><use href="#svg-arrow-right"></use></svg>
+              <div class="page-info">
+                <div class="context">
+                  <span>Previous</span>
+                </div>
+                
+                <div class="title">Getting Started</div>
+                
+              </div>
+            </a>
+        </div>
+        <div class="bottom-of-page">
+          <div class="left-details">
+            <div class="copyright">
+                Copyright &#169; 2024, Logan Lang
+            </div>
+            Made with <a href="https://www.sphinx-doc.org/">Sphinx</a> and <a class="muted-link" href="https://pradyunsg.me">@pradyunsg</a>'s
+            
+            <a href="https://github.com/pradyunsg/furo">Furo</a>
+            
+          </div>
+          <div class="right-details">
+            
+          </div>
+        </div>
+        
+      </footer>
+    </div>
+    <aside class="toc-drawer">
+      
+      
+      <div class="toc-sticky toc-scroll">
+        <div class="toc-title-container">
+          <span class="toc-title">
+            On this page
+          </span>
+        </div>
+        <div class="toc-tree-container">
+          <div class="toc-tree">
+            <ul>
+<li><a class="reference internal" href="#">Normalization</a><ul>
+<li><a class="reference internal" href="#Generate-Example-Data">Generate Example Data</a><ul>
+<li><a class="reference internal" href="#Normalize-Data-Using-ParquetDB">Normalize Data Using ParquetDB</a><ul>
+<li><a class="reference internal" href="#The-NormalizeConfig-Class">The <code class="docutils literal notranslate"><span class="pre">NormalizeConfig</span></code> Class</a></li>
+<li><a class="reference internal" href="#Finishing">Finishing</a></li>
+</ul>
+</li>
+</ul>
+</li>
+</ul>
+</li>
+</ul>
+
+          </div>
+        </div>
+      </div>
+      
+      
+    </aside>
+  </div>
+</div><script src="../_static/documentation_options.js?v=0d70ca51"></script>
+    <script src="../_static/doctools.js?v=9a2dae69"></script>
+    <script src="../_static/sphinx_highlight.js?v=dc90522c"></script>
+    <script src="../_static/scripts/furo.js?v=5fa4622c"></script>
+    <script src="../_static/clipboard.min.js?v=a7894cd8"></script>
+    <script src="../_static/copybutton.js?v=f281be69"></script>
+    <script src="../_static/design-tabs.js?v=f930bc37"></script>
+    <script crossorigin="anonymous" integrity="sha256-Ae2Vz/4ePdIu6ZyI/5ZGsYnb+m0JlOmKPjt6XZ9JJkA=" src="https://cdnjs.cloudflare.com/ajax/libs/require.js/2.3.4/require.min.js"></script>
+    <script>window.MathJax = {"tex": {"inlineMath": [["$", "$"], ["\\(", "\\)"]], "processEscapes": true}, "options": {"ignoreHtmlClass": "tex2jax_ignore|mathjax_ignore|document", "processHtmlClass": "tex2jax_process|mathjax_process|math|output_area"}}</script>
+    <script defer="defer" src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+    <script src="../_static/js/custom.js"></script>
+    </body>
+</html>

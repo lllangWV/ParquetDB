@@ -145,3 +145,8 @@ update_package.md
 /my_tests/
 
 /papers/
+/media/
+/sphinx/_build/
+/sphinx/manim/
+/sphinx/README.md
+sphinx/source/examples/
