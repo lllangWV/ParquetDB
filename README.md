@@ -1,14 +1,10 @@
 # ParquetDB
 
-ParquetDB is a lightweight database-like system built on top of Apache Parquet files using PyArrow. It offers a simple and efficient way to store, manage, and retrieve complex data types without the overhead of serialization, which is often a bottleneck in machine learning pipelines. By leveraging Parquet's columnar storage format and PyArrow's computational capabilities, ParquetDB provides high performance for data-intensive applications. 
-
-
-![Benchmark Create and Read Times for Different Databases](benchmarks/benchmark_create_read_times.png)
+**ParquetDB** is a Python library designed to bridge the gap between traditional file storage and fully fledged databases, all while wrapping the powerful PyArrow library to streamline data input and output. By leveraging the Parquet file format, ParquetDB provides the portability and simplicity of file-based data storage alongside advanced querying features typically found in database systems.
 
 ## Table of Contents
 
 - [Features](#features)
-- [Why ParquetDB?](#why-parquetdb)
 - [Installation](#installation)
 - [Quick Start](#quick-start)
 - [Usage](#usage)
@@ -17,66 +13,18 @@ ParquetDB is a lightweight database-like system built on top of Apache Parquet f
   - [Reading Data](#reading-data)
   - [Updating Data](#updating-data)
   - [Deleting Data](#deleting-data)
-- [Benchmark Overview](#benchmark-overview)
 - [Contributing](#contributing)
 - [License](#license)
 
 ## Features
 
 - **Simple Interface**: Easy-to-use methods for creating, reading, updating, and deleting data.
-- **High Performance**: Utilizes Apache Parquet and PyArrow for efficient data storage and retrieval.
-- **Supports Complex Data Types**: Handles nested and complex data types without serialization overhead.
-- **Scalable**: Designed to handle large datasets efficiently.
+- **Minimal Overhead**: Achieve quick read/write speeds without the complexity of setting up or managing a larger database system.
+- **Batching**: Efficiently handle large datasets by batching operations.
+- **Supports Complex Data Types**: Handles nested and complex data types.
 - **Schema Evolution**: Supports adding new fields and updating schemas seamlessly.
-
-## Roadmap
-
-- Support foriegn keys use
-- Multiprocessing for reading and writing
-
-## Why ParquetDB?
-
-### The Challenge of Serialization and Deserialization
-
-In many data processing and machine learning workflows, a significant performance bottleneck occurs during the serialization and deserialization of data. Serialization is the process of converting complex data structures or objects into a format that can be easily stored or transmitted, while deserialization is the reverse process of reconstructing these objects from the serialized format.
-
-The need for serialization arises when:
-1. Storing data on disk
-2. Transmitting data over a network
-3. Caching data in memory
-
-However, serialization and deserialization can be computationally expensive, especially when dealing with large datasets or complex object structures. This process can lead to:
-
-- Increased I/O operations
-- Higher CPU usage
-- Increased memory consumption
-- Longer processing times
-
-These issues become particularly problematic in machine learning pipelines, where data needs to be frequently loaded, processed, and saved. The overhead of constantly serializing and deserializing data can significantly slow down the entire workflow, affecting both development iteration speed and production performance.
-
-### How Parquet Files Address the Serialization Challenge
-
-Apache Parquet files offer a solution to the serialization/deserialization problem by providing:
-
-1. **Columnar Storage Format**: Parquet stores data in a columnar format, which allows for efficient compression and encoding schemes. This format is particularly beneficial for analytical queries that typically involve a subset of columns.
-2. **Schema Preservation**: Parquet files store the schema of the data along with the data itself. This eliminates the need for separate schema definitions and reduces the risk of schema mismatch errors.
-3. **Efficient Encoding**: Parquet uses advanced encoding techniques like dictionary encoding, bit packing, and run length encoding, which can significantly reduce file sizes and improve read performance.
-4. **Predicate Pushdown**: Parquet supports predicate pushdown, allowing queries to skip irrelevant data blocks entirely, further improving query performance.
-5. **Compatibility**: Parquet files are compatible with various big data processing frameworks, making it easier to integrate into existing data pipelines.
-
-By leveraging these features, ParquetDB eliminates the need for explicit serialization and deserialization of complex data types. Data can be read directly from and written directly to Parquet files, maintaining its structure and allowing for efficient querying and processing.
-
-### The ParquetDB Advantage
-
-ParquetDB builds upon the benefits of Parquet files by providing:
-
-1. A simple, database-like interface for working with Parquet files
-2. Efficient storage and retrieval of complex data types
-3. High-performance data operations leveraging PyArrow's computational capabilities
-4. Seamless integration with machine learning pipelines and data processing workflows
-
-By using ParquetDB, developers and data scientists can focus on their core tasks without worrying about the intricacies of data serialization or the performance implications of frequent I/O operations. This results in faster development cycles, improved system performance, and more efficient use of computational resources.
-
+- **Supports storing of python objects**: ParquetDB can store python objects (objects and functions) using pickle.
+- **Supports np.ndarrays**: ParquetDB can store ndarrays.
 
 ## Installation
 
@@ -92,7 +40,7 @@ pip install parquetdb
 from parquetdb import ParquetDB
 
 # Initialize the database
-db = ParquetDB(dataset_name='parquetdb')
+db = ParquetDB(db_path='ParquetDB')
 
 # Create data
 data = [
@@ -190,29 +138,20 @@ Delete records from the database by specifying their IDs.
 db.delete(ids=[2, 4])
 ```
 
+## Citing ParquetDB
 
-## Benchmark Overview
+If you use ParquetDB in your work, please cite the following paper:
 
-A benchmark was conducted to evaluate the performance of ParquetDB, SQLite, and MongoDB. The benchmark measures the read and write times for datasets consisting of 100 integer columns across varying record sizes.
-
-#### Write Performance
-For write operations, we tested the time required to insert records into each database and close the connections. Bulk inserts were used for SQLite and MongoDB, but only serial inserts were tested. Specifically for SQLite, `PRAGMA synchronous = OFF` and `PRAGMA journal_mode = MEMORY` were applied to optimize write performance.
-
-#### Read Performance
-For read operations, we measured the time taken to load the entire dataset into an array-like structure. Leaving the data in a cursor was not counted as a completed read.
-
-#### Test Environment
-The benchmark was executed on the following system:
-- **Processor**: AMD Ryzen 7 3700X 8-Core, 3600 MHz
-- **Logical Processors**: 16
-- **Memory**: 32 GB RAM
-
-The scripts used to generate these benchmark results can be found in the `benchmarks` directory.
-
-### Results Summary
-- **Read Times**: ParquetDB is the fastest for large datasets, followed by SQLite, with MongoDB trailing.
-- **Write Times**: For large datasets, SQLite achieves the fastest write times, followed by ParquetDB and MongoDB.
-
+```bibtex
+    @misc{lang2025parquetdblightweightpythonparquetbased,
+      title={ParquetDB: A Lightweight Python Parquet-Based Database}, 
+      author={Logan Lang and Eduardo Hernandez and Kamal Choudhary and Aldo H. Romero},
+      year={2025},
+      eprint={2502.05311},
+      archivePrefix={arXiv},
+      primaryClass={cs.DB},
+      url={https://arxiv.org/abs/2502.05311}}
+```
 
 ## Contributing
 
