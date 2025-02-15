@@ -32,6 +32,7 @@ wes_anderson_palettes = {
         "#F11B00",
     ],
     "Darjeeling1": ["#FF0000", "#00A08A", "#F2AD00", "#e66f0e", "#5BBCD6"],
+    "Darjeeling2": ["#ECCBAE", "#046C9A", "#D69C4E", "#ABDDDE", "#000000"],
     "Darjeeling1_alt": ["#e52207", "#00a398", "#e5a000", "#ABDDDE", "#59b9de"],
     "Chevalier1": ["#446455", "#FDD262", "#D3DDDC", "#C7B19C"],
     "FantasticFox1": ["#DD8D29", "#E2D200", "#46ACC8", "#E58601", "#B40F20"],
@@ -69,3 +70,12 @@ def create_colormap(palette_name):
     else:
         print(f"Palette '{palette_name}' not found.")
         return None
+
+
+# DEFAULT_COLOR_MAP = mcolors.LinearSegmentedColormap.from_list(
+#     "", wes_anderson_palettes["Zissou1Continuous"]
+# )
+DEFAULT_COLORS = wes_anderson_palettes["Darjeeling1"]
+DEFAULT_COLORS.extend(wes_anderson_palettes["Darjeeling2"])
+plt.rcParams["axes.prop_cycle"] = plt.cycler(color=DEFAULT_COLORS)
+DEFAULT_COLOR_MAP = create_colormap("Zissou1Continuous")

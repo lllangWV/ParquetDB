@@ -1,16 +1,20 @@
+import bz2
+import multiprocessing
 import os
 import re
-import multiprocessing
-from functools import partial
 import shutil
-import requests
-import bz2
-from bs4 import BeautifulSoup
-import pandas as pd
-import numpy as np
-from matplotlib.patches import Rectangle
+from functools import partial
+
 import matplotlib.pyplot as plt
+import numpy as np
+import pandas as pd
+import requests
+from bs4 import BeautifulSoup
+from matplotlib.patches import Rectangle
+
 from parquetdb import config
+from parquetdb.utils.matplotlib_utils import DEFAULT_COLOR_MAP
+
 
 # Function to download the file
 def download_file(file_url, output_path):
@@ -31,15 +35,17 @@ def download_file(file_url, output_path):
     """
     response = requests.get(file_url, stream=True)
     if response.status_code == 200:
-        with open(output_path, 'wb') as f:
+        with open(output_path, "wb") as f:
             for chunk in response.iter_content(chunk_size=8192):
                 f.write(chunk)
         print(f"Downloaded: {output_path}")
     else:
         print(f"Failed to download: {file_url}")
-        
-        
-def download_file_mp_task(file_name, url = "https://alexandria.icams.rub.de/data/pbe/", output_dir='.'):
+
+
+def download_file_mp_task(
+    file_name, url="https://alexandria.icams.rub.de/data/pbe/", output_dir="."
+):
     """
     Downloads a file by combining the base URL and file name, then saves it to the specified output directory.
 
@@ -61,8 +67,9 @@ def download_file_mp_task(file_name, url = "https://alexandria.icams.rub.de/data
     output_path = os.path.join(output_dir, file_name)
     download_file(file_url, output_path)
 
+
 # Scrape the page to find all file links that match the pattern
-def scrape_files(output_dir='data/external/alexandria/uncompressed', n_cores=1):
+def scrape_files(output_dir="data/external/alexandria/uncompressed", n_cores=1):
     """
     Scrapes a web page to find all file links matching the pattern `alexandria_***.json.bz2` and downloads them.
 
@@ -78,7 +85,7 @@ def scrape_files(output_dir='data/external/alexandria/uncompressed', n_cores=1):
     >>> scrape_files(output_dir='data/downloads', n_cores=4)
     Using Multiprocessing
     """
-    
+
     os.makedirs(output_dir, exist_ok=True)
     # The URL of the page to scrape
     url = "https://alexandria.icams.rub.de/data/pbe/"
@@ -89,13 +96,13 @@ def scrape_files(output_dir='data/external/alexandria/uncompressed', n_cores=1):
         return
 
     # Parse the HTML content
-    soup = BeautifulSoup(response.text, 'html.parser')
+    soup = BeautifulSoup(response.text, "html.parser")
 
     # Find all links that match the pattern alexandria_***.json.bz2
     file_links = []
-    for link in soup.find_all('a', href=True):
-        file_name = link['href']
-        if re.match(r'alexandria_.*\.json\.bz2', file_name):
+    for link in soup.find_all("a", href=True):
+        file_name = link["href"]
+        if re.match(r"alexandria_.*\.json\.bz2", file_name):
             file_links.append(file_name)
 
     if not file_links:
@@ -103,17 +110,20 @@ def scrape_files(output_dir='data/external/alexandria/uncompressed', n_cores=1):
         return
 
     # Download each file
-    if n_cores!=1:
+    if n_cores != 1:
         print("Using Multiprocessing")
         with multiprocessing.Pool(processes=n_cores) as pool:
-            results=pool.map(partial(download_file_mp_task, url=url, output_dir=output_dir), file_links)
+            results = pool.map(
+                partial(download_file_mp_task, url=url, output_dir=output_dir),
+                file_links,
+            )
     else:
         print("Not Using Multiprocessing")
         for file_link in file_links:
             download_file(file_link, url, output_dir)
-        
 
-def decompress_bz2_file(file_name, source_dir='compressed', dest_dir='uncompressed'):
+
+def decompress_bz2_file(file_name, source_dir="compressed", dest_dir="uncompressed"):
     """
     Decompresses a .bz2 file and saves the decompressed content to the destination directory.
 
@@ -131,7 +141,7 @@ def decompress_bz2_file(file_name, source_dir='compressed', dest_dir='uncompress
     >>> decompress_bz2_file('data.bz2', source_dir='compressed', dest_dir='uncompressed')
     Decompressed: compressed/data.bz2 -> uncompressed/data
     """
-    if file_name.endswith('.bz2'):
+    if file_name.endswith(".bz2"):
         # Path to the .bz2 file
         bz2_file_path = os.path.join(source_dir, file_name)
 
@@ -140,12 +150,13 @@ def decompress_bz2_file(file_name, source_dir='compressed', dest_dir='uncompress
         decompressed_file_path = os.path.join(dest_dir, decompressed_file_name)
 
         # Decompress the file
-        with bz2.BZ2File(bz2_file_path, 'rb') as file_in:
-            with open(decompressed_file_path, 'wb') as file_out:
+        with bz2.BZ2File(bz2_file_path, "rb") as file_in:
+            with open(decompressed_file_path, "wb") as file_out:
                 file_out.write(file_in.read())
-        
+
         print(f"Decompressed: {bz2_file_path} -> {decompressed_file_path}")
-        
+
+
 def decompress_bz2_files(source_dir, dest_dir, n_cores):
     """
     Decompresses all .bz2 files in the source directory using multiple cores.
@@ -167,14 +178,18 @@ def decompress_bz2_files(source_dir, dest_dir, n_cores):
     os.makedirs(dest_dir, exist_ok=True)
 
     # Loop through all files in the source directory
-    filenames=os.listdir(source_dir)
-    
-    if n_cores!=1:
+    filenames = os.listdir(source_dir)
+
+    if n_cores != 1:
         with multiprocessing.Pool(n_cores) as pool:
-            results = pool.map(partial(decompress_bz2_file, source_dir=source_dir, dest_dir=dest_dir), filenames)
+            results = pool.map(
+                partial(decompress_bz2_file, source_dir=source_dir, dest_dir=dest_dir),
+                filenames,
+            )
     else:
         for filename in filenames:
             decompress_bz2_file(filename, source_dir, dest_dir)
+
 
 def download_alexandria_3d_database(output_dir, n_cores=8, from_scratch=False):
     """
@@ -202,28 +217,29 @@ def download_alexandria_3d_database(output_dir, n_cores=8, from_scratch=False):
     if from_scratch and os.path.exists(output_dir):
         print(f"Removing existing directory: {output_dir}")
         shutil.rmtree(output_dir, ignore_errors=True)
-        
+
     os.makedirs(output_dir, exist_ok=True)
-    source_directory = os.path.join(output_dir, 'compressed')
-    destination_directory = os.path.join(output_dir, 'uncompressed')
-    
+    source_directory = os.path.join(output_dir, "compressed")
+    destination_directory = os.path.join(output_dir, "uncompressed")
+
     os.makedirs(destination_directory, exist_ok=True)
     os.makedirs(source_directory, exist_ok=True)
-    
-    if len(os.listdir(destination_directory))>0:
+
+    if len(os.listdir(destination_directory)) > 0:
         print("Database downloaded already. Skipping download.")
         return destination_directory
-    
-    
+
     scrape_files(output_dir=source_directory, n_cores=n_cores)
-    decompress_bz2_files(source_directory, destination_directory,n_cores=n_cores)
-    
+    decompress_bz2_files(source_directory, destination_directory, n_cores=n_cores)
+
     return destination_directory
 
 
-def plot_periodic_table_heatmap(df_elements, property_name=None, save_path=None):
+def plot_periodic_table_heatmap(
+    df_elements, property_name=None, save_path=None, **kwargs
+):
     """Plot a heatmap in the shape of the periodic table.
-    
+
     Args:
         data: Either a dictionary with element symbols as keys and values for the heatmap,
               or a DataFrame with 'symbol' and 'value' columns
@@ -232,12 +248,11 @@ def plot_periodic_table_heatmap(df_elements, property_name=None, save_path=None)
     """
     # Convert dictionary to DataFrame if needed
 
-
     # Get element positions from periodic table data
     # df_elements = pd.read_csv('data/periodic_table.csv')
-    element_symbols = df_elements['symbol'].tolist()
-    element_groups = df_elements['extended_group'].tolist()
-    element_periods = df_elements['period'].tolist()
+    element_symbols = df_elements["symbol"].tolist()
+    element_groups = df_elements["extended_group"].tolist()
+    element_periods = df_elements["period"].tolist()
 
     # Map elements to positions
     element_positions = {}
@@ -256,45 +271,52 @@ def plot_periodic_table_heatmap(df_elements, property_name=None, save_path=None)
     min_period = min(element_periods)
 
     # Colormap setup
-    cmap = plt.cm.viridis
-    norm = plt.Normalize(vmin=df_elements['value'].min(), vmax=df_elements['value'].max())
+    cmap = kwargs.get("cmap", DEFAULT_COLOR_MAP)
+    norm = plt.Normalize(
+        vmin=df_elements["value"].min(), vmax=df_elements["value"].max()
+    )
 
     # Plot elements as rectangles
     for idx in range(len(element_symbols)):
         symbol = element_symbols[idx]
         group = element_groups[idx]
         period = element_periods[idx]
-        
+
         # Get value for this element if it exists in input data
-        value = df_elements[df_elements['symbol'] == symbol]['value'].values
+        value = df_elements[df_elements["symbol"] == symbol]["value"].values
         prop_value = value[0] if len(value) > 0 else np.nan
-        
+
         x = group
         y = period
-        color = cmap(norm(prop_value)) if not np.isnan(prop_value) else 'grey'
-        rect = Rectangle((x - 0.5, y - 0.5), 1, 1,
-                         facecolor=color,
-                         edgecolor='white')
+        color = cmap(norm(prop_value)) if not np.isnan(prop_value) else "grey"
+        rect = Rectangle((x - 0.5, y - 0.5), 1, 1, facecolor=color, edgecolor="white")
 
         ax.add_patch(rect)
-        ax.text(x, y, symbol,
-                ha='center', va='center', fontsize=8, color='white',
-                bbox=dict(facecolor='black', alpha=1.0, boxstyle='circle'))
+        ax.text(
+            x,
+            y,
+            symbol,
+            ha="center",
+            va="center",
+            fontsize=8,
+            color="white",
+            bbox=dict(facecolor="black", alpha=1.0, boxstyle="circle"),
+        )
 
     # Axes settings
     ax.set_xlim(0.5, max_group + 0.5)
     ax.set_ylim(min_period - 0.5, max_period + 0.5)
-    ax.set_xlabel('Group')
-    ax.set_ylabel('Period')
+    ax.set_xlabel("Group")
+    ax.set_ylabel("Period")
     ax.invert_yaxis()
 
     # Colorbar
     sm = plt.cm.ScalarMappable(cmap=cmap, norm=norm)
     sm.set_array([])
     cbar = plt.colorbar(sm, ax=ax)
-    
+
     if property_name:
-        cbar.set_label(property_name.replace('_', ' ').title())
+        cbar.set_label(property_name.replace("_", " ").title())
 
     # Ticks and labels
     ax.set_xticks(range(1, max_group + 1))
@@ -303,20 +325,23 @@ def plot_periodic_table_heatmap(df_elements, property_name=None, save_path=None)
     ax.set_yticklabels(range(min_period, max_period + 1))
 
     # Remove unnecessary spines
-    ax.spines['top'].set_visible(False)
-    ax.spines['right'].set_visible(False)
+    ax.spines["top"].set_visible(False)
+    ax.spines["right"].set_visible(False)
 
     # Title
     if property_name:
-        plt.title(f'Periodic Table Colored by {property_name.replace("_", " ").title()}', fontsize=14)
+        plt.title(
+            f'Periodic Table Colored by {property_name.replace("_", " ").title()}',
+            fontsize=14,
+        )
     else:
-        plt.title('Periodic Table Heatmap')
-        
+        plt.title("Periodic Table Heatmap")
+
     plt.tight_layout()
 
     # Save if path provided
     if save_path:
         os.makedirs(os.path.dirname(save_path), exist_ok=True)
         plt.savefig(save_path)
-        
+
     return fig, ax
