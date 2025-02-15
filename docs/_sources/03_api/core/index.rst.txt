@@ -7,11 +7,11 @@ The Core API provides the fundamental functionality of ParquetDB, offering a rob
 
 The core components include:
 
-- :class:`parquetdb.core.parquetdb.ParquetDB` - The main interface class that provides database-like operations over Parquet files. This class handles data storage, retrieval, querying, schema evolution, and complex data type management through an intuitive API that wraps PyArrow's functionality.
+- :class:`ParquetDB <parquetdb.core.parquetdb.ParquetDB>` - The main interface class that provides database-like operations over Parquet files. This class handles data storage, retrieval, querying, schema evolution, and complex data type management through an intuitive API that wraps PyArrow's functionality.
 
-- :class:`parquetdb.core.parquetdb.NormalizeConfig` - A configuration dataclass that controls how data normalization operations are performed in the database. It provides settings for optimizing performance through row distribution, file structure, batch processing, and memory management. Parameters include batch sizes, read-ahead settings, threading options, and file organization constraints.
+- :class:`NormalizeConfig <parquetdb.core.parquetdb.NormalizeConfig>` - A configuration dataclass that controls how data normalization operations are performed in the database. It provides settings for optimizing performance through row distribution, file structure, batch processing, and memory management. Parameters include batch sizes, read-ahead settings, threading options, and file organization constraints.
 
-- :class:`parquetdb.core.parquetdb.LoadConfig` - A configuration dataclass that controls how ParquetDB loads data from Parquet files. It provides settings to optimize data loading performance through parameters like batch sizes, read-ahead settings, threading options, and memory management configurations.
+- :class:`LoadConfig <parquetdb.core.parquetdb.LoadConfig>` - A configuration dataclass that controls how ParquetDB loads data from Parquet files. It provides settings to optimize data loading performance through parameters like batch sizes, read-ahead settings, threading options, and memory management configurations.
 
 .. toctree::
    :maxdepth: 2
