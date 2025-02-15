@@ -14,6 +14,9 @@ directory`_ of the package and showcase how to effectively use ParquetDB's featu
     :name: rst-link-gallery
 
     notebooks/Example 1 - 3D Alexandria Database
+    notebooks/Example 2 - 3D Alexandria Advanced
+    notebooks/Example 3 - Jarvis-dft_3d
+    notebooks/Example 4 - Jarvis-dft_pbe_2d
 
 Contents
 --------
@@ -23,3 +26,6 @@ Contents
    :caption: Example Gallery
 
    notebooks/Example 1 - 3D Alexandria Database
+   notebooks/Example 2 - 3D Alexandria Advanced
+   notebooks/Example 3 - Jarvis-dft_3d
+   notebooks/Example 4 - Jarvis-dft_pbe_2d
