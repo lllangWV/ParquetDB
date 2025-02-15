@@ -2,8 +2,6 @@
 
 **ParquetDB** is a Python library designed to bridge the gap between traditional file storage and fully fledged databases, all while wrapping the powerful PyArrow library to streamline data input and output. By leveraging the Parquet file format, ParquetDB provides the portability and simplicity of file-based data storage alongside advanced querying features typically found in database systems.
 
-Check out the [docs](https://lllangwv.github.io/ParquetDB/)
-
 ## Table of Contents
 
 - [ParquetDB](#parquetdb)
@@ -20,6 +18,10 @@ Check out the [docs](https://lllangwv.github.io/ParquetDB/)
   - [Citing ParquetDB](#citing-parquetdb)
   - [Contributing](#contributing)
   - [License](#license)
+
+## Documentation
+
+Check out the [docs](https://lllangwv.github.io/ParquetDB/)
 
 ## Features
 
