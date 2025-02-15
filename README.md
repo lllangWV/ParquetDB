@@ -10,7 +10,6 @@ Check out the [docs](https://lllangwv.github.io/ParquetDB/)
   - [Table of Contents](#table-of-contents)
   - [Features](#features)
   - [Installation](#installation)
-  - [Quick Start](#quick-start)
   - [Usage](#usage)
     - [Creating a Database](#creating-a-database)
     - [Adding Data](#adding-data)
@@ -38,28 +37,6 @@ Install ParquetDB using pip:
 
 ```bash
 pip install parquetdb
-```
-
-## Quick Start
-
-```python
-from parquetdb import ParquetDB
-
-# Initialize the database
-db = ParquetDB(db_path='ParquetDB')
-
-# Create data
-data = [
-    {'name': 'Alice', 'age': 30, 'occupation': 'Engineer'},
-    {'name': 'Bob', 'age': 25, 'occupation': 'Data Scientist'}
-]
-
-# Add data to the database
-db.create(data)
-
-# Read data from the database
-employees = db.read()
-print(employees.to_pandas())
 ```
 
 ## Usage
