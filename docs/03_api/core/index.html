@@ -1,18 +1,18 @@
 <!doctype html>
-<html class="no-js" lang="en" data-content_root="../">
+<html class="no-js" lang="en" data-content_root="../../">
   <head><meta charset="utf-8"/>
     <meta name="viewport" content="width=device-width,initial-scale=1"/>
     <meta name="color-scheme" content="light dark"><meta name="viewport" content="width=device-width, initial-scale=1" />
-<link rel="index" title="Index" href="../genindex.html" /><link rel="search" title="Search" href="../search.html" /><link rel="next" title="ParquetDB Internals" href="01%20-%20parquetdb_internals.html" /><link rel="prev" title="Other Helper Methods" href="../01_tutorials/07%20-%20Helper%20Methods.html" />
+<link rel="index" title="Index" href="../../genindex.html" /><link rel="search" title="Search" href="../../search.html" /><link rel="next" title="ParquetDB" href="parquetdb.html" /><link rel="prev" title="API Reference" href="../index.html" />
 
     <!-- Generated with Sphinx 8.1.3 and Furo 2024.08.06 -->
-        <title>Internals of ParquetDB - ParquetDB Docs: v0.24.1</title>
-      <link rel="stylesheet" type="text/css" href="../_static/pygments.css?v=03e43079" />
-    <link rel="stylesheet" type="text/css" href="../_static/styles/furo.css?v=354aac6f" />
-    <link rel="stylesheet" type="text/css" href="../_static/copybutton.css?v=76b2166b" />
-    <link rel="stylesheet" type="text/css" href="../_static/sphinx-design.min.css?v=95c83b7e" />
-    <link rel="stylesheet" type="text/css" href="../_static/styles/furo-extensions.css?v=302659d7" />
-    <link rel="stylesheet" type="text/css" href="../_static/css/custom.css" />
+        <title>Core API - ParquetDB Docs: v0.24.1</title>
+      <link rel="stylesheet" type="text/css" href="../../_static/pygments.css?v=03e43079" />
+    <link rel="stylesheet" type="text/css" href="../../_static/styles/furo.css?v=354aac6f" />
+    <link rel="stylesheet" type="text/css" href="../../_static/copybutton.css?v=76b2166b" />
+    <link rel="stylesheet" type="text/css" href="../../_static/sphinx-design.min.css?v=95c83b7e" />
+    <link rel="stylesheet" type="text/css" href="../../_static/styles/furo-extensions.css?v=302659d7" />
+    <link rel="stylesheet" type="text/css" href="../../_static/css/custom.css" />
     
     
 
@@ -169,7 +169,7 @@
       </label>
     </div>
     <div class="header-center">
-      <a href="../index.html"><div class="brand">ParquetDB Docs: v0.24.1</div></a>
+      <a href="../../index.html"><div class="brand">ParquetDB Docs: v0.24.1</div></a>
     </div>
     <div class="header-right">
       <div class="theme-toggle-container theme-toggle-header">
@@ -181,7 +181,7 @@
           <svg class="theme-icon-when-light"><use href="#svg-sun"></use></svg>
         </button>
       </div>
-      <label class="toc-overlay-icon toc-header-icon" for="__toc">
+      <label class="toc-overlay-icon toc-header-icon no-toc" for="__toc">
         <div class="visually-hidden">Toggle table of contents sidebar</div>
         <i class="icon"><svg><use href="#svg-toc"></use></svg></i>
       </label>
@@ -190,67 +190,67 @@
   <aside class="sidebar-drawer">
     <div class="sidebar-container">
       
-      <div class="sidebar-sticky"><a class="sidebar-brand" href="../index.html">
+      <div class="sidebar-sticky"><a class="sidebar-brand" href="../../index.html">
   
   <div class="sidebar-logo-container">
-    <img class="sidebar-logo" src="../_static/ParquetDB_logo.png" alt="Logo"/>
+    <img class="sidebar-logo" src="../../_static/ParquetDB_logo.png" alt="Logo"/>
   </div>
   
   <span class="sidebar-brand-text">ParquetDB Docs: v0.24.1</span>
   
-</a><form class="sidebar-search-container" method="get" action="../search.html" role="search">
+</a><form class="sidebar-search-container" method="get" action="../../search.html" role="search">
   <input class="sidebar-search" placeholder="Search" name="q" aria-label="Search">
   <input type="hidden" name="check_keywords" value="yes">
   <input type="hidden" name="area" value="default">
 </form>
 <div id="searchbox"></div><div class="sidebar-scroll"><div class="sidebar-tree">
   <ul class="current">
-<li class="toctree-l1 has-children"><a class="reference internal" href="../01_tutorials/index.html">Tutorials</a><input class="toctree-checkbox" id="toctree-checkbox-1" name="toctree-checkbox-1" role="switch" type="checkbox"/><label for="toctree-checkbox-1"><div class="visually-hidden">Toggle navigation of Tutorials</div><i class="icon"><svg><use href="#svg-arrow-right"></use></svg></i></label><ul>
-<li class="toctree-l2"><a class="reference internal" href="../01_tutorials/01%20-%20Getting%20Started.html">Getting Started</a></li>
-<li class="toctree-l2"><a class="reference internal" href="../01_tutorials/02%20-%20Normalization.html">Normalization</a></li>
-<li class="toctree-l2"><a class="reference internal" href="../01_tutorials/03%20-%20Advanced%20Reads.html">Advanced Read Operations</a></li>
-<li class="toctree-l2"><a class="reference internal" href="../01_tutorials/04%20-%20Supported%20Data%20Types.html">Supported Data Types</a></li>
-<li class="toctree-l2"><a class="reference internal" href="../01_tutorials/05%20-%20Advanced%20Updates.html">Advanced Update Operations</a></li>
-<li class="toctree-l2"><a class="reference internal" href="../01_tutorials/06%20-%20Adding%20Metadata.html">Manipulating Metadata</a></li>
-<li class="toctree-l2"><a class="reference internal" href="../01_tutorials/07%20-%20Helper%20Methods.html">Other Helper Methods</a></li>
+<li class="toctree-l1 has-children"><a class="reference internal" href="../../01_tutorials/index.html">Tutorials</a><input class="toctree-checkbox" id="toctree-checkbox-1" name="toctree-checkbox-1" role="switch" type="checkbox"/><label for="toctree-checkbox-1"><div class="visually-hidden">Toggle navigation of Tutorials</div><i class="icon"><svg><use href="#svg-arrow-right"></use></svg></i></label><ul>
+<li class="toctree-l2"><a class="reference internal" href="../../01_tutorials/01%20-%20Getting%20Started.html">Getting Started</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../01_tutorials/02%20-%20Normalization.html">Normalization</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../01_tutorials/03%20-%20Advanced%20Reads.html">Advanced Read Operations</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../01_tutorials/04%20-%20Supported%20Data%20Types.html">Supported Data Types</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../01_tutorials/05%20-%20Advanced%20Updates.html">Advanced Update Operations</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../01_tutorials/06%20-%20Adding%20Metadata.html">Manipulating Metadata</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../01_tutorials/07%20-%20Helper%20Methods.html">Other Helper Methods</a></li>
 </ul>
 </li>
-<li class="toctree-l1 current has-children current-page"><a class="current reference internal" href="#">Internals of ParquetDB</a><input checked="" class="toctree-checkbox" id="toctree-checkbox-2" name="toctree-checkbox-2" role="switch" type="checkbox"/><label for="toctree-checkbox-2"><div class="visually-hidden">Toggle navigation of Internals of ParquetDB</div><i class="icon"><svg><use href="#svg-arrow-right"></use></svg></i></label><ul>
-<li class="toctree-l2"><a class="reference internal" href="01%20-%20parquetdb_internals.html">ParquetDB Internals</a></li>
-<li class="toctree-l2"><a class="reference internal" href="01%20-%20parquetdb_internals.html#input-data-formats">Input Data Formats</a></li>
-<li class="toctree-l2"><a class="reference internal" href="01%20-%20parquetdb_internals.html#preprocessing-incoming-data">Preprocessing Incoming Data</a></li>
-<li class="toctree-l2"><a class="reference internal" href="02%20-%20parquet_file_format.html">Parquet File Format</a></li>
-<li class="toctree-l2"><a class="reference internal" href="02%20-%20parquet_file_format.html#parquet-file-layout">Parquet File Layout</a></li>
-<li class="toctree-l2"><a class="reference internal" href="02%20-%20parquet_file_format.html#how-parquet-files-are-written">How Parquet Files are Written</a></li>
+<li class="toctree-l1 has-children"><a class="reference internal" href="../../02_internal/index.html">Internals of ParquetDB</a><input class="toctree-checkbox" id="toctree-checkbox-2" name="toctree-checkbox-2" role="switch" type="checkbox"/><label for="toctree-checkbox-2"><div class="visually-hidden">Toggle navigation of Internals of ParquetDB</div><i class="icon"><svg><use href="#svg-arrow-right"></use></svg></i></label><ul>
+<li class="toctree-l2"><a class="reference internal" href="../../02_internal/01%20-%20parquetdb_internals.html">ParquetDB Internals</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../02_internal/01%20-%20parquetdb_internals.html#input-data-formats">Input Data Formats</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../02_internal/01%20-%20parquetdb_internals.html#preprocessing-incoming-data">Preprocessing Incoming Data</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../02_internal/02%20-%20parquet_file_format.html">Parquet File Format</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../02_internal/02%20-%20parquet_file_format.html#parquet-file-layout">Parquet File Layout</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../02_internal/02%20-%20parquet_file_format.html#how-parquet-files-are-written">How Parquet Files are Written</a></li>
 </ul>
 </li>
-<li class="toctree-l1 has-children"><a class="reference internal" href="../examples/index.html">Examples for the ParquetDB package</a><input class="toctree-checkbox" id="toctree-checkbox-3" name="toctree-checkbox-3" role="switch" type="checkbox"/><label for="toctree-checkbox-3"><div class="visually-hidden">Toggle navigation of Examples for the ParquetDB package</div><i class="icon"><svg><use href="#svg-arrow-right"></use></svg></i></label><ul>
-<li class="toctree-l2"><a class="reference internal" href="../examples/notebooks/Example%201%20-%203D%20Alexandria%20Database.html">3D Alexandria Database</a></li>
+<li class="toctree-l1 has-children"><a class="reference internal" href="../../examples/index.html">Examples for the ParquetDB package</a><input class="toctree-checkbox" id="toctree-checkbox-3" name="toctree-checkbox-3" role="switch" type="checkbox"/><label for="toctree-checkbox-3"><div class="visually-hidden">Toggle navigation of Examples for the ParquetDB package</div><i class="icon"><svg><use href="#svg-arrow-right"></use></svg></i></label><ul>
+<li class="toctree-l2"><a class="reference internal" href="../../examples/notebooks/Example%201%20-%203D%20Alexandria%20Database.html">3D Alexandria Database</a></li>
 </ul>
 </li>
-<li class="toctree-l1 has-children"><a class="reference internal" href="../03_api/index.html">API Reference</a><input class="toctree-checkbox" id="toctree-checkbox-4" name="toctree-checkbox-4" role="switch" type="checkbox"/><label for="toctree-checkbox-4"><div class="visually-hidden">Toggle navigation of API Reference</div><i class="icon"><svg><use href="#svg-arrow-right"></use></svg></i></label><ul>
-<li class="toctree-l2 has-children"><a class="reference internal" href="../03_api/core/index.html">Core API</a><input class="toctree-checkbox" id="toctree-checkbox-5" name="toctree-checkbox-5" role="switch" type="checkbox"/><label for="toctree-checkbox-5"><div class="visually-hidden">Toggle navigation of Core API</div><i class="icon"><svg><use href="#svg-arrow-right"></use></svg></i></label><ul>
-<li class="toctree-l3 has-children"><a class="reference internal" href="../03_api/core/parquetdb.html">ParquetDB</a><input class="toctree-checkbox" id="toctree-checkbox-6" name="toctree-checkbox-6" role="switch" type="checkbox"/><label for="toctree-checkbox-6"><div class="visually-hidden">Toggle navigation of ParquetDB</div><i class="icon"><svg><use href="#svg-arrow-right"></use></svg></i></label><ul>
-<li class="toctree-l4"><a class="reference internal" href="../03_api/core/_autosummary/parquetdb.core.parquetdb.ParquetDB.html">parquetdb.core.parquetdb.ParquetDB</a></li>
+<li class="toctree-l1 current has-children"><a class="reference internal" href="../index.html">API Reference</a><input checked="" class="toctree-checkbox" id="toctree-checkbox-4" name="toctree-checkbox-4" role="switch" type="checkbox"/><label for="toctree-checkbox-4"><div class="visually-hidden">Toggle navigation of API Reference</div><i class="icon"><svg><use href="#svg-arrow-right"></use></svg></i></label><ul class="current">
+<li class="toctree-l2 current has-children current-page"><a class="current reference internal" href="#">Core API</a><input checked="" class="toctree-checkbox" id="toctree-checkbox-5" name="toctree-checkbox-5" role="switch" type="checkbox"/><label for="toctree-checkbox-5"><div class="visually-hidden">Toggle navigation of Core API</div><i class="icon"><svg><use href="#svg-arrow-right"></use></svg></i></label><ul>
+<li class="toctree-l3 has-children"><a class="reference internal" href="parquetdb.html">ParquetDB</a><input class="toctree-checkbox" id="toctree-checkbox-6" name="toctree-checkbox-6" role="switch" type="checkbox"/><label for="toctree-checkbox-6"><div class="visually-hidden">Toggle navigation of ParquetDB</div><i class="icon"><svg><use href="#svg-arrow-right"></use></svg></i></label><ul>
+<li class="toctree-l4"><a class="reference internal" href="_autosummary/parquetdb.core.parquetdb.ParquetDB.html">parquetdb.core.parquetdb.ParquetDB</a></li>
 </ul>
 </li>
-<li class="toctree-l3 has-children"><a class="reference internal" href="../03_api/core/normalize_config.html">NormalizeConfig</a><input class="toctree-checkbox" id="toctree-checkbox-7" name="toctree-checkbox-7" role="switch" type="checkbox"/><label for="toctree-checkbox-7"><div class="visually-hidden">Toggle navigation of NormalizeConfig</div><i class="icon"><svg><use href="#svg-arrow-right"></use></svg></i></label><ul>
-<li class="toctree-l4"><a class="reference internal" href="../03_api/core/_autosummary/parquetdb.core.parquetdb.NormalizeConfig.html">parquetdb.core.parquetdb.NormalizeConfig</a></li>
+<li class="toctree-l3 has-children"><a class="reference internal" href="normalize_config.html">NormalizeConfig</a><input class="toctree-checkbox" id="toctree-checkbox-7" name="toctree-checkbox-7" role="switch" type="checkbox"/><label for="toctree-checkbox-7"><div class="visually-hidden">Toggle navigation of NormalizeConfig</div><i class="icon"><svg><use href="#svg-arrow-right"></use></svg></i></label><ul>
+<li class="toctree-l4"><a class="reference internal" href="_autosummary/parquetdb.core.parquetdb.NormalizeConfig.html">parquetdb.core.parquetdb.NormalizeConfig</a></li>
 </ul>
 </li>
-<li class="toctree-l3 has-children"><a class="reference internal" href="../03_api/core/load_config.html">LoadConfig</a><input class="toctree-checkbox" id="toctree-checkbox-8" name="toctree-checkbox-8" role="switch" type="checkbox"/><label for="toctree-checkbox-8"><div class="visually-hidden">Toggle navigation of LoadConfig</div><i class="icon"><svg><use href="#svg-arrow-right"></use></svg></i></label><ul>
-<li class="toctree-l4"><a class="reference internal" href="../03_api/core/_autosummary/parquetdb.core.parquetdb.LoadConfig.html">parquetdb.core.parquetdb.LoadConfig</a></li>
-</ul>
-</li>
-</ul>
-</li>
-<li class="toctree-l2 has-children"><a class="reference internal" href="../03_api/utils/index.html">Utils API</a><input class="toctree-checkbox" id="toctree-checkbox-9" name="toctree-checkbox-9" role="switch" type="checkbox"/><label for="toctree-checkbox-9"><div class="visually-hidden">Toggle navigation of Utils API</div><i class="icon"><svg><use href="#svg-arrow-right"></use></svg></i></label><ul>
-<li class="toctree-l3"><a class="reference internal" href="../03_api/utils/pyarrow_utils.html">PyArrowUtils</a></li>
+<li class="toctree-l3 has-children"><a class="reference internal" href="load_config.html">LoadConfig</a><input class="toctree-checkbox" id="toctree-checkbox-8" name="toctree-checkbox-8" role="switch" type="checkbox"/><label for="toctree-checkbox-8"><div class="visually-hidden">Toggle navigation of LoadConfig</div><i class="icon"><svg><use href="#svg-arrow-right"></use></svg></i></label><ul>
+<li class="toctree-l4"><a class="reference internal" href="_autosummary/parquetdb.core.parquetdb.LoadConfig.html">parquetdb.core.parquetdb.LoadConfig</a></li>
 </ul>
 </li>
 </ul>
 </li>
-<li class="toctree-l1"><a class="reference internal" href="../CONTRIBUTING.html">Contributing</a></li>
+<li class="toctree-l2 has-children"><a class="reference internal" href="../utils/index.html">Utils API</a><input class="toctree-checkbox" id="toctree-checkbox-9" name="toctree-checkbox-9" role="switch" type="checkbox"/><label for="toctree-checkbox-9"><div class="visually-hidden">Toggle navigation of Utils API</div><i class="icon"><svg><use href="#svg-arrow-right"></use></svg></i></label><ul>
+<li class="toctree-l3"><a class="reference internal" href="../utils/pyarrow_utils.html">PyArrowUtils</a></li>
+</ul>
+</li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="../../CONTRIBUTING.html">Contributing</a></li>
 </ul>
 
 </div>
@@ -271,7 +271,7 @@
         </a>
         <div class="content-icon-container">
           <div class="view-this-page">
-  <a class="muted-link" href="../_sources/02_internal/index.rst.txt" title="View this page">
+  <a class="muted-link" href="../../_sources/03_api/core/index.rst.txt" title="View this page">
     <svg><use href="#svg-eye"></use></svg>
     <span class="visually-hidden">View this page</span>
   </a>
@@ -285,35 +285,37 @@
               <svg class="theme-icon-when-light"><use href="#svg-sun"></use></svg>
             </button>
           </div>
-          <label class="toc-overlay-icon toc-content-icon" for="__toc">
+          <label class="toc-overlay-icon toc-content-icon no-toc" for="__toc">
             <div class="visually-hidden">Toggle table of contents sidebar</div>
             <i class="icon"><svg><use href="#svg-toc"></use></svg></i>
           </label>
         </div>
         <article role="main" id="furo-main-content">
-          <section id="internals-of-parquetdb">
-<h1>Internals of ParquetDB<a class="headerlink" href="#internals-of-parquetdb" title="Link to this heading">¶</a></h1>
-<p>Welcome to the internal documentation of ParquetDB. This section provides an in-depth look into how ParquetDB works under the hood. Here you will find detailed explanations of the following topics:</p>
+          <section id="core-api">
+<span id="core-api-index"></span><h1>Core API<a class="headerlink" href="#core-api" title="Link to this heading">¶</a></h1>
+<p>The Core API provides the fundamental functionality of ParquetDB, offering a robust interface for managing Parquet-based data storage. This module contains the essential classes and methods that enable database-like operations while maintaining the simplicity and portability of file-based storage.</p>
+<p>The core components include:</p>
 <ul class="simple">
-<li><p>The integration of PyArrow and its role in high-performance data processing.</p></li>
-<li><p>The data flow within ParquetDB: how various input formats are standardized and preprocessed.</p></li>
-<li><p>The internal structure and handling of Parquet files, including file layout and metadata management.</p></li>
-<li><p>Advanced topics related to schema evolution, normalization, and more.</p></li>
+<li><p><a class="reference internal" href="_autosummary/parquetdb.core.parquetdb.ParquetDB.html#parquetdb.core.parquetdb.ParquetDB" title="parquetdb.core.parquetdb.ParquetDB"><code class="xref py py-class docutils literal notranslate"><span class="pre">parquetdb.core.parquetdb.ParquetDB</span></code></a> - The main interface class that provides database-like operations over Parquet files. This class handles data storage, retrieval, querying, schema evolution, and complex data type management through an intuitive API that wraps PyArrow’s functionality.</p></li>
+<li><p><a class="reference internal" href="_autosummary/parquetdb.core.parquetdb.NormalizeConfig.html#parquetdb.core.parquetdb.NormalizeConfig" title="parquetdb.core.parquetdb.NormalizeConfig"><code class="xref py py-class docutils literal notranslate"><span class="pre">parquetdb.core.parquetdb.NormalizeConfig</span></code></a> - A configuration dataclass that controls how data normalization operations are performed in the database. It provides settings for optimizing performance through row distribution, file structure, batch processing, and memory management. Parameters include batch sizes, read-ahead settings, threading options, and file organization constraints.</p></li>
+<li><p><a class="reference internal" href="_autosummary/parquetdb.core.parquetdb.LoadConfig.html#parquetdb.core.parquetdb.LoadConfig" title="parquetdb.core.parquetdb.LoadConfig"><code class="xref py py-class docutils literal notranslate"><span class="pre">parquetdb.core.parquetdb.LoadConfig</span></code></a> - A configuration dataclass that controls how ParquetDB loads data from Parquet files. It provides settings to optimize data loading performance through parameters like batch sizes, read-ahead settings, threading options, and memory management configurations.</p></li>
 </ul>
-<section id="contents">
-<h2>Contents<a class="headerlink" href="#contents" title="Link to this heading">¶</a></h2>
 <div class="toctree-wrapper compound">
-<p class="caption" role="heading"><span class="caption-text">Internal Topics</span></p>
 <ul>
-<li class="toctree-l1"><a class="reference internal" href="01%20-%20parquetdb_internals.html">ParquetDB Internals</a></li>
-<li class="toctree-l1"><a class="reference internal" href="01%20-%20parquetdb_internals.html#input-data-formats">Input Data Formats</a></li>
-<li class="toctree-l1"><a class="reference internal" href="01%20-%20parquetdb_internals.html#preprocessing-incoming-data">Preprocessing Incoming Data</a></li>
-<li class="toctree-l1"><a class="reference internal" href="02%20-%20parquet_file_format.html">Parquet File Format</a></li>
-<li class="toctree-l1"><a class="reference internal" href="02%20-%20parquet_file_format.html#parquet-file-layout">Parquet File Layout</a></li>
-<li class="toctree-l1"><a class="reference internal" href="02%20-%20parquet_file_format.html#how-parquet-files-are-written">How Parquet Files are Written</a></li>
+<li class="toctree-l1"><a class="reference internal" href="parquetdb.html">ParquetDB</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="_autosummary/parquetdb.core.parquetdb.ParquetDB.html">parquetdb.core.parquetdb.ParquetDB</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="normalize_config.html">NormalizeConfig</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="_autosummary/parquetdb.core.parquetdb.NormalizeConfig.html">parquetdb.core.parquetdb.NormalizeConfig</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="load_config.html">LoadConfig</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="_autosummary/parquetdb.core.parquetdb.LoadConfig.html">parquetdb.core.parquetdb.LoadConfig</a></li>
+</ul>
+</li>
 </ul>
 </div>
-</section>
 </section>
 
         </article>
@@ -321,23 +323,23 @@
       <footer>
         
         <div class="related-pages">
-          <a class="next-page" href="01%20-%20parquetdb_internals.html">
+          <a class="next-page" href="parquetdb.html">
               <div class="page-info">
                 <div class="context">
                   <span>Next</span>
                 </div>
-                <div class="title">ParquetDB Internals</div>
+                <div class="title">ParquetDB</div>
               </div>
               <svg class="furo-related-icon"><use href="#svg-arrow-right"></use></svg>
             </a>
-          <a class="prev-page" href="../01_tutorials/07%20-%20Helper%20Methods.html">
+          <a class="prev-page" href="../index.html">
               <svg class="furo-related-icon"><use href="#svg-arrow-right"></use></svg>
               <div class="page-info">
                 <div class="context">
                   <span>Previous</span>
                 </div>
                 
-                <div class="title">Other Helper Methods</div>
+                <div class="title">API Reference</div>
                 
               </div>
             </a>
@@ -359,39 +361,20 @@
         
       </footer>
     </div>
-    <aside class="toc-drawer">
+    <aside class="toc-drawer no-toc">
       
-      
-      <div class="toc-sticky toc-scroll">
-        <div class="toc-title-container">
-          <span class="toc-title">
-            On this page
-          </span>
-        </div>
-        <div class="toc-tree-container">
-          <div class="toc-tree">
-            <ul>
-<li><a class="reference internal" href="#">Internals of ParquetDB</a><ul>
-<li><a class="reference internal" href="#contents">Contents</a></li>
-</ul>
-</li>
-</ul>
-
-          </div>
-        </div>
-      </div>
       
       
     </aside>
   </div>
-</div><script src="../_static/documentation_options.js?v=0d70ca51"></script>
-    <script src="../_static/doctools.js?v=9bcbadda"></script>
-    <script src="../_static/sphinx_highlight.js?v=dc90522c"></script>
-    <script src="../_static/scripts/furo.js?v=5fa4622c"></script>
-    <script src="../_static/clipboard.min.js?v=a7894cd8"></script>
-    <script src="../_static/copybutton.js?v=f281be69"></script>
-    <script src="../_static/design-tabs.js?v=f930bc37"></script>
+</div><script src="../../_static/documentation_options.js?v=0d70ca51"></script>
+    <script src="../../_static/doctools.js?v=9bcbadda"></script>
+    <script src="../../_static/sphinx_highlight.js?v=dc90522c"></script>
+    <script src="../../_static/scripts/furo.js?v=5fa4622c"></script>
+    <script src="../../_static/clipboard.min.js?v=a7894cd8"></script>
+    <script src="../../_static/copybutton.js?v=f281be69"></script>
+    <script src="../../_static/design-tabs.js?v=f930bc37"></script>
     <script crossorigin="anonymous" integrity="sha256-Ae2Vz/4ePdIu6ZyI/5ZGsYnb+m0JlOmKPjt6XZ9JJkA=" src="https://cdnjs.cloudflare.com/ajax/libs/require.js/2.3.4/require.min.js"></script>
-    <script src="../_static/js/custom.js"></script>
+    <script src="../../_static/js/custom.js"></script>
     </body>
 </html>

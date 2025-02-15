@@ -51,11 +51,16 @@ What Next?
 
 Now that you have successfully installed ParquetDB, here are some recommended next steps:
 
+- **Tutorials**  
+  Visit the :doc:`01_tutorials/index` section for a hands-on tutorial covering the basics of creating, reading, and querying ParquetDB files.
+
+
 - **Learn the Inner Details**  
   Visit the :doc:`ParquetDB Internals <02_internal/index>` section to dive deeper into ParquetDB's internals to understand how it wraps PyArrow, processes different data types, and performs efficient read/write operations.
 
-- **Getting Started**  
-  Visit the :doc:`01_tutorials/index` section for a hands-on tutorial covering the basics of creating, reading, and querying ParquetDB files.
+- **Example Gallery**  
+  Visit the :doc:`Example Gallery <examples/index>` section real use cases of ParquetDB.
+
 
 - **Explore PyArrow**  
   ParquetDB relies on PyArrow for powerful data type handling and filtering mechanisms. For more in-depth information on PyArrow's `Table <https://arrow.apache.org/docs/python/generated/pyarrow.Table.html>`__ structure, filtering, and other features, refer to the `PyArrow Documentation <https://arrow.apache.org/docs/python/getstarted.html>`__.
@@ -90,4 +95,5 @@ Index
     01_tutorials/index
     02_internal/index
     examples/index.rst
+    03_api/index
     CONTRIBUTING
