@@ -1,6 +1,37 @@
 
 ___
 
+# 0.25.0 (02-15-2025)
+
+##### Bugs
+- None identified
+
+##### New Features
+- Added example notebooks for advanced 3D Alexandria and Jarvis datasets
+- Introduced matplotlib utility functions and improved periodic table plotting
+- Expanded test cases for new metadata retrieval functionality
+
+##### Documentation
+- Enhanced the README.md by adding a Documentation section to the table of contents and restructuring for clarity
+- Created API Reference documentation for ParquetDB
+- Updated documentation references to simplify class names in Core API documentation
+- Prepared documentation for online hosting and integration with ReadTheDocs
+- Streamlined documentation for improved readability
+- Added JOSS paper metadata for ParquetDB publication
+- Updated documentation configuration and static assets
+
+##### Maintenance
+- Modified dataset loading to ignore nested directories and improve filter handling
+- Cleaned up and ensured consistent formatting in plotting scripts
+- Revised the test runner configuration in test_parquetdb.py
+- Removed the .nojekyll file from docs directory
+- Merged branch 'main' from remote repository
+- Updated _version.py and CHANGELOG.md for the new release
+
+___
+
+___
+
 # 0.24.1 (01-26-2025)
 
 ##### Bugs
