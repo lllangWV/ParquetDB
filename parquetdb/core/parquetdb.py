@@ -381,7 +381,7 @@ class ParquetDB:
         PARQUETDB SUMMARY
         ============================================================
         Database path: /path/to/my_database
-        
+
         • Number of columns: 5
         • Number of rows: 1000
         • Number of files: 2
@@ -683,7 +683,6 @@ class ParquetDB:
 
         # Build filter expression
         filter_expression = self._build_filter_expression(ids, filters)
-
         dataset_dir = None
         if rebuild_nested_struct:
             nested_dataset_dir = os.path.join(self.db_path, "nested")
@@ -949,7 +948,7 @@ class ParquetDB:
         ...     values = range(len(table))
         ...     new_col = pa.array(values)
         ...     return table.append_column('new_col', new_col)
-        
+
         >>> # Transform in-place
         >>> db.transform(add_column)
 
@@ -970,7 +969,7 @@ class ParquetDB:
         """
         Normalize the dataset by restructuring files for optimal performance.
 
-        This method reorganizes the dataset files to ensure consistent row distribution and 
+        This method reorganizes the dataset files to ensure consistent row distribution and
         efficient storage. It rewrites the data with optimized file and row group sizes,
         which improves performance of all database operations.
 
@@ -979,7 +978,7 @@ class ParquetDB:
         normalize_config : NormalizeConfig, optional
             Configuration controlling the normalization process, including:
             - File sizes and row distribution
-            - Row group sizes and organization 
+            - Row group sizes and organization
             - Threading and memory usage
             - File system options
             Default uses standard NormalizeConfig settings.
@@ -997,7 +996,7 @@ class ParquetDB:
         Custom normalization configuration:
         >>> config = NormalizeConfig(
         ...     max_rows_per_file=5000,
-        ...     min_rows_per_group=500, 
+        ...     min_rows_per_group=500,
         ...     max_rows_per_group=5000,
         ...     max_partitions=512,
         ...     use_threads=True
@@ -1346,7 +1345,7 @@ class ParquetDB:
 
         Examples
         --------
-        >>> db = ParquetDB("my_database") 
+        >>> db = ParquetDB("my_database")
         >>> schema = db.get_schema()
         >>> print(schema)
         id: int64
@@ -1418,7 +1417,7 @@ class ParquetDB:
         >>> print(metadata)
         {'source': 'API', 'version': '1.0'}
 
-        >>> raw_metadata = db.get_metadata(return_bytes=True) 
+        >>> raw_metadata = db.get_metadata(return_bytes=True)
         >>> print(raw_metadata)
         {b'source': b'API', b'version': b'1.0'}
         """
@@ -1788,7 +1787,7 @@ class ParquetDB:
         >>> # Dictionary format
         >>> db.get_n_rows_per_row_group_per_file(as_dict=True)
         {'file_0': {0: 500, 1: 500}, 'file_1': {0: 1000}}
-        
+
         >>> # List format
         >>> db.get_n_rows_per_row_group_per_file(as_dict=False)
         [[500, 500], [1000]]
@@ -1873,9 +1872,7 @@ class ParquetDB:
             else:
                 new_fields.append(field)
 
-        self._normalize(
-            schema=pa.schema(new_fields), normalize_config=normalize_config
-        )
+        self._normalize(schema=pa.schema(new_fields), normalize_config=normalize_config)
 
         return schema
 
@@ -1893,7 +1890,7 @@ class ParquetDB:
 
         Examples
         --------
-        >>> db.sort_fields()  # Reorders fields like ['age', 'name', 'zip'] 
+        >>> db.sort_fields()  # Reorders fields like ['age', 'name', 'zip']
         """
         schema = self.get_schema()
         field_names = schema.names
@@ -2023,7 +2020,7 @@ class ParquetDB:
         --------
         >>> db = ParquetDB('old_name')
         >>> db.rename_dataset('new_name')  # Renames dataset
-        
+
         >>> db.rename_dataset('existing_name', remove_dest=True)  # Overwrites existing
 
         Notes
@@ -2085,7 +2082,7 @@ class ParquetDB:
         --------
         >>> db = ParquetDB('original')
         >>> db.copy_dataset('backup')  # Creates copy named 'backup'
-        
+
         >>> db.copy_dataset('existing', overwrite=True)  # Overwrites existing copy
 
         Notes
@@ -2141,7 +2138,7 @@ class ParquetDB:
         --------
         Export to CSV:
         >>> db.export_dataset('data.csv', format='csv')
-        
+
         Export to JSON Lines:
         >>> db.export_dataset('data.jsonl', format='json')
 
@@ -2516,7 +2513,9 @@ class ParquetDB:
         logger.info(f"Loading only columns: {columns}")
         logger.info(f"Using filter: {filter}")
 
-        dataset = ds.dataset(dataset_dir, format="parquet", ignore_prefixes=["tmp_"])
+        dataset = ds.dataset(
+            dataset_dir, format="parquet", ignore_prefixes=["tmp_", "nested"]
+        )
         if load_format == "batches":
             return self._load_batches(dataset, columns, filter, load_config=load_config)
         elif load_format == "table":
