@@ -6,6 +6,7 @@
 
 - [ParquetDB](#parquetdb)
   - [Table of Contents](#table-of-contents)
+  - [Documentation](#documentation)
   - [Features](#features)
   - [Installation](#installation)
   - [Usage](#usage)
