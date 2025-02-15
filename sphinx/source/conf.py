@@ -84,6 +84,10 @@ extensions = [
     "sphinxcontrib.video",
     "sphinx_design",
     "sphinx.ext.githubpages",
+    "sphinx.ext.napoleon", 
+    'numpydoc',
+    "sphinx.ext.autodoc",
+    "sphinx.ext.autosummary",
     # "sphinx-nbexamples",
     # "sphinx_gallery.gen_gallery",
     # 'sphinx.youtube',
@@ -111,7 +115,32 @@ pygments_style = "sphinx"
 #     "urls": "https://github.com/lllangWV/ParquetDB/blob/main/examples/notebooks",
 # }
 
-autosummary_generate = False
+
+# Configuration for the Napoleon extension
+napoleon_use_ivar = True
+napoleon_use_rtype = False
+napoleon_use_param = False
+napoleon_custom_sections = [
+    ('My Custom Section', 'params_style'),  # Custom section treated like parameters
+    ('Plot Appearance', 'params_style'),  # Custom section treated like parameters
+    ('Surface Configuration', 'params_style'),  # Custom section treated like parameters
+    ('Spin Settings', 'params_style'),  # Custom section treated like parameters
+    ('Axes and Labels', 'params_style'),  # Custom section treated like parameters
+    ('Brillouin Zone Styling', 'params_style'),  # Custom section treated like parameters
+    ('Advanced Configurations', 'params_style'),  # Custom section treated like parameters
+    ('Isoslider Settings', 'params_style'),  # Custom section treated like parameters
+    ('Miscellaneous', 'params_style'),  # Custom section treated like parameters
+    'Methods'
+]
+
+
+
+numpydoc_use_plots = True
+numpydoc_show_class_members = False
+numpydoc_xref_param_type = True
+
+
+autosummary_generate = True
 add_module_names = False
 
 # Add any paths that contain templates here, relative to this directory.

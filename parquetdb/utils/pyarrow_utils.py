@@ -1264,8 +1264,42 @@ def update_schema(current_schema, schema=None, field_dict=None, update_metadata=
     updated_schema = pa.schema(field_names, metadata=updated_metadata)
     return updated_schema
 
-
 def unify_schemas(schema_list, promote_options="permissive"):
+    """
+    Unify two PyArrow schemas while preserving and merging their metadata.
+
+    Parameters
+    ----------
+    schema_list : list of pyarrow.Schema
+        List containing exactly two schemas to unify. The first schema is considered
+        the current schema and the second is the new schema to merge with.
+    promote_options : str, optional
+        Options for type promotion when unifying schemas. Default is "permissive".
+        See PyArrow documentation for valid options.
+
+    Returns
+    -------
+    pyarrow.Schema
+        A new unified schema that:
+        - Contains all fields from both input schemas
+        - Has merged metadata from both schemas if they differ
+        - Has field types promoted according to promote_options
+
+    Notes
+    -----
+    The function:
+    - Extracts and merges metadata from both schemas if they differ
+    - Uses PyArrow's unify_schemas to combine the field definitions
+    - Reattaches the merged metadata to the final schema
+
+    Examples
+    --------
+    >>> schema1 = pa.schema([('id', pa.int32()), ('name', pa.string())])
+    >>> schema2 = pa.schema([('id', pa.int64()), ('age', pa.int32())])
+    >>> unified = unify_schemas([schema1, schema2])
+    >>> unified.names
+    ['id', 'name', 'age']
+    """
     current_schema, new_schema = schema_list
     merged_metadata = {}
     table_metadata_equal = current_schema.metadata == new_schema.metadata
@@ -1286,12 +1320,20 @@ def align_table(current_table: pa.Table, new_schema: pa.Schema) -> pa.Table:
     """
     Aligns the given table to the new schema, filling in missing fields or struct fields with null values.
 
-    Args:
-        table (pa.Table): The table to align.
-        new_schema (pa.Schema): The target schema to align the table to.
+    Parameters
+    ----------
+    current_table : pyarrow.Table
+        The table to align.
+    new_schema : pyarrow.Schema
+        The target schema to align the table to.
 
-    Returns:
-        pa.Table: The aligned table.
+    Returns
+    -------
+    pyarrow.Table
+        The aligned table with:
+        - Missing fields filled with null values
+        - Fields ordered according to new schema
+        - Struct fields aligned to match new schema
     """
     # current_table=replace_empty_structs_in_table(current_table)
 
@@ -1374,8 +1416,32 @@ def add_new_null_fields_in_struct(column_array, new_struct_type):
             new_arrays.append(null_array)
     return pa.StructArray.from_arrays(new_arrays, fields=new_struct_type)
 
-
 def table_schema_cast(current_table, new_schema):
+    """Cast a PyArrow table to match a new schema.
+
+    This function casts an existing PyArrow table to match a new schema, handling:
+    - Fields present in both schemas (cast to new type)
+    - New fields (added as null columns)
+    - Special handling for fixed shape tensors
+    - Reordering columns alphabetically
+    
+    Parameters
+    ----------
+    current_table : pyarrow.Table
+        The table to be cast to the new schema
+    new_schema : pyarrow.Schema
+        The target schema to cast the table to
+
+    Returns
+    -------
+    pyarrow.Table
+        A new table with the schema matching new_schema
+
+    Raises
+    ------
+    Exception
+        If casting a list column fails, typically due to nested null fields
+    """
     current_names = set(current_table.column_names)
     new_names = set(new_schema.names)
 
@@ -1445,8 +1511,28 @@ def table_schema_cast(current_table, new_schema):
     current_table = current_table.replace_schema_metadata(new_schema.metadata)
     return current_table
 
-
 def schema_equal(schema1, schema2):
+    """
+    Compare two PyArrow schemas for equality, including metadata.
+
+    Parameters
+    ----------
+    schema1 : pyarrow.Schema
+        First schema to compare
+    schema2 : pyarrow.Schema
+        Second schema to compare
+
+    Returns
+    -------
+    bool
+        True if schemas and their metadata are equal, False otherwise
+
+    Notes
+    -----
+    This function checks both the schema structure (fields and types) as well as
+    the metadata dictionaries for equality. Two schemas are considered equal only
+    if both their structure and metadata match exactly.
+    """
     are_schemas_equal = schema1.equals(schema2)
     logger.debug(f"Are schemas equal before metadata check: {are_schemas_equal}")
     # Check if metadata are equal
@@ -1464,7 +1550,24 @@ def schema_equal(schema1, schema2):
 
 
 def sort_schema(schema):
+    """
+    Sort the fields in a PyArrow schema alphabetically by field name.
 
+    Parameters
+    ----------
+    schema : pyarrow.Schema
+        Input schema to sort
+
+    Returns
+    -------
+    pyarrow.Schema
+        New schema with fields sorted alphabetically, preserving the original metadata
+
+    Notes
+    -----
+    The function maintains the original schema metadata while reordering the fields.
+    This is useful for ensuring consistent field ordering across different schema instances.
+    """
     names = set(schema.names)
     names_sorted = sorted(names)
 
@@ -1477,13 +1580,60 @@ def sort_schema(schema):
 def join_tables(
     left_table,
     right_table,
-    left_keys,
-    right_keys=None,
-    join_type="left outer",
-    left_suffix=None,
-    right_suffix=None,
-    coalesce_keys=True,
+    left_keys: List[str],
+    right_keys: List[str] = None,
+    join_type: str = "left outer",
+    left_suffix: str = None,
+    right_suffix: str = None,
+    coalesce_keys: bool = True,
 ):
+    """
+    Join two PyArrow tables based on specified key columns.
+
+    Parameters
+    ----------
+    left_table : pyarrow.Table
+        The left table for the join operation.
+    right_table : pyarrow.Table
+        The right table for the join operation.
+    left_keys : str or list of str
+        Column name(s) from the left table to join on.
+    right_keys : str or list of str, optional
+        Column name(s) from the right table to join on. If None, uses left_keys.
+    join_type : str, optional
+        Type of join to perform. Default is "left outer".
+        Supported types: "left outer", "right outer", "inner", "full outer".
+    left_suffix : str, optional
+        Suffix to append to overlapping column names from the left table.
+    right_suffix : str, optional
+        Suffix to append to overlapping column names from the right table.
+    coalesce_keys : bool, optional
+        Whether to combine join keys that appear in both tables. Default is True.
+
+    Returns
+    -------
+    pyarrow.Table
+        A new table containing the joined data with:
+        - All columns from both tables (except join keys which are coalesced if specified)
+        - Column name conflicts resolved using the provided suffixes
+        - Combined metadata from both input tables
+
+    Notes
+    -----
+    The function:
+    - Preserves the original data types and metadata
+    - Handles overlapping column names by adding suffixes
+    - Removes temporary index columns used for joining
+    - Combines metadata from both input tables
+
+    Examples
+    --------
+    >>> left = pa.table({'id': [1, 2, 3], 'value': ['a', 'b', 'c']})
+    >>> right = pa.table({'id': [2, 3, 4], 'score': [10, 20, 30]})
+    >>> joined = join_tables(left, right, 'id')
+    >>> joined.column_names
+    ['id', 'value', 'score']
+    """
     # Add index column to both tables
     if right_keys:
         tmp_right_table = right_table.select(right_keys)
@@ -1571,6 +1721,40 @@ def join_tables(
 
 
 def update_fixed_shape_tensor(current_array, update_array):
+    """
+    Update a fixed shape tensor array with values from another array, preserving nulls.
+
+    This function updates values in current_array with non-null values from update_array.
+    Where update_array has null values, the original values from current_array are preserved.
+
+    Parameters
+    ----------
+    current_array : pyarrow.Array
+        The original fixed shape tensor array to be updated
+    update_array : pyarrow.Array
+        The array containing update values. Must be the same length as current_array.
+
+    Returns
+    -------
+    pyarrow.Array
+        A new array with values from current_array updated with non-null values from update_array
+
+    Notes
+    -----
+    The function preserves the null/non-null status of elements:
+    - Where update_array has non-null values, those values replace current_array values
+    - Where update_array has null values, current_array values are preserved
+    - The returned array maintains the same length as the input arrays
+
+    Examples
+    --------
+    >>> import pyarrow as pa
+    >>> current = pa.array([[1,2], [3,4], [5,6]])
+    >>> update = pa.array([[7,8], None, [9,10]])
+    >>> result = update_fixed_shape_tensor(current, update)
+    >>> result.to_pylist()
+    [[7,8], [3,4], [9,10]]
+    """
     is_valid_array = update_array.is_valid()
     is_null_array = update_array.is_null()
 
@@ -1621,38 +1805,150 @@ def update_fixed_shape_tensor(current_array, update_array):
 
 
 def is_extension_type(type):
+    """
+    Check if a PyArrow type is an extension type.
+
+    Parameters
+    ----------
+    type : pyarrow.DataType
+        The PyArrow type to check.
+
+    Returns
+    -------
+    bool
+        True if the type is an extension type, False otherwise.
+    """
     return hasattr(type, "extension_name")
 
 
 def is_fixed_shape_tensor(type):
+    """
+    Check if a PyArrow type is a fixed shape tensor type.
+
+    Parameters
+    ----------
+    type : pyarrow.DataType
+        The PyArrow type to check.
+
+    Returns
+    -------
+    bool
+        True if the type is a fixed shape tensor, False otherwise.
+    """
     return is_extension_type(type) and type.extension_name == "arrow.fixed_shape_tensor"
 
 
 def delete_columns(table, columns):
+    """
+    Delete specified columns from a PyArrow table.
+
+    Parameters
+    ----------
+    table : pyarrow.Table
+        The input table to delete columns from.
+    columns : list of str
+        List of column names to delete.
+
+    Returns
+    -------
+    pyarrow.Table
+        A new table with the specified columns removed.
+
+    Examples
+    --------
+    >>> import pyarrow as pa
+    >>> table = pa.table({'a': [1,2,3], 'b': [4,5,6], 'c': [7,8,9]})
+    >>> delete_columns(table, ['b', 'c'])
+    pyarrow.Table
+    a: int64
+    """
     return table.drop_columns(columns)
 
 
 def delete_ids(table, ids):
+    """
+    Delete rows from a table based on ID values.
+
+    Parameters
+    ----------
+    table : pyarrow.Table
+        The input table to delete rows from.
+    ids : array-like
+        List of ID values to delete.
+
+    Returns
+    -------
+    pyarrow.Table
+        A new table with rows matching the specified IDs removed.
+
+    Examples
+    --------
+    >>> import pyarrow as pa
+    >>> table = pa.table({'id': [1,2,3,4], 'value': ['a','b','c','d']})
+    >>> delete_ids(table, [2,3])
+    pyarrow.Table
+    id: int64
+    value: string
+    ----
+    id         value
+    1          a    
+    4          d    
+    """
     return table.filter(~pc.field("id").isin(ids))
 
 
 def delete_field_values(table, values, field_name):
+    """
+    Delete rows from a table based on values in a specified field.
+
+    Parameters
+    ----------
+    table : pyarrow.Table
+        The input table to delete rows from.
+    values : array-like
+        List of values to delete.
+    field_name : str
+        Name of the field to match values against.
+
+    Returns
+    -------
+    pyarrow.Table
+        A new table with rows matching the specified values in the given field removed.
+
+    Examples
+    --------
+    >>> import pyarrow as pa
+    >>> table = pa.table({'id': [1,2,3], 'category': ['A','B','A']})
+    >>> delete_field_values(table, ['A'], 'category')
+    pyarrow.Table
+    id: int64
+    category: string
+    ----
+    id         category
+    2          B       
+    """
     return table.filter(~pc.field(field_name).isin(values))
 
 
 def drop_duplicates(table, keys):
     """
-    Drops duplicate rows from a PyArrow Table based specified keys, keeping the first occurrence.
+    Drop duplicate rows from a PyArrow Table based on specified keys.
 
-    Parameters:
-    - table: pyarrow.Table
+    Parameters
+    ----------
+    table : pyarrow.Table
         The input table from which duplicates will be removed.
-    - keys: list of str
+    keys : list of str
         A list of column names that determine the uniqueness of rows.
 
-    Returns:
-    - pyarrow.Table
+    Returns
+    -------
+    pyarrow.Table
         A new table with duplicates removed, keeping the first occurrence of each unique key combination.
+
+    Notes
+    -----
+    This function keeps the first occurrence of each unique key combination.
     """
     # keys.append("id")
     groupby_keys = list(set(keys).union(set(["id"])))

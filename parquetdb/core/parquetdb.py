@@ -40,42 +40,57 @@ class NormalizeConfig:
     """
     Configuration for the normalization process, optimizing performance by managing row distribution and file structure.
 
-    Parameters
+    Attributes
     ----------
     load_format : str
-        The format of the output dataset. Supported formats are 'table' and 'batches' (default: 'table').
-    batch_size : int, optional
-        The number of rows to process in each batch (default: None).
-    batch_readahead : int, optional
-        The number of batches to read ahead in a file (default: 16).
-    fragment_readahead : int, optional
-        The number of files to read ahead, improving IO utilization at the cost of RAM usage (default: 4).
-    fragment_scan_options : Optional[pa.dataset.FragmentScanOptions], optional
+        The format of the output dataset. Supported formats are 'table' and 'batches'.
+        Default: 'table'
+    batch_size : int
+        The number of rows to process in each batch.
+        Default: 131,072
+    batch_readahead : int
+        The number of batches to read ahead in a file.
+        Default: 16
+    fragment_readahead : int
+        The number of files to read ahead, improving IO utilization at the cost of RAM usage.
+        Default: 4
+    fragment_scan_options : Optional[pa.dataset.FragmentScanOptions]
         Options specific to a particular scan and fragment type, potentially changing across scans.
-    use_threads : bool, optional
-        Whether to use maximum parallelism determined by available CPU cores (default: True).
-    memory_pool : Optional[pa.MemoryPool], optional
-        The memory pool for allocations. Defaults to the system's default memory pool.
-    filesystem : pyarrow.fs.FileSystem, optional
-        Filesystem for writing the dataset (default: None).
-    file_options : pyarrow.fs.FileWriteOptions, optional
-        Options for writing the dataset files (default: None).
+        Default: None
     use_threads : bool
-        Whether to use threads for writing (default: True).
+        Whether to use maximum parallelism determined by available CPU cores.
+        Default: True
+    memory_pool : Optional[pa.MemoryPool]
+        The memory pool for allocations. Uses the system's default memory pool if not specified.
+        Default: None
+    filesystem : pyarrow.fs.FileSystem
+        Filesystem for writing the dataset.
+        Default: None
+    file_options : pyarrow.fs.FileWriteOptions
+        Options for writing the dataset files.
+        Default: None
     max_partitions : int
-        Maximum number of partitions for dataset writing (default: 1024).
+        Maximum number of partitions for dataset writing.
+        Default: 1024
     max_open_files : int
-        Maximum open files for dataset writing (default: 1024).
+        Maximum open files for dataset writing.
+        Default: 1024
     max_rows_per_file : int
-        Maximum rows per file (default: 10,000).
+        Maximum rows per file.
+        Default: 10,000
     min_rows_per_group : int
-        Minimum rows per row group within each file (default: 0).
+        Minimum rows per row group within each file.
+        Default: 0
     max_rows_per_group : int
-        Maximum rows per row group within each file (default: 10,000).
+        Maximum rows per row group within each file.
+        Default: 10,000
     existing_data_behavior : str
-        How to handle existing data in the dataset directory (options: 'overwrite_or_ignore', default: 'overwrite_or_ignore').
+        How to handle existing data in the dataset directory.
+        Options: 'overwrite_or_ignore'
+        Default: 'overwrite_or_ignore'
     create_dir : bool
-        Whether to create the dataset directory if it does not exist (default: True).
+        Whether to create the dataset directory if it does not exist.
+        Default: True
     """
 
     load_format: str = "table"
@@ -109,20 +124,26 @@ class LoadConfig:
     """
     Configuration for loading data, specifying columns, filters, batch size, and memory usage.
 
-    Parameters
+    Attributes
     ----------
-    batch_size : int, optional
-        The number of rows to process in each batch (default: 131_072).
-    batch_readahead : int, optional
-        The number of batches to read ahead in a file (default: 16).
-    fragment_readahead : int, optional
-        The number of files to read ahead, improving IO utilization at the cost of RAM usage (default: 4).
-    fragment_scan_options : Optional[pa.dataset.FragmentScanOptions], optional
+    batch_size : int
+        The number of rows to process in each batch.
+        Default: 131,072
+    batch_readahead : int
+        The number of batches to read ahead in a file.
+        Default: 16
+    fragment_readahead : int
+        The number of files to read ahead, improving IO utilization at the cost of RAM usage.
+        Default: 4
+    fragment_scan_options : Optional[pa.dataset.FragmentScanOptions]
         Options specific to a particular scan and fragment type, potentially changing across scans.
-    use_threads : bool, optional
-        Whether to use maximum parallelism determined by available CPU cores (default: True).
-    memory_pool : Optional[pa.MemoryPool], optional
-        The memory pool for allocations. Defaults to the system's default memory pool.
+        Default: None
+    use_threads : bool
+        Whether to use maximum parallelism determined by available CPU cores.
+        Default: True
+    memory_pool : Optional[pa.MemoryPool]
+        The memory pool for allocations. Uses the system's default memory pool if not specified.
+        Default: None
     """
 
     batch_size: int = 131_072
@@ -148,10 +169,23 @@ class ParquetDB:
         ----------
         db_path : str
             The path of the database.
+        initial_fields : List[pa.Field], optional
+            List of PyArrow fields to initialize the database schema with.
+            An 'id' field of type int64 will automatically be added.
+            Default is None (empty list).
+        serialize_python_objects : bool, optional
+            Whether to serialize Python objects when storing them.
+            Default is True.
+        use_multiprocessing : bool, optional
+            Whether to enable multiprocessing for operations.
+            Default is False.
 
-        Example
-        -------
-        >>> db = ParquetDB(db_path='/path/to/db')
+        Examples
+        --------
+        >>> from parquetdb import ParquetDB
+        >>> import pyarrow as pa
+        >>> fields = [pa.field('name', pa.string()), pa.field('age', pa.int32())]
+        >>> db = ParquetDB(db_path='/path/to/db', initial_fields=fields)
         """
         self._db_path = db_path
         os.makedirs(self._db_path, exist_ok=True)
@@ -183,52 +217,179 @@ class ParquetDB:
 
     @property
     def db_path(self):
+        """
+        Get the database path.
+
+        Returns
+        -------
+        str
+            The path to the database directory.
+        """
         return self._db_path
 
     @property
     def dataset_name(self):
+        """
+        Get the dataset name.
+
+        Returns
+        -------
+        str
+            The name of the dataset, derived from the database path.
+        """
         return os.path.basename(self._db_path)
 
     @property
     def basename_template(self):
+        """
+        Get the template for parquet file basenames.
+
+        Returns
+        -------
+        str
+            Template string for parquet filenames in format "{dataset_name}_{i}.parquet".
+        """
         return f"{self.dataset_name}_{{i}}.parquet"
 
     @property
     def n_columns(self):
+        """
+        Get the number of columns in the database.
+
+        Returns
+        -------
+        int
+            The total number of columns.
+        """
         return len(self.columns)
 
     @property
     def columns(self):
+        """
+        Get the column names in the database.
+
+        Returns
+        -------
+        list
+            List of column names.
+        """
         return self.get_field_names()
 
     @property
     def n_rows(self):
+        """
+        Get the total number of rows in the database.
+
+        Returns
+        -------
+        int
+            The total number of rows.
+        """
         ds = self.read(load_format="dataset")
         return ds.count_rows()
 
     @property
     def n_files(self):
+        """
+        Get the number of parquet files in the database.
+
+        Returns
+        -------
+        int
+            The total number of parquet files.
+        """
         return len(self.get_current_files())
 
     @property
     def n_rows_per_file(self):
+        """
+        Get the number of rows in each parquet file.
+
+        Returns
+        -------
+        dict
+            Dictionary mapping filenames to their row counts.
+        """
         return self.get_number_of_rows_per_file()
 
     @property
     def n_row_groups_per_file(self):
+        """
+        Get the number of row groups in each parquet file.
+
+        Returns
+        -------
+        dict
+            Dictionary mapping filenames to their row group counts.
+        """
         return self.get_number_of_row_groups_per_file()
 
     @property
     def n_rows_per_row_group_per_file(self):
+        """
+        Get the number of rows in each row group for each file.
+
+        Returns
+        -------
+        dict
+            Nested dictionary mapping filenames to row group indices to row counts.
+        """
         return self.get_n_rows_per_row_group_per_file(as_dict=True)
 
     @property
     def serialized_metadata_size_per_file(self):
+        """
+        Get the size of serialized metadata for each file.
+
+        Returns
+        -------
+        dict
+            Dictionary mapping filenames to their metadata sizes in bytes.
+        """
         return self.get_serialized_metadata_size_per_file()
 
     def summary(
         self, show_column_names: bool = False, show_row_group_metadata: bool = False
     ):
+        """
+        Generate a formatted summary string containing database information and metadata.
+
+        Parameters
+        ----------
+        show_column_names : bool, optional
+            If True, include a list of column names and their metadata in the summary.
+            Default is False.
+        show_row_group_metadata : bool, optional
+            If True, include detailed row group information for each file.
+            Default is False.
+
+        Returns
+        -------
+        str
+            A formatted string containing:
+            - Basic database information (path, number of columns/rows/files)
+            - Per-file statistics (rows, row groups, metadata size)
+            - Database metadata
+            - Column details (if show_column_names=True)
+            - Row group details (if show_row_group_metadata=True)
+
+        Examples
+        --------
+        >>> db = ParquetDB("my_database")
+        >>> print(db.summary())
+        ============================================================
+        PARQUETDB SUMMARY
+        ============================================================
+        Database path: /path/to/my_database
+        
+        • Number of columns: 5
+        • Number of rows: 1000
+        • Number of files: 2
+        ...
+
+        >>> print(db.summary(show_column_names=True))
+        # Shows same summary plus list of columns and their metadata
+        """
         fields_metadata = self.get_field_metadata()
         metadata = self.get_metadata()
         # Header section
@@ -291,25 +452,58 @@ class ParquetDB:
 
         Parameters
         ----------
-        data : dict, list of dict, or pandas.DataFrame
-            The data to be added to the database.
-        schema : pyarrow.Schema, optional
-            The schema for the incoming data.
+        data : Union[List[dict], dict, pd.DataFrame]
+            The data to create the dataset with. Can be:
+            - A list of dictionaries, where each dict represents a row
+            - A single dictionary with column names as keys and lists of values
+            - A pandas DataFrame
+            - A pyarrow Table
+        schema : pa.Schema, optional
+            PyArrow schema defining the structure and types of the data.
+            If not provided, schema will be inferred from the data.
         metadata : dict, optional
-            Metadata to be attached to the table.
+            Dictionary of key-value pairs to attach as metadata to the table.
+            This metadata applies to the entire table.
         fields_metadata : dict, optional
-            Metadata to be attached to the fields.
-        normalize_dataset : bool, optional
-            If True, the dataset will be normalized after the data is added (default is True).
-        treat_fields_as_ragged : list of str, optional
-            A list of fields to treat as ragged arrays.
+            Dictionary mapping field names to their metadata dictionaries.
+            Allows attaching metadata to specific fields/columns.
+        treat_fields_as_ragged : List[str], optional
+            List of field names to treat as ragged arrays (arrays with varying lengths).
+            These fields will be processed differently during data loading.
         convert_to_fixed_shape : bool, optional
-            If True, the ragged arrays will be converted to fixed shape arrays.
+            Whether to convert ragged arrays to fixed shape tensors.
+            If True, ragged arrays will be padded to match the maximum length.
+            Default is True.
+        normalize_dataset : bool, optional
+            Whether to normalize the dataset after creation.
+            Normalization optimizes data storage and query performance.
+            Default is False.
         normalize_config : NormalizeConfig, optional
-            Configuration for the normalization process, optimizing performance by managing row distribution and file structure.
-        Example
-        -------
-        >>> db.create(data=my_data, schema=my_schema, metadata={'source': 'api'}, normalize_dataset=True)
+            Configuration object for dataset normalization, controlling:
+            - Row distribution across files
+            - Row group sizes
+            - File organization
+            - Thread/memory usage
+            Default uses standard NormalizeConfig settings.
+
+        Examples
+        --------
+        >>> data = [
+        ...     {'name': 'Alice', 'age': 30},
+        ...     {'name': 'Bob', 'age': 25}
+        ... ]
+        >>> db.create(
+        ...     data=data,
+        ...     metadata={'source': 'users'},
+        ...     normalize_dataset=True
+        ... )
+
+        Notes
+        -----
+        - An 'id' column will automatically be added if not present
+        - The schema will be unified with any existing data
+        - Ragged arrays are converted to fixed shape by default
+        - Normalization is recommended for optimal performance
         """
 
         logger.info("Creating data")
@@ -409,40 +603,71 @@ class ParquetDB:
         normalize_config: NormalizeConfig = NormalizeConfig(),
     ):
         """
-        Reads data from the database.
+        Reads data from the database with flexible filtering and formatting options.
 
         Parameters
         ----------
-
-        ids : list of int, optional
-            A list of IDs to read. If None, all data is read (default is None).
-        columns : list of str, optional
-            The columns to include in the output. If None, all columns are included (default is None).
-        filters : list of pyarrow.compute.Expression, optional
-            Filters to apply to the data (default is None).
+        ids : List[int], optional
+            Specific IDs to read from the database. If None, reads all records.
+        columns : List[str], optional
+            Column names to include/exclude in the output. If None, includes all columns.
+        filters : List[pc.Expression], optional
+            PyArrow compute expressions for filtering the data.
+            Example: [pc.field('age') > 18]
         load_format : str, optional
-            The format of the returned data: 'table' or 'batches' (default is 'table').
+            Format of the returned data. Options:
+            - 'table': Returns a PyArrow Table (default)
+            - 'batches': Returns a generator of record batches
+            - 'dataset': Returns a PyArrow Dataset
         batch_size : int, optional
-            The batch size to use for loading data in batches. If None, data is loaded as a whole (default is None).
-        include_cols : bool, optional
-            If True, includes only the specified columns. If False, excludes the specified columns (default is True).
-        rebuild_nested_struct : bool, optional
-            If True, rebuilds the nested structure (default is False).
-        rebuild_nested_from_scratch : bool, optional
-            If True, rebuilds the nested structure from scratch (default is False).
+            Number of rows per batch when reading data. Overrides batch_size in load_config if provided.
+        include_cols : bool, default True
+            If True, includes only the specified columns.
+            If False, excludes the specified columns.
+        rebuild_nested_struct : bool, default False
+            Whether to rebuild and use the nested structure for reading.
+            Useful for optimizing reads of deeply nested data.
+        rebuild_nested_from_scratch : bool, default False
+            If True, rebuilds the nested structure from scratch rather than using existing.
+            Only relevant if rebuild_nested_struct is True.
         load_config : LoadConfig, optional
-            Configuration for loading data, optimizing performance by managing memory usage.
+            Configuration for optimizing data loading performance.
+            Controls batch sizes, readahead, threading, and memory usage.
         normalize_config : NormalizeConfig, optional
-            Configuration for the normalization process, optimizing performance by managing row distribution and file structure.
+            Configuration for optimizing data distribution and file structure.
+            Used when rebuilding nested structures.
 
         Returns
         -------
-        pa.Table, generator, or dataset
-            The data read from the database. The output can be in table format or as a batch generator.
+        Union[pa.Table, Generator[pa.RecordBatch, None, None], ds.Dataset]
+            Data in the requested format:
+            - PyArrow Table if load_format='table'
+            - Generator of record batches if load_format='batches'
+            - PyArrow Dataset if load_format='dataset'
 
-        Example
-        -------
-        >>> data = db.read(ids=[1, 2, 3], columns=['name', 'age'], filters=[pc.field('age') > 18])
+        Examples
+        --------
+        Read specific columns for certain IDs:
+        >>> data = db.read(ids=[1, 2, 3], columns=['name', 'age'])
+
+        Read with filtering:
+        >>> filters = [pc.field('age') > 18, pc.field('city') == 'New York']
+        >>> data = db.read(filters=filters)
+
+        Read in batches:
+        >>> for batch in db.read(load_format='batches', batch_size=1000):
+        ...     process_batch(batch)
+
+        Optimize for nested data:
+        >>> data = db.read(rebuild_nested_struct=True)
+
+        Notes
+        -----
+        - The method automatically handles schema alignment and type casting
+        - For large datasets, using 'batches' format with appropriate batch_size
+          helps manage memory usage
+        - rebuild_nested_struct can significantly improve performance for
+          queries on nested data structures
         """
         if batch_size:
             load_config.batch_size = batch_size
@@ -491,31 +716,64 @@ class ParquetDB:
         normalize_config: NormalizeConfig = NormalizeConfig(),
     ):
         """
-        Updates existing records in the database.
+        Updates existing records in the database by matching on specified key fields.
 
         Parameters
         ----------
-        data : dict, list of dicts, or pandas.DataFrame
-            The data to be updated in the database. Each record must contain an 'id' key
-            corresponding to the record to be updated.
-        schema : pyarrow.Schema, optional
-            The schema for the data being added. If not provided, it will be inferred.
+        data : Union[List[dict], dict, pd.DataFrame]
+            The data containing updates. Can be:
+            - A list of dictionaries, where each dict represents a row
+            - A single dictionary with column names as keys and lists of values
+            - A pandas DataFrame
+            Each record must contain the update_keys fields to match existing records.
+        schema : pa.Schema, optional
+            PyArrow schema defining the structure and types of the update data.
+            If not provided, schema will be inferred from the data.
         metadata : dict, optional
-            Additional metadata to store alongside the data.
+            Dictionary of key-value pairs to attach as metadata to the updated table.
+            This metadata applies to the entire table.
         fields_metadata : dict, optional
-            Additional metadata to store alongside the data.
-        update_key : list of str or str, optional
-            The keys to use for the update. If a list, the update will be performed on the intersection of the existing data and the incoming data.
-        treat_fields_as_ragged : list of str, optional
-            A list of fields to treat as ragged arrays.
+            Dictionary mapping field names to their metadata dictionaries.
+            Allows attaching metadata to specific fields/columns.
+        update_keys : Union[List[str], str], optional
+            Field name(s) to use for matching update records with existing records.
+            Can be a single field name string or list of field names.
+            Default is ["id"].
+        treat_fields_as_ragged : List[str], optional
+            List of field names to treat as ragged arrays (arrays with varying lengths).
+            These fields will be processed differently during data loading.
         convert_to_fixed_shape : bool, optional
-            If True, the ragged arrays will be converted to fixed shape arrays.
+            Whether to convert ragged arrays to fixed shape tensors.
+            If True, ragged arrays will be padded to match the maximum length.
+            Default is True.
         normalize_config : NormalizeConfig, optional
-            Configuration for the normalization process, optimizing performance by managing row distribution and file structure.
+            Configuration object for dataset normalization after update, controlling:
+            - Row distribution across files
+            - Row group sizes
+            - File organization
+            - Thread/memory usage
+            Default uses standard NormalizeConfig settings.
 
-        Example
-        -------
-        >>> db.update(data=[{'id': 1, 'name': 'John', 'age': 30}, {'id': 2, 'name': 'Jane', 'age': 25}])
+        Examples
+        --------
+        Update records using id field:
+        >>> db.update([
+        ...     {'id': 1, 'name': 'John', 'age': 30},
+        ...     {'id': 2, 'name': 'Jane', 'age': 25}
+        ... ])
+
+        Update using multiple key fields:
+        >>> db.update(
+        ...     data={'name': ['John'], 'dept': ['Sales'], 'salary': [50000]},
+        ...     update_keys=['name', 'dept']
+        ... )
+
+        Notes
+        -----
+        - Records are matched and updated based on update_keys fields
+        - New fields in update data will be added to existing records
+        - Missing fields in update data will preserve existing values
+        - Schema and data types are automatically aligned
         """
         if self.is_empty():
             logger.info(f"Dataset {self.dataset_name} is empty. No data to update.")
@@ -561,26 +819,47 @@ class ParquetDB:
         normalize_config: NormalizeConfig = NormalizeConfig(),
     ):
         """
-        Deletes records from the database.
+        Deletes records or columns from the database.
 
         Parameters
         ----------
-        ids : list of int
-            A list of record IDs to delete from the database.
-        columns : list of str, optional
-            A list of column names to delete from the dataset. If not provided, it will be inferred from the existing data (default: None).
-        filters : list of pyarrow.compute.Expression, optional
-            Filters to apply to the data.
+        ids : List[int], optional
+            List of record IDs to delete from the database.
+            Cannot be used together with columns or filters.
+        filters : List[pc.Expression], optional
+            PyArrow compute expressions to filter which records to delete.
+            Cannot be used together with ids or columns.
+            Example: [pc.field('age') > 30]
+        columns : List[str], optional
+            List of column names to delete from the dataset.
+            Cannot delete the 'id' column or be used with ids/filters.
         normalize_config : NormalizeConfig, optional
-            Configuration for the normalization process, optimizing performance by managing row distribution and file structure.
+            Configuration for optimizing data distribution and file structure
+            after deletion. Controls batch sizes, readahead, threading, and
+            memory usage.
 
         Returns
         -------
         None
+            Returns None if no matching records found to delete.
 
-        Example
-        -------
+        Examples
+        --------
+        Delete specific records by ID:
         >>> db.delete(ids=[1, 2, 3])
+
+        Delete records matching a filter:
+        >>> db.delete(filters=[pc.field('age') > 30])
+
+        Delete specific columns:
+        >>> db.delete(columns=['address', 'phone'])
+
+        Notes
+        -----
+        - Must provide exactly one of: ids, filters, or columns
+        - Cannot delete the 'id' column
+        - Returns None if no matching records/columns found
+        - Automatically normalizes dataset after deletion
         """
 
         if ids is not None and columns is not None and filters is not None:
@@ -641,29 +920,41 @@ class ParquetDB:
         """
         Transform the entire dataset using a user-provided callable.
 
-        This function:
-        1. Reads the entire dataset as a PyArrow table.
-        2. Applies the `transform_callable`, which should accept a `pa.Table`
-            and return another `pa.Table`.
-        3. Writes out the transformed data:
-            - Overwrites this ParquetDB in-place (if `new_db_path=None`), or
-            - Creates a new ParquetDB at `new_db_path` (if `new_db_path!=None`).
+        This function loads the dataset as a PyArrow table, applies a transformation function,
+        and writes the transformed data either in-place or to a new location.
 
         Parameters
         ----------
         transform_callable : Callable[[pa.Table], pa.Table]
             A function that takes a PyArrow Table and returns a transformed PyArrow Table.
+            The function should preserve the schema structure but can modify values and add/remove rows.
         new_db_path : str, optional
-            If provided and `in_place=False`, the transformed dataset will be written
-            to this new directory as a fresh ParquetDB.
+            Path where the transformed dataset will be written as a new ParquetDB.
+            If None, transforms the current ParquetDB in-place.
+            Default is None.
         normalize_config : NormalizeConfig, optional
-            Configuration for the normalization process, optimizing performance by managing row distribution and file structure.
+            Configuration for optimizing the transformed dataset's storage.
+            Controls file sizes, row distribution, and performance settings.
+            Default uses standard NormalizeConfig settings.
 
         Returns
         -------
         ParquetDB or None
-            - If `in_place=False`, returns the newly created ParquetDB instance.
-            - If `in_place=True`, returns None (in-place transformation).
+            If new_db_path is provided, returns a new ParquetDB instance at that location.
+            If new_db_path is None, returns None after transforming in-place.
+
+        Examples
+        --------
+        >>> def add_column(table):
+        ...     values = range(len(table))
+        ...     new_col = pa.array(values)
+        ...     return table.append_column('new_col', new_col)
+        
+        >>> # Transform in-place
+        >>> db.transform(add_column)
+
+        >>> # Transform to new location
+        >>> new_db = db.transform(add_column, new_db_path='path/to/new/db')
         """
 
         if new_db_path:
@@ -677,33 +968,48 @@ class ParquetDB:
 
     def normalize(self, normalize_config: NormalizeConfig = NormalizeConfig()):
         """
-        Normalize the dataset by restructuring files for consistent row distribution.
+        Normalize the dataset by restructuring files for optimal performance.
 
-        This method optimizes performance by ensuring that files in the dataset directory have a consistent number of rows.
-        It first creates temporary files from the current dataset and rewrites them, ensuring that no file has significantly
-        fewer rows than others, which can degrade performance. This is particularly useful after a large data ingestion,
-        as it enhances the efficiency of create, read, update, and delete operations.
+        This method reorganizes the dataset files to ensure consistent row distribution and 
+        efficient storage. It rewrites the data with optimized file and row group sizes,
+        which improves performance of all database operations.
 
         Parameters
         ----------
         normalize_config : NormalizeConfig, optional
-            Configuration for the normalization process, optimizing performance by managing row distribution and file structure.
+            Configuration controlling the normalization process, including:
+            - File sizes and row distribution
+            - Row group sizes and organization 
+            - Threading and memory usage
+            - File system options
+            Default uses standard NormalizeConfig settings.
 
         Returns
         -------
         None
-            This function does not return anything but modifies the dataset directory in place.
+            Modifies the dataset directory in place.
 
         Examples
         --------
-        from parquetdb.core.parquetdb import NormalizeConfig
-        normalize_config=NormalizeConfig(load_format='batches',
-                                         max_rows_per_file=5000,
-                                         min_rows_per_group=500,
-                                         max_rows_per_group=5000,
-                                         existing_data_behavior='overwrite_or_ignore',
-                                         max_partitions=512)
-        >>> db.normalize(normalize_config=normalize_config)
+        Basic normalization with default settings:
+        >>> db.normalize()
+
+        Custom normalization configuration:
+        >>> config = NormalizeConfig(
+        ...     max_rows_per_file=5000,
+        ...     min_rows_per_group=500, 
+        ...     max_rows_per_group=5000,
+        ...     max_partitions=512,
+        ...     use_threads=True
+        ... )
+        >>> db.normalize(normalize_config=config)
+
+        Notes
+        -----
+        - Recommended after large data ingestions
+        - Improves performance of create, read, update and delete operations
+        - Ensures balanced file sizes and row distribution
+        - Safe to run at any time to optimize storage
         """
         if self.is_empty():
             logger.info(f"Dataset {self.dataset_name} is empty. No data to normalize.")
@@ -723,35 +1029,47 @@ class ParquetDB:
         normalize_config: NormalizeConfig = NormalizeConfig(),
     ):
         """
-        Normalize the dataset by restructuring files for consistent row distribution.
+        Internal method to normalize the dataset by restructuring files.
 
-        This method optimizes performance by ensuring that files in the dataset directory have a consistent number of rows.
-        It first creates temporary files from the current dataset and rewrites them, ensuring that no file has significantly
-        fewer rows than others, which can degrade performance. This is particularly useful after a large data ingestion,
-        as it enhances the efficiency of create, read, update, and delete operations.
+        This method handles the core normalization logic, including:
+        - Rewriting files to ensure balanced row distribution
+        - Applying updates or deletions if specified
+        - Optimizing file and row group organization
+        - Managing schema changes and data transformations
 
         Parameters
         ----------
         nested_dataset_dir : str, optional
-            The directory of the nested dataset. If not provided, it will be inferred from the existing data (default: None).
+            Path to store nested data structure. Used for optimizing queries on nested data.
         incoming_table : pa.Table, optional
-            The table to use for the update normalization. If not provided, it will be inferred from the existing data (default: None).
-        schema : Schema, optional
-            The schema to use for the dataset. If not provided, it will be inferred from the existing data (default: None).
-        ids : list of int, optional
-            A list of IDs to delete from the dataset. If not provided, it will be inferred from the existing data (default: None).
-        columns : list of str, optional
-            A list of column names to delete from the dataset. If not provided, it will be inferred from the existing data (default: None).
-        update_keys : list of str or str, optional
-            The keys to use for the update. If a list, the update will be performed on the intersection of the existing data and the incoming data.
+            New data to merge during update operations.
+        schema : pa.Schema, optional
+            Schema to enforce during normalization. If None, preserves existing schema.
+        ids : List[int], optional
+            Record IDs to remove during normalization.
+        columns : List[str], optional
+            Column names to remove during normalization.
+        transform_callable : Callable, optional
+            Custom transformation function to apply during normalization.
+        new_db_path : str, optional
+            Alternative path to write normalized data. If None, overwrites existing files.
+        update_keys : Union[List[str], str], optional
+            Field(s) to match on when merging incoming_table. Default is ["id"].
         normalize_config : NormalizeConfig, optional
-            Configuration for the normalization process, optimizing performance by managing row distribution and file structure.
+            Configuration controlling file sizes, row groups, threading, etc.
+            Default uses standard NormalizeConfig settings.
 
         Returns
         -------
         None
-            This function does not return anything but modifies the dataset directory in place.
+            Modifies dataset files in place.
 
+        Notes
+        -----
+        - This is an internal method called by public methods like normalize(), update(), delete()
+        - Handles both standard normalization and specialized operations like updates/deletes
+        - Uses temporary files to ensure atomic operations
+        - Preserves data consistency during restructuring
         """
         if new_db_path:
             dataset_dir = new_db_path
@@ -917,21 +1235,58 @@ class ParquetDB:
         """
         Updates the schema of the table in the dataset.
 
+        This method allows modifying the data types and metadata of fields in the dataset's schema.
+        Changes can be specified either through a field dictionary mapping names to new types,
+        or by providing a complete new schema. The dataset will be normalized after the schema update.
+
         Parameters
         ----------
         field_dict : dict, optional
-            A dictionary where keys are the field names and values are the new field types.
-        schema : pyarrow.Schema, optional
-            The new schema to apply to the table.
-        normalize_config : NormalizeConfig, optional
-            Configuration for the normalization process, optimizing performance by managing row distribution and file structure.
+            Dictionary mapping field names to their new PyArrow data types.
+            Example: {'age': pa.int32(), 'name': pa.string()}
+            If None, uses the provided schema parameter instead.
+        schema : pa.Schema, optional
+            Complete PyArrow schema to apply to the dataset.
+            Takes precedence over field_dict if both are provided.
+            Must include all existing fields with their desired types.
         update_metadata : bool, optional
-            Whether to update the metadata of the table.
+            Whether to preserve and update the schema metadata during the update.
+            If True, merges existing metadata with any new metadata.
+            If False, uses only the new schema's metadata.
+            Default is True.
+        normalize_config : NormalizeConfig, optional
+            Configuration for optimizing the dataset after schema update:
+            - Controls row distribution across files
+            - Sets row group sizes and organization
+            - Manages threading and memory usage
+            Default uses standard NormalizeConfig settings.
 
-
-        Example
-        -------
+        Examples
+        --------
+        Update a single field type:
         >>> db.update_schema(field_dict={'age': pa.int32()})
+
+        Apply a complete new schema:
+        >>> new_schema = pa.schema([
+        ...     ('id', pa.int64()),
+        ...     ('name', pa.string()),
+        ...     ('age', pa.int32())
+        ... ])
+        >>> db.update_schema(schema=new_schema)
+
+        Update schema with custom normalization:
+        >>> config = NormalizeConfig(max_rows_per_file=5000)
+        >>> db.update_schema(
+        ...     field_dict={'salary': pa.float64()},
+        ...     normalize_config=config
+        ... )
+
+        Notes
+        -----
+        - The 'id' field must be preserved in the schema
+        - Schema updates trigger dataset normalization
+        - Existing data will be cast to new types where possible
+        - Invalid type conversions will raise errors
         """
         logger.info("Updating schema")
         current_schema = self.get_schema()
@@ -955,6 +1310,21 @@ class ParquetDB:
         logger.info(f"Updated Fields in {self.dataset_name} table.")
 
     def is_empty(self):
+        """
+        Check if the dataset is empty.
+
+        Returns
+        -------
+        bool
+            True if the dataset is empty or does not exist, False otherwise.
+
+        Examples
+        --------
+        >>> db = ParquetDB("my_database")
+        >>> is_empty = db.is_empty()
+        >>> print(is_empty)
+        True
+        """
         if self.dataset_exists():
             ds = self._load_data(load_format="dataset")
             parquet_file = pq.ParquetFile(
@@ -967,40 +1337,56 @@ class ParquetDB:
 
     def get_schema(self):
         """
-        Retrieves the schema of the dataset table.
+        Get the PyArrow schema of the dataset.
 
         Returns
         -------
         pyarrow.Schema
-            The schema of the table.
+            The schema describing the structure and data types of all columns.
 
-        Example
-        -------
+        Examples
+        --------
+        >>> db = ParquetDB("my_database") 
         >>> schema = db.get_schema()
+        >>> print(schema)
+        id: int64
+        name: string
+        age: int32
         """
         schema = self._load_data(load_format="dataset").schema
         return schema
 
     def get_field_names(self, columns=None, include_cols=True):
         """
-        Retrieves the field names from the dataset schema.
+        Get the names of fields/columns in the dataset schema.
 
         Parameters
         ----------
-        columns : list, optional
-            A list of specific column names to include.
-        include_cols : bool, optional
-            If True, includes only the specified columns. If False, includes all columns
-            except the ones in `columns` (default is True).
+        columns : List[str], optional
+            List of column names to filter by. If None, returns all column names.
+        include_cols : bool, default True
+            If True, returns only the columns specified in `columns`.
+            If False, returns all columns except those specified in `columns`.
 
         Returns
         -------
-        list
-            A list of field names.
+        List[str]
+            List of field names based on the filtering criteria.
 
-        Example
-        -------
-        >>> fields = db.get_field_names(columns=['name', 'age'], include_cols=False)
+        Examples
+        --------
+        Get all field names:
+        >>> db = ParquetDB("my_database")
+        >>> db.get_field_names()
+        ['id', 'name', 'age']
+
+        Get specific fields:
+        >>> db.get_field_names(columns=['name', 'age'], include_cols=True)
+        ['name', 'age']
+
+        Exclude specific fields:
+        >>> db.get_field_names(columns=['age'], include_cols=False)
+        ['id', 'name']
         """
         schema = self.get_schema()
         existing_columns = set(schema.names)
@@ -1013,14 +1399,28 @@ class ParquetDB:
         """
         Retrieves the metadata of the dataset table.
 
+        Parameters
+        ----------
+        return_bytes : bool, optional
+            If True, returns raw bytes metadata. If False, decodes to strings.
+            Default is False.
+
         Returns
         -------
         dict
-            The metadata of the table.
+            Dictionary containing the table metadata. Keys and values will be strings
+            if return_bytes=False, or bytes if return_bytes=True.
 
-        Example
-        -------
+        Examples
+        --------
+        >>> db = ParquetDB("my_database")
         >>> metadata = db.get_metadata()
+        >>> print(metadata)
+        {'source': 'API', 'version': '1.0'}
+
+        >>> raw_metadata = db.get_metadata(return_bytes=True) 
+        >>> print(raw_metadata)
+        {b'source': b'API', b'version': b'1.0'}
         """
         if not self.dataset_exists():
             raise ValueError(f"Dataset {self.dataset_name} does not exist.")
@@ -1047,11 +1447,23 @@ class ParquetDB:
         Parameters
         ----------
         metadata : dict
-            A dictionary of metadata to set for the table.
+            Dictionary of metadata key-value pairs to set for the table.
+        update : bool, optional
+            If True, updates existing metadata. If False, replaces it entirely.
+            Default is True.
 
-        Example
-        -------
+        Examples
+        --------
+        Update existing metadata:
         >>> db.set_metadata({'source': 'API', 'version': '1.0'})
+
+        Replace all metadata:
+        >>> db.set_metadata({'new_key': 'value'}, update=False)
+
+        Notes
+        -----
+        - Metadata keys and values must be strings
+        - Updates schema and rewrites Parquet files to persist changes
         """
         # Update metadata in schema and rewrite Parquet files
         new_fields = []
@@ -1070,6 +1482,40 @@ class ParquetDB:
         )
 
     def set_field_metadata(self, fields_metadata: Dict[str, dict], update: bool = True):
+        """
+        Sets or updates metadata for specific fields/columns in the dataset.
+
+        Parameters
+        ----------
+        fields_metadata : Dict[str, dict]
+            Dictionary mapping field names to their metadata dictionaries.
+            Each inner dictionary contains metadata key-value pairs for that field.
+        update : bool, optional
+            If True, updates existing field metadata. If False, replaces it.
+            Default is True.
+
+        Returns
+        -------
+        pa.Schema
+            Updated PyArrow schema with new field metadata.
+
+        Examples
+        --------
+        Add metadata to specific fields:
+        >>> field_meta = {
+        ...     'age': {'unit': 'years', 'type': 'numeric'},
+        ...     'name': {'language': 'en'}
+        ... }
+        >>> db.set_field_metadata(field_meta)
+
+        Replace field metadata:
+        >>> db.set_field_metadata({'age': {'new_meta': 'value'}}, update=False)
+
+        Notes
+        -----
+        - Skips fields that don't exist in the schema
+        - Updates schema and rewrites Parquet files to persist changes
+        """
         schema = self.get_schema()
 
         for field_name, incoming_field_metadata in fields_metadata.items():
@@ -1098,6 +1544,37 @@ class ParquetDB:
     def get_field_metadata(
         self, field_names: Union[str, List[str]] = None, return_bytes: bool = False
     ):
+        """
+        Retrieves metadata for specified fields/columns in the dataset.
+
+        Parameters
+        ----------
+        field_names : Union[str, List[str]], optional
+            Name(s) of fields to get metadata for. If None, returns metadata for all fields.
+            Can be a single field name or list of field names.
+        return_bytes : bool, optional
+            If True, returns raw bytes metadata. If False, decodes to strings.
+            Default is False.
+
+        Returns
+        -------
+        dict
+            Dictionary mapping field names to their metadata dictionaries.
+            Inner dictionaries contain metadata key-value pairs for each field.
+
+        Examples
+        --------
+        Get metadata for all fields:
+        >>> meta = db.get_field_metadata()
+        >>> print(meta)
+        {'age': {'unit': 'years'}, 'name': {'language': 'en'}}
+
+        Get metadata for specific fields:
+        >>> meta = db.get_field_metadata(['age', 'name'])
+
+        Get raw bytes metadata:
+        >>> meta = db.get_field_metadata(return_bytes=True)
+        """
         schema = self.get_schema()
         fields_metadata = {}
 
@@ -1128,7 +1605,18 @@ class ParquetDB:
 
     def get_number_of_rows_per_file(self):
         """
-        Retrieves the number of rows per file in the dataset.
+        Get the number of rows in each Parquet file in the dataset.
+
+        Returns
+        -------
+        list
+            A list containing the number of rows for each file, in order of the files
+            returned by get_current_files().
+
+        Examples
+        --------
+        >>> db.get_number_of_rows_per_file()
+        [1000, 500, 750]  # Shows rows in each file
         """
         return [
             pq.ParquetFile(file).metadata.num_rows for file in self.get_current_files()
@@ -1136,7 +1624,18 @@ class ParquetDB:
 
     def get_number_of_row_groups_per_file(self):
         """
-        Retrieves the number of row groups per file in the dataset.
+        Get the number of row groups in each Parquet file in the dataset.
+
+        Returns
+        -------
+        list
+            A list containing the number of row groups for each file, in order of the files
+            returned by get_current_files().
+
+        Examples
+        --------
+        >>> db.get_number_of_row_groups_per_file()
+        [2, 1, 2]  # Shows row groups in each file
         """
         return [
             pq.ParquetFile(file).metadata.num_row_groups
@@ -1145,7 +1644,25 @@ class ParquetDB:
 
     def get_parquet_file_metadata_per_file(self, as_dict: bool = False):
         """
-        Retrieves the metadata of each Parquet file in the dataset.
+        Get the metadata for each Parquet file in the dataset.
+
+        Parameters
+        ----------
+        as_dict : bool, optional
+            If True, returns metadata as dictionaries. If False, returns raw metadata objects.
+            Default is False.
+
+        Returns
+        -------
+        list
+            A list containing either metadata objects or dictionaries for each file,
+            in order of the files returned by get_current_files().
+
+        Examples
+        --------
+        >>> metadata = db.get_parquet_file_metadata_per_file(as_dict=True)
+        >>> print(metadata[0]['num_rows'])  # Access metadata for first file
+        1000
         """
         if as_dict:
             return [
@@ -1157,7 +1674,26 @@ class ParquetDB:
 
     def get_parquet_file_row_group_metadata_per_file(self, as_dict: bool = False):
         """
-        Retrieves the row group metadata of each Parquet file in the dataset.
+        Get detailed metadata for each row group in each Parquet file.
+
+        Parameters
+        ----------
+        as_dict : bool, optional
+            If True, returns metadata as dictionaries. If False, returns raw metadata objects.
+            Default is False.
+
+        Returns
+        -------
+        dict
+            A nested dictionary structure:
+            {filename: {row_group_idx: metadata}}
+            where metadata is either a dictionary or metadata object based on as_dict.
+
+        Examples
+        --------
+        >>> metadata = db.get_parquet_file_row_group_metadata_per_file(as_dict=True)
+        >>> print(metadata['file_0'][0]['num_rows'])  # Rows in first group of first file
+        500
         """
         row_group_metadata = {}
         for file in self.get_current_files():
@@ -1179,6 +1715,29 @@ class ParquetDB:
         return row_group_metadata
 
     def get_parquet_column_metadata_per_file(self, as_dict: bool = False):
+        """
+        Get detailed metadata for each column in each row group in each file.
+
+        Parameters
+        ----------
+        as_dict : bool, optional
+            If True, returns metadata as dictionaries. If False, returns raw metadata objects.
+            Default is False.
+
+        Returns
+        -------
+        dict
+            A nested dictionary structure:
+            {filename: {row_group_idx: {column_idx: metadata}}}
+            where metadata is either a dictionary or metadata object based on as_dict.
+
+        Examples
+        --------
+        >>> metadata = db.get_parquet_column_metadata_per_file(as_dict=True)
+        >>> # Access metadata for first column in first row group of first file
+        >>> print(metadata['file_0'][0][0]['total_compressed_size'])
+        1024
+        """
         column_metadata = {}
         for file in self.get_current_files():
             filename = os.path.basename(file)
@@ -1206,7 +1765,33 @@ class ParquetDB:
 
     def get_n_rows_per_row_group_per_file(self, as_dict: bool = False):
         """
-        Retrieves the number of rows per row group per file in the dataset.
+        Get the number of rows in each row group for each file.
+
+        Parameters
+        ----------
+        as_dict : bool, optional
+            If True, returns a nested dictionary structure. If False, returns a list of lists.
+            Default is False.
+
+        Returns
+        -------
+        Union[dict, list]
+            If as_dict=True:
+                A nested dictionary: {filename: {row_group_idx: num_rows}}
+            If as_dict=False:
+                A list of lists, where each inner list contains row counts for each
+                row group in a file.
+            Returns empty dict if no row groups exist.
+
+        Examples
+        --------
+        >>> # Dictionary format
+        >>> db.get_n_rows_per_row_group_per_file(as_dict=True)
+        {'file_0': {0: 500, 1: 500}, 'file_1': {0: 1000}}
+        
+        >>> # List format
+        >>> db.get_n_rows_per_row_group_per_file(as_dict=False)
+        [[500, 500], [1000]]
         """
         row_group_metadata = self.get_parquet_file_row_group_metadata_per_file(
             as_dict=True
@@ -1238,7 +1823,18 @@ class ParquetDB:
 
     def get_serialized_metadata_size_per_file(self):
         """
-        Retrieves the serialized size of each Parquet file in the dataset.
+        Get the serialized metadata size for each Parquet file in the dataset.
+
+        Returns
+        -------
+        list
+            A list containing the serialized metadata size in bytes for each file,
+            in order of the files returned by get_current_files().
+
+        Examples
+        --------
+        >>> db.get_serialized_metadata_size_per_file()
+        [1024, 2048, 1536]  # Shows metadata size in bytes for each file
         """
         return [
             pq.ParquetFile(file).metadata.serialized_size
@@ -1248,6 +1844,27 @@ class ParquetDB:
     def rename_fields(
         self, name_map: dict, normalize_config: NormalizeConfig = NormalizeConfig()
     ):
+        """
+        Rename fields/columns in the dataset using a mapping dictionary.
+
+        Parameters
+        ----------
+        name_map : dict
+            Dictionary mapping current field names to new field names.
+            Fields not included in the map retain their original names.
+        normalize_config : NormalizeConfig, optional
+            Configuration for optimizing data distribution after renaming.
+            Default uses standard NormalizeConfig settings.
+
+        Returns
+        -------
+        pa.Schema
+            The original schema before renaming.
+
+        Examples
+        --------
+        >>> db.rename_fields({'old_name': 'new_name', 'age': 'years'})
+        """
         schema = self.get_schema()
         new_fields = []
         for field in schema:
@@ -1257,12 +1874,27 @@ class ParquetDB:
                 new_fields.append(field)
 
         self._normalize(
-            schema=pa.schema(new_fields), normalize_config=NormalizeConfig()
+            schema=pa.schema(new_fields), normalize_config=normalize_config
         )
 
         return schema
 
-    def sort_fields(self):
+    def sort_fields(self, normalize_config: NormalizeConfig = NormalizeConfig()):
+        """
+        Sort the fields/columns of the dataset alphabetically by name.
+
+        This method reorders the fields in the schema alphabetically while
+        preserving the data and field types. The sort is performed in-place.
+
+        Returns
+        -------
+        None
+            Modifies the dataset schema in place.
+
+        Examples
+        --------
+        >>> db.sort_fields()  # Reorders fields like ['age', 'name', 'zip'] 
+        """
         schema = self.get_schema()
         field_names = schema.names
         sorted_field_names = sorted(field_names)
@@ -1271,43 +1903,60 @@ class ParquetDB:
             new_fields.append(schema.field(field_name))
 
         schema = pa.schema(new_fields, metadata=schema.metadata)
-        self._normalize(schema=schema, normalize_config=NormalizeConfig())
+        self._normalize(schema=schema, normalize_config=normalize_config)
 
     def get_current_files(self):
         """
-        Retrieves the list of current Parquet files in the dataset directory.
+        Get a list of all Parquet files in the current dataset.
 
         Returns
         -------
         list of str
-            A list of file paths for the current dataset files.
+            List of absolute file paths for all Parquet files in the dataset,
+            sorted by file number.
 
-        Example
-        -------
-        >>> files = db.get_current_files()
+        Examples
+        --------
+        >>> db.get_current_files()
+        ['/path/to/data/mydata_0.parquet', '/path/to/data/mydata_1.parquet']
+
+        Notes
+        -----
+        - Files are named using pattern: {dataset_name}_{number}.parquet
+        - Files are sorted numerically by their suffix number
         """
         return glob(os.path.join(self.db_path, f"{self.dataset_name}_*.parquet"))
 
     def dataset_exists(self, dataset_name: str = None):
         """
-        Checks if the specified dataset exists.
+        Check if a dataset exists and contains data.
 
         Parameters
         ----------
         dataset_name : str, optional
-            The name of the dataset to check. If None, checks the current dataset.
+            Name of dataset to check. If None, checks the current dataset.
+            Default is None.
 
         Returns
         -------
         bool
-            True if the dataset exists, False otherwise.
+            True if the dataset exists and contains files, False otherwise.
 
-        Example
-        -------
-        >>> db.dataset_exists('my_dataset')
+        Examples
+        --------
+        Check current dataset:
+        >>> db.dataset_exists()
         True
-        """
 
+        Check specific dataset:
+        >>> db.dataset_exists('other_dataset')
+        False
+
+        Notes
+        -----
+        - Checks both directory existence and presence of files
+        - Empty directories return False
+        """
         if dataset_name:
             dir = os.path.dirname(self.db_path)
             dataset_dir = os.path.join(dir, dataset_name)
@@ -1317,15 +1966,27 @@ class ParquetDB:
 
     def drop_dataset(self):
         """
-        Removes the current dataset directory, effectively dropping the table.
+        Removes the current dataset directory and reinitializes it with an empty table.
+
+        This method:
+        1. Deletes the entire dataset directory if it exists
+        2. Creates a new empty directory
+        3. Initializes a new empty table with just an 'id' column
 
         Returns
         -------
         None
 
-        Example
-        -------
-        >>> db.drop_dataset()
+        Examples
+        --------
+        >>> db = ParquetDB('my_dataset')
+        >>> db.drop_dataset()  # Removes all data and reinitializes
+
+        Notes
+        -----
+        - After dropping, the dataset will contain one empty file with an 'id' column
+        - Safe to call even if dataset doesn't exist
+        - Logs the drop operation for tracking
         """
         logger.info(f"Dropping dataset {self.dataset_name}")
         if os.path.exists(self.db_path):
@@ -1342,16 +2003,34 @@ class ParquetDB:
 
     def rename_dataset(self, new_name: str, remove_dest: bool = False):
         """
-        Renames the current dataset to a new name.
+        Renames the current dataset directory and all contained files.
 
         Parameters
         ----------
         new_name : str
-            The new name for the dataset.
+            The new name for the dataset. Will be used for both directory and file prefixes.
+        remove_dest : bool, optional
+            If True, removes existing dataset at new_name if it exists.
+            If False, raises error if new_name already exists.
+            Default is False.
 
-        Example
-        -------
-        >>> db.rename_dataset('new_dataset_name')
+        Raises
+        ------
+        ValueError
+            If source dataset doesn't exist or destination exists and remove_dest=False
+
+        Examples
+        --------
+        >>> db = ParquetDB('old_name')
+        >>> db.rename_dataset('new_name')  # Renames dataset
+        
+        >>> db.rename_dataset('existing_name', remove_dest=True)  # Overwrites existing
+
+        Notes
+        -----
+        - Updates internal path reference after renaming
+        - Maintains file numbering scheme in new location
+        - Operation is atomic - either completes fully or not at all
         """
         logger.info(f"Renaming dataset to {new_name}")
         if not self.dataset_exists():
@@ -1386,18 +2065,35 @@ class ParquetDB:
 
     def copy_dataset(self, dest_name: str, overwrite: bool = False):
         """
-        Copies the current dataset to a new dataset.
+        Creates a complete copy of the current dataset under a new name.
 
         Parameters
         ----------
         dest_name : str
-            The name of the destination dataset.
+            Name for the new copy of the dataset.
         overwrite : bool, optional
-            Whether to overwrite the destination dataset if it already exists (default is False).
+            If True, overwrites existing dataset at dest_name.
+            If False, raises error if dest_name already exists.
+            Default is False.
 
-        Example
-        -------
-        >>> db.copy_dataset('new_dataset_copy', overwrite=True)
+        Raises
+        ------
+        ValueError
+            If destination dataset exists and overwrite=False
+
+        Examples
+        --------
+        >>> db = ParquetDB('original')
+        >>> db.copy_dataset('backup')  # Creates copy named 'backup'
+        
+        >>> db.copy_dataset('existing', overwrite=True)  # Overwrites existing copy
+
+        Notes
+        -----
+        - Creates new directory with copied files
+        - Preserves all data, metadata, and file organization
+        - Original dataset remains unchanged
+        - Useful for backups or creating test copies
         """
         logger.info(f"Copying dataset to {dest_name}")
         dir = os.path.dirname(self.db_path)
@@ -1424,23 +2120,37 @@ class ParquetDB:
 
     def export_dataset(self, file_path: str, format: str = "csv"):
         """
-        Exports the dataset to a specified file format.
+        Exports the entire dataset to a single file in the specified format.
 
         Parameters
         ----------
         file_path : str
-            The path where the exported file will be saved.
+            Full path where the exported file will be saved, including filename and extension.
         format : str, optional
-            The format for exporting the data ('csv', 'json'). Default is 'csv'.
+            Output file format. Currently supports:
+            - 'csv': Comma-separated values file
+            - 'json': JSON Lines format (one record per line)
+            Default is 'csv'.
 
         Raises
         ------
         ValueError
-            If an unsupported export format is provided.
+            If format is not 'csv' or 'json'
 
-        Example
-        -------
-        >>> db.export_dataset(file_path='/path/to/file.csv', format='csv')
+        Examples
+        --------
+        Export to CSV:
+        >>> db.export_dataset('data.csv', format='csv')
+        
+        Export to JSON Lines:
+        >>> db.export_dataset('data.jsonl', format='json')
+
+        Notes
+        -----
+        - CSV exports use no index column
+        - JSON exports use 'records' orientation with one record per line
+        - Loads entire dataset into memory during export
+        - For large datasets, consider using export_partitioned_dataset()
         """
         table = self._load_data(load_format="table")
         if format == "csv":
@@ -1463,22 +2173,61 @@ class ParquetDB:
         **kwargs,
     ):
         """
-        Exports the dataset to a specified directory with partitioning.
+        Exports the dataset to a partitioned format in the specified directory.
 
         Parameters
         ----------
         export_dir : str
-            The directory where the partitioned dataset will be saved.
-        partitioning : dict
-            The partitioning strategy to use (e.g., by columns).
+            Directory path where the partitioned dataset will be saved.
+        partitioning : Union[str, List[str], Partitioning]
+            Partitioning configuration. Can be:
+            - Column name(s) to partition by
+            - PyArrow Partitioning object
+            - Dict of partition expressions
         partitioning_flavor : str, optional
-            The partitioning flavor to use (e.g., 'hive' partitioning).
+            Partitioning flavor to use. Options:
+            - 'hive': Hive-style partitioning
+            - 'directory': Directory-based partitioning
+            Default is None.
+        load_config : LoadConfig, optional
+            Configuration for optimizing data loading during export.
+            Controls batch sizes, readahead, threading, etc.
+            Default uses standard LoadConfig settings.
+        load_format : str, optional
+            Format to load data before exporting. Options:
+            - 'table': Load as single PyArrow Table
+            - 'batches': Load as record batch generator
+            Default is 'table'.
         **kwargs : dict, optional
-            Additional arguments passed to the `pq.write_to_dataset` function.
+            Additional arguments passed to pq.write_to_dataset().
+            Common options include:
+            - existing_data_behavior: How to handle existing data
+            - max_rows_per_file: Target rows per output file
+            - use_threads: Enable multi-threading
 
-        Example
-        -------
-        >>> db.export_partitioned_dataset(export_dir='/path/to/export', partitioning={'year': '2023'}, partitioning_flavor='hive')
+        Examples
+        --------
+        Basic partitioning by column:
+        >>> db.export_partitioned_dataset(
+        ...     export_dir='data/partitioned',
+        ...     partitioning=['year', 'month']
+        ... )
+
+        Hive-style partitioning with custom config:
+        >>> config = LoadConfig(batch_size=10000, use_threads=True)
+        >>> db.export_partitioned_dataset(
+        ...     export_dir='data/hive',
+        ...     partitioning=['region'],
+        ...     partitioning_flavor='hive',
+        ...     load_config=config
+        ... )
+
+        Notes
+        -----
+        - Creates a new directory structure based on partition values
+        - Maintains original data types and schema
+        - For large datasets, consider using batches format
+        - Partitioning can significantly improve query performance
         """
         self._validate_load_format(load_format)
 
@@ -1506,25 +2255,56 @@ class ParquetDB:
 
     def import_dataset(self, file_path: str, format: str = "csv", **kwargs):
         """
-        Imports data from a specified file into the dataset.
+        Imports data from a file into the dataset, supporting multiple file formats.
 
         Parameters
         ----------
         file_path : str
-            The path of the file to import.
+            Path to the input file to import.
+            Must be readable and in a supported format.
         format : str, optional
-            The format of the file to import ('csv', 'json'). Default is 'csv'.
+            Format of the input file. Supported formats:
+            - 'csv': Comma-separated values (default)
+            - 'json': JSON Lines format (one record per line)
         **kwargs : dict, optional
-            Additional arguments passed to the data loading function (e.g., pandas read options).
+            Additional arguments passed to the underlying reader.
+            For CSV:
+                - delimiter: Field separator
+                - header: Row number(s) to use as headers
+                - dtype: Column data types
+                - encoding: File encoding
+            For JSON:
+                - orient: JSON string format
+                - lines: Read JSON Lines format
+                - dtype: Column data types
 
-        Raises
-        ------
-        ValueError
-            If an unsupported import format is provided.
 
-        Example
-        -------
-        >>> db.import_dataset(file_path='/path/to/file.csv', format='csv')
+        Examples
+        --------
+        Import CSV with default settings:
+        >>> db.import_dataset('data.csv')
+
+        Import CSV with custom options:
+        >>> db.import_dataset(
+        ...     'data.csv',
+        ...     delimiter=';',
+        ...     encoding='utf-8',
+        ...     dtype={'id': int, 'value': float}
+        ... )
+
+        Import JSON Lines:
+        >>> db.import_dataset(
+        ...     'data.jsonl',
+        ...     format='json',
+        ...     lines=True
+        ... )
+
+        Notes
+        -----
+        - Automatically detects and preserves data types
+        - Handles missing values appropriately
+        - Creates new dataset if none exists
+        - Updates schema if necessary
         """
         logger.info("Importing data")
         if format == "csv":
@@ -1543,16 +2323,31 @@ class ParquetDB:
 
     def backup_database(self, backup_path: str):
         """
-        Creates a backup of the current dataset by copying it to the specified backup path.
+        Creates a complete backup of the current dataset.
 
         Parameters
         ----------
         backup_path : str
-            The path where the backup will be stored.
+            Directory path where the backup will be stored.
+            Must have write permissions and sufficient space.
 
-        Example
-        -------
-        >>> db.backup_database(backup_path='/path/to/backup')
+        Raises
+        ------
+        OSError
+            If backup_path is not writable or has insufficient space
+        shutil.Error
+            If copying files fails
+
+        Examples
+        --------
+        >>> db.backup_database('/path/to/backups/mydb_20231201')
+
+        Notes
+        -----
+        - Creates exact copy of all dataset files
+        - Preserves file structure and metadata
+        - Overwrites existing backup at same path
+        - Safe to run while database is in use
         """
         logger.info("Backing up database to : {backup_path}")
         shutil.copytree(self.db_path, backup_path)
@@ -1560,16 +2355,33 @@ class ParquetDB:
 
     def restore_database(self, backup_path: str):
         """
-        Restores the dataset from a specified backup path.
+        Restores the dataset from a previous backup.
 
         Parameters
         ----------
         backup_path : str
-            The path to the backup from which the database will be restored.
+            Path to the backup directory containing the dataset files.
+            Must be a valid backup created by backup_database().
 
-        Example
-        -------
-        >>> db.restore_database(backup_path='/path/to/backup')
+        Raises
+        ------
+        FileNotFoundError
+            If backup_path does not exist
+        OSError
+            If restore fails due to permissions or space
+        ValueError
+            If backup appears invalid or corrupted
+
+        Examples
+        --------
+        >>> db.restore_database('/path/to/backups/mydb_20231201')
+
+        Notes
+        -----
+        - Completely replaces current dataset
+        - Requires exclusive access to dataset
+        - Verifies backup integrity before restore
+        - Maintains all metadata and structure
         """
         logger.info("Restoring database from : {backup_path}")
         if os.path.exists(self.db_path):
@@ -1584,25 +2396,51 @@ class ParquetDB:
         rebuild_nested_from_scratch: bool = False,
     ):
         """
-        Converts the current dataset to a nested dataset.
+        Converts the current dataset to a nested structure optimized for querying nested data.
+
+        This method reorganizes the dataset into a nested directory structure that improves
+        performance when querying deeply nested data structures. The nested structure can
+        be rebuilt from scratch or incrementally updated.
 
         Parameters
         ----------
         nested_dataset_dir : str, optional
-            The directory of the nested dataset. If not provided, it will be inferred from the existing data (default: None).
+            Directory path where the nested dataset will be stored. If not provided,
+            defaults to a 'nested' subdirectory in the current dataset path.
         normalize_config : NormalizeConfig, optional
-            Configuration for the normalization process, optimizing performance by managing row distribution and file structure.
+            Configuration for optimizing the nested structure, controlling:
+            - Row distribution across files
+            - Row group sizes
+            - File organization
+            - Thread/memory usage
+            Default uses standard NormalizeConfig settings.
         rebuild_nested_from_scratch : bool, optional
-            If True, rebuilds the nested structure from scratch (default is False).
+            If True, completely rebuilds the nested structure, discarding any existing
+            nested data. If False, updates the existing nested structure incrementally.
+            Default is False.
 
         Returns
         -------
         None
-            This function does not return anything but modifies the dataset directory in place.
+            Modifies the dataset structure in place.
 
         Examples
         --------
+        Basic nested conversion:
         >>> db.to_nested()
+
+        Custom nested directory with full rebuild:
+        >>> db.to_nested(
+        ...     nested_dataset_dir='/path/to/nested',
+        ...     rebuild_nested_from_scratch=True
+        ... )
+
+        Notes
+        -----
+        - Recommended for datasets with complex nested structures
+        - Improves query performance on nested fields
+        - May require additional storage space
+        - Safe to rebuild while database is in use
         """
 
         if os.path.exists(nested_dataset_dir) and rebuild_nested_from_scratch:
@@ -1622,29 +2460,53 @@ class ParquetDB:
         load_config: LoadConfig = LoadConfig(),
     ):
         """
-        Loads data from the dataset, supporting various output formats such as PyArrow Table, Dataset, or a batch generator.
+        Internal method to load data from the dataset in various formats.
+
+        This method provides flexible data loading capabilities, supporting different
+        output formats and filtering options. It handles the core logic for all data
+        reading operations.
 
         Parameters
         ----------
-        columns : list of str, optional
-            A list of column names to load. If None, all columns are loaded (default is None).
-        filter : list of pyarrow.compute.Expression, optional
-            A list of filters to apply to the data (default is None).
         load_format : str, optional
-            The format for loading the data: 'table', 'batches', or 'dataset' (default is 'table').
+            Format to return the data in. Options:
+            - 'table': Returns a PyArrow Table (default)
+            - 'batches': Returns a generator of record batches
+            - 'dataset': Returns a PyArrow Dataset
+        columns : List[str], optional
+            Specific columns to load. If None, loads all columns.
+            Default is None.
+        filter : List[pc.Expression], optional
+            PyArrow compute expressions for filtering the data.
+            Example: [pc.field('age') > 18]
+            Default is None.
         dataset_dir : str, optional
-            The directory where the dataset is stored (default is None).
+            Custom directory to load data from. If None, uses the default
+            dataset directory. Default is None.
         load_config : LoadConfig, optional
-            Configuration for loading data, optimizing performance by managing memory usage.
+            Configuration for optimizing data loading performance.
+            Controls batch sizes, readahead, threading, and memory usage.
+            Default uses standard LoadConfig settings.
 
         Returns
         -------
         Union[pa.Table, pa.dataset.Scanner, Iterator[pa.RecordBatch]]
-            The loaded data as a PyArrow Table, Dataset, or batch generator, depending on the specified output format.
+            Data in the requested format:
+            - PyArrow Table for 'table'
+            - Batch generator for 'batches'
+            - PyArrow Dataset for 'dataset'
 
-        Example
-        -------
-        >>> data = db._load_data(columns=['name', 'age'], load_format='table')
+        Raises
+        ------
+        ValueError
+            If load_format is not one of: 'table', 'batches', 'dataset'
+
+        Notes
+        -----
+        - Core method used by public read() interface
+        - Handles error cases gracefully
+        - Logs loading operations for debugging
+        - Optimizes memory usage for large datasets
         """
 
         if dataset_dir is None:
@@ -1675,27 +2537,40 @@ class ParquetDB:
         load_config: LoadConfig = LoadConfig(),
     ):
         """
-        Loads data in batches from the dataset, returning an iterator of PyArrow RecordBatches.
+        Internal method to load data as batches from a PyArrow dataset.
+
+        This method provides memory-efficient data loading by returning an iterator
+        of record batches instead of loading the entire dataset into memory at once.
 
         Parameters
         ----------
         dataset : pa.dataset.Dataset
-            The PyArrow dataset from which to load data.
-        columns : list of str, optional
-            A list of column names to load. If None, all columns are loaded (default is None).
-        filter : list of pyarrow.compute.Expression, optional
-            A list of filters to apply to the data (default is None).
+            PyArrow dataset to load data from. Must be a valid dataset created
+            by PyArrow's dataset factory.
+        columns : List[str], optional
+            Specific columns to load. If None, loads all columns.
+            Default is None.
+        filter : List[pc.Expression], optional
+            PyArrow compute expressions for filtering the data.
+            Example: [pc.field('age') > 18]
+            Default is None.
         load_config : LoadConfig, optional
-            Configuration for loading data, optimizing performance by managing memory usage.
+            Configuration for optimizing batch loading performance.
+            Controls batch sizes, readahead, threading, and memory usage.
+            Default uses standard LoadConfig settings.
 
         Returns
         -------
         Iterator[pa.RecordBatch]
-            An iterator yielding batches of data as PyArrow RecordBatches.
+            Generator yielding PyArrow RecordBatch objects, each containing
+            a portion of the dataset.
 
-        Example
-        -------
-        >>> batches = db._load_batches(dataset, columns=['name', 'age'])
+        Notes
+        -----
+        - Memory efficient for large datasets
+        - Handles errors by returning empty batch generator
+        - Preserves schema even when filtering
+        - Useful for processing data in chunks
         """
 
         try:
@@ -1718,27 +2593,39 @@ class ParquetDB:
         load_config: LoadConfig = LoadConfig(),
     ):
         """
-        Loads the entire dataset as a PyArrow Table.
+        Internal method to load data as a single PyArrow Table from a dataset.
+
+        This method loads the entire dataset into memory as a single table, which can be
+        more convenient but less memory efficient than loading as batches.
 
         Parameters
         ----------
         dataset : pa.dataset.Dataset
-            The PyArrow dataset from which to load data.
-        columns : list of str, optional
-            A list of column names to load. If None, all columns are loaded (default is None).
-        filter : list of pyarrow.compute.Expression, optional
-            A list of filters to apply to the data (default is None).
+            PyArrow dataset to load data from. Must be a valid dataset created
+            by PyArrow's dataset factory.
+        columns : List[str], optional
+            Specific columns to load. If None, loads all columns.
+            Default is None.
+        filter : List[pc.Expression], optional
+            PyArrow compute expressions for filtering the data.
+            Example: [pc.field('age') > 18]
+            Default is None.
         load_config : LoadConfig, optional
-            Configuration for loading data, optimizing performance by managing memory usage.
+            Configuration for optimizing loading performance.
+            Controls batch sizes, readahead, threading, and memory usage.
+            Default uses standard LoadConfig settings.
 
         Returns
         -------
         pa.Table
-            The loaded data as a PyArrow Table.
+            A single PyArrow Table containing the loaded data.
 
-        Example
-        -------
-        >>> table = db._load_table(dataset, columns=['name', 'age'])
+        Notes
+        -----
+        - Loads entire dataset into memory
+        - Handles errors by returning empty table
+        - Preserves schema even when filtering
+        - Consider using _load_batches for large datasets
         """
         try:
             table = dataset.to_table(
@@ -1756,6 +2643,37 @@ class ParquetDB:
     def preprocess_table(
         table, treat_fields_as_ragged=None, convert_to_fixed_shape=True
     ):
+        """
+        Preprocesses a PyArrow table by flattening nested structures and handling special field types.
+
+        This method performs several preprocessing steps:
+        1. Flattens nested table structures
+        2. Converts list columns to fixed tensors (unless marked as ragged)
+        3. Replaces empty structs with dummy values
+        4. Flattens any remaining nested structures
+
+        Parameters
+        ----------
+        table : pa.Table
+            The PyArrow table to preprocess.
+        treat_fields_as_ragged : List[str], optional
+            List of field names to treat as ragged arrays (skip tensor conversion).
+            Default is None.
+        convert_to_fixed_shape : bool, optional
+            Whether to convert list columns to fixed-shape tensors.
+            Default is True.
+
+        Returns
+        -------
+        pa.Table
+            The preprocessed PyArrow table.
+
+        Notes
+        -----
+        - Modifies table structure but preserves data
+        - Handles nested arrays and structs
+        - Useful for ensuring consistent data format
+        """
         table = pyarrow_utils.flatten_table(table)
 
         if treat_fields_as_ragged is None:
@@ -1785,21 +2703,27 @@ class ParquetDB:
 
     def _get_new_ids(self, incoming_table):
         """
-        Generates a list of new IDs for the incoming data, starting from the next available ID.
+        Generates sequential IDs for new records starting from the next available ID.
+
+        This method determines the highest existing ID in the dataset and generates
+        new sequential IDs starting from the next number. For empty datasets, it
+        starts from 0.
 
         Parameters
         ----------
-        data_list : list of dict
-            The incoming data for which new IDs will be generated. Each entry represents a row in the dataset.
+        incoming_table : pa.Table
+            The table containing new records that need IDs.
 
         Returns
         -------
-        list of int
-            A list of new unique IDs for each entry in the data list.
+        List[int]
+            List of new unique sequential IDs, one for each row in incoming_table.
 
-        Example
-        -------
-        >>> new_ids = db._get_new_ids(data_list=[{'name': 'Alice'}, {'name': 'Bob'}])
+        Notes
+        -----
+        - Ensures ID uniqueness across the dataset
+        - Handles empty datasets appropriately
+        - Thread-safe when reading max ID
         """
         logger.info("Getting new ids")
 
@@ -1822,23 +2746,32 @@ class ParquetDB:
         self, ids: List[int] = None, filters: List[pc.Expression] = None
     ):
         """
-        Builds a filter expression from provided IDs and additional filters.
+        Combines ID-based and custom filters into a single PyArrow compute expression.
+
+        This method merges multiple filter conditions:
+        1. An optional ID-based filter using the provided IDs
+        2. Any additional custom filter expressions
+        All filters are combined using AND operations.
 
         Parameters
         ----------
-        ids : list of int, optional
-            A list of IDs to include in the filter.
-        filters : list of pyarrow.compute.Expression, optional
-            Additional filter expressions to apply to the dataset.
+        ids : List[int], optional
+            List of record IDs to filter by. Creates an 'id IN (...)' expression.
+            Default is None.
+        filters : List[pc.Expression], optional
+            Additional PyArrow compute expressions for filtering.
+            Default is None.
 
         Returns
         -------
-        pyarrow.compute.Expression or None
-            A combined filter expression, or None if no filters are provided.
+        pc.Expression or None
+            Combined filter expression if any filters provided, None otherwise.
 
-        Example
-        -------
-        >>> filter_expr = db._build_filter_expression(ids=[1, 2, 3], filters=[pc.field('age') > 18])
+        Notes
+        -----
+        - Combines multiple filters with AND operations
+        - Returns None if no filters provided
+        - Optimized for PyArrow compute engine
         """
         logger.info("Building filter expression")
         final_filters = []
@@ -1863,16 +2796,24 @@ class ParquetDB:
 
     def _get_save_path(self):
         """
-        Determines the path to save the incoming table based on the number of existing files in the dataset directory.
+        Generates the next available file path for saving data in the dataset.
+
+        This method determines the appropriate file path by:
+        1. Counting existing dataset files
+        2. Generating the next sequential file name
+        3. Combining with the dataset directory path
 
         Returns
         -------
         str
-            The file path where the new table will be saved.
+            Complete file path for saving the next data file.
+            Format: {db_path}/{dataset_name}_{number}.parquet
 
-        Example
-        -------
-        >>> save_path = db._get_save_path()
+        Notes
+        -----
+        - Maintains sequential file numbering
+        - Handles empty datasets (starts at _0)
+        - Thread-safe for file counting
         """
         logger.info("Getting save path")
         n_files = len(
@@ -1890,20 +2831,28 @@ class ParquetDB:
 
     def _validate_id(self, id_column):
         """
-        Validates the incoming ID column by checking if the IDs exist in the main table.
+        Verifies that all IDs in the provided column exist in the main dataset.
+
+        This method checks for ID validity by:
+        1. Loading existing IDs from the dataset
+        2. Comparing against provided IDs
+        3. Logging any IDs that don't exist
 
         Parameters
         ----------
-        id_column : pyarrow.Array
-            The ID column from the incoming table to validate.
+        id_column : pa.Array
+            PyArrow array containing IDs to validate.
 
         Returns
         -------
         None
+            Performs validation and logging only.
 
-        Example
-        -------
-        >>> db._validate_id(id_column=incoming_table['id'])
+        Notes
+        -----
+        - Logs warning for non-existent IDs
+        - Efficient ID comparison using PyArrow compute
+        - Useful for update/delete operations
         """
         logger.info(f"Validating ids")
         current_table = self.read(columns=["id"], load_format="table").combine_chunks()
@@ -1917,6 +2866,15 @@ class ParquetDB:
         return None
 
     def _validate_load_format(self, load_format):
+        """
+        Validates that the provided load format is supported.
+
+        Parameters
+        ----------
+        load_format : str
+            The format to validate. Must be one of the supported load formats.
+
+        """
         if load_format not in self.load_formats:
             raise ValueError(
                 f"load_format must be one of the following: {self.load_formats}"
@@ -1928,9 +2886,31 @@ class ParquetDB:
         schema=None,
         metadata=None,
         fields_metadata=None,
-        serialize_python_objects: bool = config.serialize_python_objects,
+        serialize_python_objects: bool = config.seriathelize_python_objects,
     ):
+        """
+        Constructs a PyArrow Table from various input data formats.
 
+        Parameters
+        ----------
+        data : Union[pa.Table, pa.RecordBatch, pd.DataFrame, dict, list]
+            The input data to convert to a PyArrow Table.
+        schema : pa.Schema, optional
+            Schema to use for the table. If None, inferred from data.
+        metadata : dict, optional
+            Metadata to attach to the table schema.
+        fields_metadata : dict, optional
+            Field-level metadata mapping field names to metadata dicts.
+        serialize_python_objects : bool, optional
+            Whether to serialize Python objects in the data.
+            Default from config.serialize_python_objects.
+
+        Returns
+        -------
+        pa.Table
+            The constructed PyArrow Table.
+
+        """
         if isinstance(data, pa.Table) or isinstance(data, pa.RecordBatch):
 
             incoming_schema = data.schema
@@ -1982,6 +2962,25 @@ class ParquetDB:
         schema=None,
         serialize_python_objects: bool = config.serialize_python_objects,
     ):
+        """
+        Processes input data and handles Python object serialization.
+
+        Parameters
+        ----------
+        data : Union[dict, list, pd.DataFrame]
+            Input data to process.
+        schema : pa.Schema, optional
+            Schema to use for the output. If None, inferred from data.
+        serialize_python_objects : bool, optional
+            Whether to serialize Python objects in the data.
+            Default from config.serialize_python_objects.
+
+        Returns
+        -------
+        Tuple[List[pa.Array], pa.Schema]
+            Tuple containing flattened arrays and schema.
+
+        """
         if isinstance(data, dict):
             df = pd.DataFrame.from_records(data)
         elif isinstance(data, list):
@@ -2020,19 +3019,79 @@ class ParquetDB:
 
 
 def generator_transform(data, callable: Callable, *args, **kwargs):
+    """
+    Transforms data from a generator using the provided callable.
+
+    Parameters
+    ----------
+    data : Generator
+        Generator yielding data to transform.
+    callable : Callable
+        Function to apply to each item from generator.
+    *args, **kwargs
+        Additional arguments passed to callable.
+
+    Yields
+    ------
+    Any
+        Transformed data items.
+    """
     for record_batch in data:
         yield callable(record_batch, *args, **kwargs)
 
 
 def table_transform(table, callable: Callable, *args, **kwargs):
+    """
+    Transforms a PyArrow Table using the provided callable.
+
+    Parameters
+    ----------
+    table : pa.Table
+        Table to transform.
+    callable : Callable
+        Function to apply to the table.
+    *args, **kwargs
+        Additional arguments passed to callable.
+
+    Returns
+    -------
+    Any
+        Result of applying callable to table.
+    """
     return callable(table, *args, **kwargs)
 
 
 def is_generator(data):
+    """
+    Checks if data is a generator by examining class name.
+
+    Parameters
+    ----------
+    data : Any
+        Object to check.
+
+    Returns
+    -------
+    bool
+        True if data appears to be a generator, False otherwise.
+    """
     return "generator" in data.__class__.__name__
 
 
 def extract_generator_schema(data):
+    """
+    Extracts schema from generator data or table.
+
+    Parameters
+    ----------
+    data : Union[pa.Table, Generator]
+        Data to extract schema from.
+
+    Returns
+    -------
+    Tuple[Union[pa.Table, Generator], pa.Schema]
+        Original data and extracted schema.
+    """
     if not isinstance(data, pa.lib.Table):
         logger.debug("retrieved_data is a record batch")
         data, tmp_generator = itertools.tee(data)
@@ -2046,6 +3105,28 @@ def extract_generator_schema(data):
 
 
 def data_transform(data, callable: Callable, *args, **kwargs):
+    """
+    Transforms data using appropriate method based on type.
+
+    Parameters
+    ----------
+    data : Union[pa.Table, Generator]
+        Data to transform.
+    callable : Callable
+        Function to apply to the data.
+    *args, **kwargs
+        Additional arguments passed to callable.
+
+    Returns
+    -------
+    Any
+        Transformed data.
+
+    Raises
+    ------
+    ValueError
+        If data is neither a PyArrow Table nor a generator.
+    """
     if isinstance(data, pa.lib.Table):
         return table_transform(data, callable, *args, **kwargs)
     elif is_generator(data):
