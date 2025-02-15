@@ -5,9 +5,9 @@
     <meta name="color-scheme" content="light dark"><meta name="viewport" content="width=device-width, initial-scale=1" />
 <link rel="index" title="Index" href="../../genindex.html" /><link rel="search" title="Search" href="../../search.html" /><link rel="next" title="API Reference" href="../../03_api/index.html" /><link rel="prev" title="Examples for the ParquetDB package" href="../index.html" />
 
-    <!-- Generated with Sphinx 8.1.3 and Furo 2024.08.06 -->
+    <!-- Generated with Sphinx 7.4.7 and Furo 2024.08.06 -->
         <title>3D Alexandria Database - ParquetDB Docs: v0.24.1</title>
-      <link rel="stylesheet" type="text/css" href="../../_static/pygments.css?v=03e43079" />
+      <link rel="stylesheet" type="text/css" href="../../_static/pygments.css?v=fa44fd50" />
     <link rel="stylesheet" type="text/css" href="../../_static/styles/furo.css?v=354aac6f" />
     <link rel="stylesheet" type="text/css" href="../../_static/copybutton.css?v=76b2166b" />
     <link rel="stylesheet" type="text/css" href="../../_static/sphinx-design.min.css?v=95c83b7e" />
@@ -299,22 +299,22 @@
 <div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[41]:
 </pre></div>
 </div>
-<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="kn">import</span><span class="w"> </span><span class="nn">json</span>
-<span class="kn">import</span><span class="w"> </span><span class="nn">os</span>
-<span class="kn">import</span><span class="w"> </span><span class="nn">logging</span>
-<span class="kn">from</span><span class="w"> </span><span class="nn">glob</span><span class="w"> </span><span class="kn">import</span> <span class="n">glob</span>
-<span class="kn">import</span><span class="w"> </span><span class="nn">shutil</span>
-<span class="kn">import</span><span class="w"> </span><span class="nn">time</span>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="kn">import</span> <span class="nn">json</span>
+<span class="kn">import</span> <span class="nn">os</span>
+<span class="kn">import</span> <span class="nn">logging</span>
+<span class="kn">from</span> <span class="nn">glob</span> <span class="kn">import</span> <span class="n">glob</span>
+<span class="kn">import</span> <span class="nn">shutil</span>
+<span class="kn">import</span> <span class="nn">time</span>
 
-<span class="kn">import</span><span class="w"> </span><span class="nn">numpy</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">np</span>
-<span class="kn">from</span><span class="w"> </span><span class="nn">pyarrow</span><span class="w"> </span><span class="kn">import</span> <span class="n">compute</span> <span class="k">as</span> <span class="n">pc</span>
+<span class="kn">import</span> <span class="nn">numpy</span> <span class="k">as</span> <span class="nn">np</span>
+<span class="kn">from</span> <span class="nn">pyarrow</span> <span class="kn">import</span> <span class="n">compute</span> <span class="k">as</span> <span class="n">pc</span>
 
-<span class="kn">from</span><span class="w"> </span><span class="nn">parquetdb.core.parquetdb</span><span class="w"> </span><span class="kn">import</span> <span class="n">LoadConfig</span><span class="p">,</span> <span class="n">NormalizeConfig</span>
-<span class="kn">from</span><span class="w"> </span><span class="nn">parquetdb.utils.general_utils</span><span class="w"> </span><span class="kn">import</span> <span class="n">timeit</span>
-<span class="kn">from</span><span class="w"> </span><span class="nn">parquetdb</span><span class="w"> </span><span class="kn">import</span> <span class="n">ParquetDB</span><span class="p">,</span> <span class="n">config</span>
-<span class="kn">from</span><span class="w"> </span><span class="nn">parquetdb.utils.external_utils</span><span class="w"> </span><span class="kn">import</span> <span class="n">download_alexandria_3d_database</span>
+<span class="kn">from</span> <span class="nn">parquetdb.core.parquetdb</span> <span class="kn">import</span> <span class="n">LoadConfig</span><span class="p">,</span> <span class="n">NormalizeConfig</span>
+<span class="kn">from</span> <span class="nn">parquetdb.utils.general_utils</span> <span class="kn">import</span> <span class="n">timeit</span>
+<span class="kn">from</span> <span class="nn">parquetdb</span> <span class="kn">import</span> <span class="n">ParquetDB</span><span class="p">,</span> <span class="n">config</span>
+<span class="kn">from</span> <span class="nn">parquetdb.utils.external_utils</span> <span class="kn">import</span> <span class="n">download_alexandria_3d_database</span>
 
-<span class="kn">import</span><span class="w"> </span><span class="nn">matplotlib.pyplot</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">plt</span>
+<span class="kn">import</span> <span class="nn">matplotlib.pyplot</span> <span class="k">as</span> <span class="nn">plt</span>
 </pre></div>
 </div>
 </div>
@@ -339,7 +339,7 @@
 <div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[43]:
 </pre></div>
 </div>
-<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="k">def</span><span class="w"> </span><span class="nf">download_alexandria_database</span><span class="p">(</span><span class="n">base_dir</span><span class="p">,</span> <span class="n">from_scratch</span><span class="o">=</span><span class="kc">False</span><span class="p">):</span>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="k">def</span> <span class="nf">download_alexandria_database</span><span class="p">(</span><span class="n">base_dir</span><span class="p">,</span> <span class="n">from_scratch</span><span class="o">=</span><span class="kc">False</span><span class="p">):</span>
     <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;Starting task: download_alexandria_database&quot;</span><span class="p">)</span>
     <span class="k">if</span> <span class="n">from_scratch</span> <span class="ow">and</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">exists</span><span class="p">(</span><span class="n">base_dir</span><span class="p">):</span>
         <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Removing existing directory: </span><span class="si">{</span><span class="n">base_dir</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
@@ -435,7 +435,7 @@ COLUMN DETAILS
 <div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[48]:
 </pre></div>
 </div>
-<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="k">def</span><span class="w"> </span><span class="nf">create_database_if_empty</span><span class="p">(</span><span class="n">db</span><span class="p">,</span> <span class="n">alexandria_dir</span><span class="p">,</span> <span class="n">normalize_config</span><span class="o">=</span><span class="n">NormalizeConfig</span><span class="p">()):</span>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="k">def</span> <span class="nf">create_database_if_empty</span><span class="p">(</span><span class="n">db</span><span class="p">,</span> <span class="n">alexandria_dir</span><span class="p">,</span> <span class="n">normalize_config</span><span class="o">=</span><span class="n">NormalizeConfig</span><span class="p">()):</span>
 <span class="w">    </span><span class="sd">&quot;&quot;&quot;_summary_</span>
 
 <span class="sd">    Parameters</span>
@@ -917,7 +917,7 @@ COLUMN DETAILS
 <div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[50]:
 </pre></div>
 </div>
-<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="k">def</span><span class="w"> </span><span class="nf">list_file_sizes</span><span class="p">(</span><span class="n">directory</span><span class="p">,</span> <span class="n">in_MB</span><span class="o">=</span><span class="kc">True</span><span class="p">):</span>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="k">def</span> <span class="nf">list_file_sizes</span><span class="p">(</span><span class="n">directory</span><span class="p">,</span> <span class="n">in_MB</span><span class="o">=</span><span class="kc">True</span><span class="p">):</span>
 <span class="w">    </span><span class="sd">&quot;&quot;&quot;Lists the size of files in a directory.</span>
 
 <span class="sd">    Args:</span>
@@ -1196,7 +1196,7 @@ Average row group size: 36.577393547827455 MB
 <div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[52]:
 </pre></div>
 </div>
-<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="k">def</span><span class="w"> </span><span class="nf">normalize_dataset</span><span class="p">(</span><span class="n">db</span><span class="p">,</span> <span class="n">normalize_config</span><span class="o">=</span><span class="n">NormalizeConfig</span><span class="p">()):</span>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="k">def</span> <span class="nf">normalize_dataset</span><span class="p">(</span><span class="n">db</span><span class="p">,</span> <span class="n">normalize_config</span><span class="o">=</span><span class="n">NormalizeConfig</span><span class="p">()):</span>
     <span class="n">task_name</span> <span class="o">=</span> <span class="s2">&quot;normalize_dataset&quot;</span>
     <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;Starting task: normalize_dataset&quot;</span><span class="p">)</span>
 
@@ -1436,7 +1436,7 @@ alexandria_3D_0.parquet: 2767.1490955352783 MB
 <div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">total_time_to_read_from_json</span> <span class="o">=</span> <span class="nb">sum</span><span class="p">(</span><span class="n">benchmark_dict</span><span class="p">[</span><span class="s2">&quot;json_load_times&quot;</span><span class="p">])</span>
 
 
-<span class="k">def</span><span class="w"> </span><span class="nf">read_single_column</span><span class="p">(</span><span class="n">db</span><span class="p">):</span>
+<span class="k">def</span> <span class="nf">read_single_column</span><span class="p">(</span><span class="n">db</span><span class="p">):</span>
     <span class="n">task_name</span> <span class="o">=</span> <span class="s2">&quot;read_single_column&quot;</span>
     <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;Starting task: read_single_column&quot;</span><span class="p">)</span>
     <span class="n">table</span> <span class="o">=</span> <span class="n">db</span><span class="o">.</span><span class="n">read</span><span class="p">(</span><span class="n">columns</span><span class="o">=</span><span class="p">[</span><span class="s2">&quot;id&quot;</span><span class="p">],</span> <span class="n">load_format</span><span class="o">=</span><span class="s2">&quot;table&quot;</span><span class="p">)</span>
@@ -1479,7 +1479,7 @@ Time to read from json: 589.19 seconds
 <div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[ ]:
 </pre></div>
 </div>
-<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="k">def</span><span class="w"> </span><span class="nf">read_specific_ids</span><span class="p">(</span><span class="n">db</span><span class="p">):</span>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="k">def</span> <span class="nf">read_specific_ids</span><span class="p">(</span><span class="n">db</span><span class="p">):</span>
     <span class="n">task_name</span> <span class="o">=</span> <span class="s2">&quot;read_specific_ids&quot;</span>
     <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;Starting task: read_specific_ids&quot;</span><span class="p">)</span>
     <span class="n">table</span> <span class="o">=</span> <span class="n">db</span><span class="o">.</span><span class="n">read</span><span class="p">(</span>
@@ -1599,7 +1599,7 @@ Time to read from json: 589.19 seconds
 <div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[57]:
 </pre></div>
 </div>
-<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="k">def</span><span class="w"> </span><span class="nf">read_energy_min_max</span><span class="p">(</span><span class="n">db</span><span class="p">):</span>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="k">def</span> <span class="nf">read_energy_min_max</span><span class="p">(</span><span class="n">db</span><span class="p">):</span>
     <span class="n">task_name</span> <span class="o">=</span> <span class="s2">&quot;read_energy_min_max&quot;</span>
     <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;Starting task: read_energy_min_max&quot;</span><span class="p">)</span>
     <span class="n">table</span> <span class="o">=</span> <span class="n">db</span><span class="o">.</span><span class="n">read</span><span class="p">(</span><span class="n">columns</span><span class="o">=</span><span class="p">[</span><span class="s2">&quot;energy&quot;</span><span class="p">],</span> <span class="n">load_format</span><span class="o">=</span><span class="s2">&quot;table&quot;</span><span class="p">)</span>
@@ -1649,7 +1649,7 @@ Time to read from json: 589.19 seconds
 <div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[58]:
 </pre></div>
 </div>
-<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="k">def</span><span class="w"> </span><span class="nf">read_filtered_energy_above_minus_one</span><span class="p">(</span><span class="n">db</span><span class="p">):</span>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="k">def</span> <span class="nf">read_filtered_energy_above_minus_one</span><span class="p">(</span><span class="n">db</span><span class="p">):</span>
     <span class="n">task_name</span> <span class="o">=</span> <span class="s2">&quot;read_filtered_energy_above_-1&quot;</span>
 
 <span class="w">    </span><span class="sd">&quot;&quot;&quot;Read records filtered by energy above -1.0 and track timing.&quot;&quot;&quot;</span>
@@ -1709,7 +1709,7 @@ Time to read from json: 589.19 seconds
 <div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[59]:
 </pre></div>
 </div>
-<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="k">def</span><span class="w"> </span><span class="nf">read_filtered_spg_204</span><span class="p">(</span><span class="n">db</span><span class="p">):</span>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="k">def</span> <span class="nf">read_filtered_spg_204</span><span class="p">(</span><span class="n">db</span><span class="p">):</span>
     <span class="n">task_name</span> <span class="o">=</span> <span class="s2">&quot;read_filtered_spg_204_table&quot;</span>
 
     <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;Starting task: read_filtered_spg_204&quot;</span><span class="p">)</span>
@@ -1766,7 +1766,7 @@ Time to read from json: 589.19 seconds
 <div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[60]:
 </pre></div>
 </div>
-<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="k">def</span><span class="w"> </span><span class="nf">read_filtered_spg_batches</span><span class="p">(</span><span class="n">db</span><span class="p">):</span>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="k">def</span> <span class="nf">read_filtered_spg_batches</span><span class="p">(</span><span class="n">db</span><span class="p">):</span>
     <span class="n">task_name</span> <span class="o">=</span> <span class="s2">&quot;read_filtered_spg_batches&quot;</span>
     <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;Starting task: read_filtered_spg_batches&quot;</span><span class="p">)</span>
     <span class="n">generator</span> <span class="o">=</span> <span class="n">db</span><span class="o">.</span><span class="n">read</span><span class="p">(</span>
@@ -1827,7 +1827,7 @@ Time to read from json: 589.19 seconds
 <div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[61]:
 </pre></div>
 </div>
-<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="k">def</span><span class="w"> </span><span class="nf">read_lattice_matrix_spg_204</span><span class="p">(</span><span class="n">db</span><span class="p">):</span>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="k">def</span> <span class="nf">read_lattice_matrix_spg_204</span><span class="p">(</span><span class="n">db</span><span class="p">):</span>
     <span class="n">task_name</span> <span class="o">=</span> <span class="s2">&quot;read_lattice_matrix_spg_204&quot;</span>
 
     <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;Starting task: read_lattice_matrix_spg_204&quot;</span><span class="p">)</span>
@@ -1874,7 +1874,7 @@ Time to read from json: 589.19 seconds
 <div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[62]:
 </pre></div>
 </div>
-<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="k">def</span><span class="w"> </span><span class="nf">read_nested_column_selection</span><span class="p">(</span><span class="n">db</span><span class="p">):</span>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="k">def</span> <span class="nf">read_nested_column_selection</span><span class="p">(</span><span class="n">db</span><span class="p">):</span>
     <span class="n">task_name</span> <span class="o">=</span> <span class="s2">&quot;read_nested_column_selection&quot;</span>
 
     <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;Starting task: read_nested_column_selection&quot;</span><span class="p">)</span>
@@ -1922,7 +1922,7 @@ Time to read from json: 589.19 seconds
 <div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[63]:
 </pre></div>
 </div>
-<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="k">def</span><span class="w"> </span><span class="nf">read_nested_structure_into_class</span><span class="p">(</span><span class="n">db</span><span class="p">):</span>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="k">def</span> <span class="nf">read_nested_structure_into_class</span><span class="p">(</span><span class="n">db</span><span class="p">):</span>
     <span class="c1"># By default the database flattens nested structure for storage.</span>
     <span class="c1"># However, we provide an option to rebuild the nested structure. This will create a new dataset in {dataset_name}_nested.</span>
     <span class="c1"># After the creation of the new dataset, the query parameters are applied to the new dataset.</span>
@@ -1956,7 +1956,7 @@ Time to read from json: 589.19 seconds
     <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;structure type&quot;</span><span class="p">)</span>
     <span class="nb">print</span><span class="p">(</span><span class="n">table</span><span class="p">[</span><span class="s2">&quot;structure&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">type</span><span class="p">)</span>
     <span class="k">try</span><span class="p">:</span>
-        <span class="kn">from</span><span class="w"> </span><span class="nn">pymatgen.core.structure</span><span class="w"> </span><span class="kn">import</span> <span class="n">Structure</span>
+        <span class="kn">from</span> <span class="nn">pymatgen.core.structure</span> <span class="kn">import</span> <span class="n">Structure</span>
 
         <span class="n">structure</span> <span class="o">=</span> <span class="n">Structure</span><span class="o">.</span><span class="n">from_dict</span><span class="p">(</span>
             <span class="n">table</span><span class="p">[</span><span class="s2">&quot;structure&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">combine_chunks</span><span class="p">()</span><span class="o">.</span><span class="n">to_pylist</span><span class="p">()[</span><span class="mi">0</span><span class="p">]</span>
@@ -2091,10 +2091,10 @@ Time to read from json: 589.19 seconds
 <div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[65]:
 </pre></div>
 </div>
-<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="kn">import</span><span class="w"> </span><span class="nn">matplotlib.pyplot</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">plt</span>
-<span class="kn">from</span><span class="w"> </span><span class="nn">parquetdb.utils</span><span class="w"> </span><span class="kn">import</span> <span class="n">matplotlib_utils</span>
-<span class="kn">from</span><span class="w"> </span><span class="nn">matplotlib</span><span class="w"> </span><span class="kn">import</span> <span class="n">rcParams</span>
-<span class="kn">from</span><span class="w"> </span><span class="nn">mpl_toolkits.axes_grid1.inset_locator</span><span class="w"> </span><span class="kn">import</span> <span class="n">inset_axes</span>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="kn">import</span> <span class="nn">matplotlib.pyplot</span> <span class="k">as</span> <span class="nn">plt</span>
+<span class="kn">from</span> <span class="nn">parquetdb.utils</span> <span class="kn">import</span> <span class="n">matplotlib_utils</span>
+<span class="kn">from</span> <span class="nn">matplotlib</span> <span class="kn">import</span> <span class="n">rcParams</span>
+<span class="kn">from</span> <span class="nn">mpl_toolkits.axes_grid1.inset_locator</span> <span class="kn">import</span> <span class="n">inset_axes</span>
 
 <span class="o">%</span><span class="k">matplotlib</span> inline
 <br/></pre></div>
@@ -2279,7 +2279,7 @@ C:\Users\lllang\AppData\Local\Temp\ipykernel_35236\2220293953.py:54: UserWarning
     </aside>
   </div>
 </div><script src="../../_static/documentation_options.js?v=0d70ca51"></script>
-    <script src="../../_static/doctools.js?v=9bcbadda"></script>
+    <script src="../../_static/doctools.js?v=9a2dae69"></script>
     <script src="../../_static/sphinx_highlight.js?v=dc90522c"></script>
     <script src="../../_static/scripts/furo.js?v=5fa4622c"></script>
     <script src="../../_static/clipboard.min.js?v=a7894cd8"></script>
