@@ -1,6 +1,24 @@
 
 ___
 
+# 0.25.1 (02-16-2025)
+
+##### Bugs
+- None identified
+
+##### New Features
+- Implemented methods to retrieve file and row group sizes in ParquetDB
+
+##### Documentation updates
+- Updated versioning information in _version.py and CHANGELOG.md for the new release
+
+##### Maintenance
+- Merged changes from the main branch of the repository
+
+___
+
+___
+
 # 0.25.0 (02-15-2025)
 
 ##### Bugs
