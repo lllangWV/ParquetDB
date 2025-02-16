@@ -1820,6 +1820,58 @@ class ParquetDB:
         else:
             return {}
 
+    def get_row_group_sizes_per_file(self, verbose: bool = False):
+        """
+        Get the size of each row group for each file. in MB
+
+        Returns
+        -------
+        dict
+        """
+        row_group_metadata_per_file = self.get_parquet_file_row_group_metadata_per_file(
+            as_dict=True
+        )
+
+        row_group_size_per_file = {}
+        sum_row_group_size = 0
+        num_row_groups = 0
+        for file, row_group_metadata in row_group_metadata_per_file.items():
+            if verbose:
+                print(f"File: {file}")
+            row_group_size_per_file[file] = {}
+            for row_group, metadata in row_group_metadata.items():
+                row_group_size_per_file[file][row_group] = metadata[
+                    "total_byte_size"
+                ] / (1024 * 1024)
+                sum_row_group_size += row_group_size_per_file[file][row_group]
+                num_row_groups += 1
+                if verbose:
+                    print(
+                        f"     {row_group}: {row_group_size_per_file[file][row_group]} MB"
+                    )
+        return row_group_size_per_file
+
+    def get_file_sizes(self, verbose: bool = False):
+        """
+        Get the size of each file in the dataset in MB.
+
+        Returns
+        -------
+        dict
+        """
+        file_sizes = {}
+        for filename in os.listdir(self.db_path):
+            # file_basename = os.path.basename(filename)
+            file_path = os.path.join(self.db_path, filename)
+            if os.path.isfile(file_path):
+                file_size = os.path.getsize(file_path)
+                file_size = file_size / (1024 * 1024)
+
+                if verbose:
+                    print(f"{filename}: {file_size} MB")
+                file_sizes[filename] = file_size
+        return file_sizes
+
     def get_serialized_metadata_size_per_file(self):
         """
         Get the serialized metadata size for each Parquet file in the dataset.
