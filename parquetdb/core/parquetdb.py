@@ -98,7 +98,6 @@ class NormalizeConfig:
     batch_readahead: int = 16
     fragment_readahead: int = 4
     fragment_scan_options: Optional[pa.dataset.FragmentScanOptions] = None
-    use_threads: bool = True
     memory_pool: Optional[pa.MemoryPool] = None
     filesystem: Optional[fs.FileSystem] = None
     file_options: Optional[ds.FileWriteOptions] = None
@@ -159,7 +158,7 @@ class ParquetDB:
         self,
         db_path,
         initial_fields: List[pa.Field] = None,
-        serialize_python_objects: bool = True,
+        serialize_python_objects: bool = False,
         use_multiprocessing: bool = False,
     ):
         """
@@ -1190,7 +1189,7 @@ class ParquetDB:
             )
             schema = self.get_schema()
 
-            # If any happen goes missing due to a transform do an error
+            # If id not in  fails due to a transform do an error
             if "id" not in schema.names:
                 a = 1 / 0
 
@@ -2974,9 +2973,14 @@ class ParquetDB:
             or isinstance(data, dict)
             or isinstance(data, list)
         ):
-            incoming_array, schema = ParquetDB.process_data_with_python_objects(
-                data, schema, serialize_python_objects
-            )
+            if serialize_python_objects:
+                incoming_array, schema = ParquetDB.process_data_with_python_objects(
+                    data, schema, serialize_python_objects
+                )
+            else:
+                incoming_array, schema = (
+                    ParquetDB.preprocess_data_without_python_objects(data, schema)
+                )
         else:
             raise ValueError(
                 "Data must be a dictionary of arrays, a list of dictionaries, a pandas dataframe, or a pyarrow table"
@@ -3006,6 +3010,43 @@ class ParquetDB:
         schema = schema.with_metadata(metadata)
 
         return pa.Table.from_arrays(incoming_array, schema=schema)
+
+    @staticmethod
+    def preprocess_data_without_python_objects(data, schema=None):
+
+        if isinstance(data, dict):
+            logger.info("The incoming data is a dictonary of arrays")
+            for key, value in data.items():
+                if not isinstance(value, List):
+                    data[key] = [value]
+            table = pa.Table.from_pydict(data)
+            incoming_array = table.to_struct_array()
+            incoming_array = incoming_array.flatten()
+            incoming_schema = table.schema
+
+        elif isinstance(data, list):
+            logger.info("Incoming data is a list of dictionaries")
+            # Convert to pyarrow array to get the schema. This method is faster than .from_pylist
+            # As from_pylist iterates through record in a python loop, but pa.array handles this in C++/cython
+            incoming_array = pa.array(data)
+            incoming_schema = pa.schema(incoming_array.type)
+            incoming_array = incoming_array.flatten()
+
+        elif isinstance(data, pd.DataFrame):
+            logger.info("Incoming data is a pandas dataframe")
+            table = pa.Table.from_pandas(data)
+            incoming_array = table.to_struct_array()
+            incoming_array = incoming_array.flatten()
+            incoming_schema = table.schema
+
+        else:
+            raise ValueError(
+                "Data must be a dictionary of arrays, a list of dictionaries, or a pandas dataframe"
+            )
+        # If schema is not provided, use the incoming schema
+        if schema is None:
+            schema = incoming_schema
+        return incoming_array, incoming_schema
 
     @staticmethod
     def process_data_with_python_objects(
