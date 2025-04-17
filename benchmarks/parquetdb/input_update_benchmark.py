@@ -1,3 +1,4 @@
+import gc
 import itertools
 import os
 import random
@@ -15,7 +16,7 @@ import pyarrow.dataset as ds
 import pyarrow.fs as fs
 import pyarrow.parquet as pq
 
-from parquetdb import ParquetDB, config
+from parquetdb import NormalizeConfig, ParquetDB, config
 from parquetdb.utils import general_utils
 
 config.logging_config.loggers.timing.level = "ERROR"
@@ -26,19 +27,22 @@ if __name__ == "__main__":
     save_dir = os.path.join(config.data_dir, "benchmarks", "parquetdb")
     os.makedirs(save_dir, exist_ok=True)
 
-    benchmark_dir = os.path.join(save_dir, "BenchmarkDB")
-    dataset_dir = os.path.join(benchmark_dir, "parquetdb")
+    # Define the path to the database
+    db_path = os.path.join(save_dir, "BenchmarkDB")
 
-    if os.path.exists(dataset_dir):
-        shutil.rmtree(dataset_dir)
+    # Remove the database if it exists
+    if os.path.exists(db_path):
+        shutil.rmtree(db_path)
 
-    db = ParquetDB(os.path.join(save_dir, "InputUpdateBenchmarkDB"))
-    if db.dataset_exists():
-        db.drop_dataset()  # Assuming there's a method to clear the database
+    # Initialize the database
+    db = ParquetDB(db_path=db_path)
+
+    # Generate data
     data = general_utils.generate_pydict_data(n_rows=1000000, n_columns=100)
 
     start_time = time.time()
     db.create(data)
+
     insert_time = time.time() - start_time
     del data
 
@@ -73,18 +77,20 @@ if __name__ == "__main__":
 
     for num_rows in row_counts:
         for key, value in input_data_generator_dict.items():
-            db = ParquetDB(os.path.join(save_dir, "InputUpdateBenchmarkDB"))
+            db = ParquetDB(db_path)
             print(f"Benchmarking {num_rows} rows. Using {key} input data...")
             update_func = value
 
             update_data = update_func(n_rows=num_rows, n_columns=n_columns)
 
             start_time = time.perf_counter()
-            db.update(update_data)
+            db.update(update_data, normalize_config=NormalizeConfig(batch_size=1200000))
 
             update_time = time.perf_counter() - start_time
             del update_data
             del db
+
+            time.sleep(10)
 
             print(f"Insertion Time for {num_rows} rows: {insert_time:.4f} seconds")
             print(f"Reading Time for {num_rows} rows: {read_time:.4f} seconds")
@@ -96,7 +102,6 @@ if __name__ == "__main__":
             results["update_times"].append(update_time)
             results["input_data_type"].append(key)
             results["n_rows"].append(num_rows)
-            time.sleep(10)
 
     df = pd.DataFrame(results)
     df.to_csv(

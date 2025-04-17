@@ -36,6 +36,20 @@ benchmark_files_dict = {"parquetdb": ["parquetdb_input_update_benchmark.csv"]}
 line_styles = {"parquetdb": "solid"}
 
 
+def main():
+    from parquetdb.utils import matplotlib_utils
+
+    matplotlib_utils.set_palette("Zissou1")
+
+    # color_diff_log_inset_plot()
+    color_diff_log_inset_plot(
+        savefig=os.path.join(benchmark_dir, "benchmark_input_update_times.pdf")
+    )
+    color_diff_log_inset_plot(
+        savefig=os.path.join(benchmark_dir, "benchmark_input_update_times.png")
+    )
+
+
 def color_diff_log_inset_plot(savefig=None):
     # Initialize a figure and axes
     fig, ax1 = plt.subplots(figsize=(10, 6))
@@ -69,7 +83,7 @@ def color_diff_log_inset_plot(savefig=None):
             unique_names = set()
             for group_name, group in groups:
 
-                print(group_name)
+                # print(group_name)
                 # Plot create times on the primary y-axis
 
                 (handle,) = ax1.plot(
@@ -141,7 +155,6 @@ def color_diff_log_inset_plot(savefig=None):
             df = pd.read_csv(csv_filename)
             groups = df.groupby("input_data_type")
             for group_name, group in groups:
-                print(group_name)
                 # Plot create times on the primary y-axis
                 ax_inset.plot(
                     group["n_rows"],
@@ -201,14 +214,4 @@ def color_diff_log_inset_plot(savefig=None):
 
 
 if __name__ == "__main__":
-    from parquetdb.utils import matplotlib_utils
-
-    matplotlib_utils.set_palette("Zissou1")
-
-    # color_diff_log_inset_plot()
-    color_diff_log_inset_plot(
-        savefig=os.path.join(benchmark_dir, "benchmark_input_update_times.pdf")
-    )
-    color_diff_log_inset_plot(
-        savefig=os.path.join(benchmark_dir, "benchmark_input_update_times.png")
-    )
+    main()

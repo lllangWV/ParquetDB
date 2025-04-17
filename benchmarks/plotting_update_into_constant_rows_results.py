@@ -54,6 +54,24 @@ marker_fill_styles = {
 }
 
 
+def main():
+    from parquetdb.utils import matplotlib_utils
+
+    matplotlib_utils.set_palette("Zissou1")
+
+    # color_diff_log_inset_plot()
+    color_diff_log_inset_plot(
+        savefig=os.path.join(
+            benchmark_dir, "benchmark_update_into_constant_rows_times.pdf"
+        )
+    )
+    color_diff_log_inset_plot(
+        savefig=os.path.join(
+            benchmark_dir, "benchmark_update_into_constant_rows_times.png"
+        )
+    )
+
+
 def color_diff_log_inset_plot(savefig=None):
     # Initialize a figure and axes
     fig, ax1 = plt.subplots(figsize=(10, 6))
@@ -209,18 +227,4 @@ def color_diff_log_inset_plot(savefig=None):
 
 
 if __name__ == "__main__":
-    from parquetdb.utils import matplotlib_utils
-
-    matplotlib_utils.set_palette("Zissou1")
-
-    # color_diff_log_inset_plot()
-    color_diff_log_inset_plot(
-        savefig=os.path.join(
-            benchmark_dir, "benchmark_update_into_constant_rows_times.pdf"
-        )
-    )
-    color_diff_log_inset_plot(
-        savefig=os.path.join(
-            benchmark_dir, "benchmark_update_into_constant_rows_times.png"
-        )
-    )
+    main()

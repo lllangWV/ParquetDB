@@ -30,6 +30,23 @@ banchmark_dir = os.path.join(config.data_dir, "benchmarks")
 benchmark_dirs = [os.path.join(banchmark_dir, db_name) for db_name in db_names]
 
 
+def main():
+    from parquetdb.utils import matplotlib_utils
+
+    matplotlib_utils.set_palette("Zissou1")
+    # color_diff_plot()
+    # line_style_diff()
+    # color_diff_log_two_axes_plot()
+
+    # color_diff_log_inset_plot()
+    color_diff_log_inset_plot(
+        savefig=os.path.join(banchmark_dir, "benchmark_create_read_times.pdf")
+    )
+    color_diff_log_inset_plot(
+        savefig=os.path.join(banchmark_dir, "benchmark_create_read_times.png")
+    )
+
+
 def line_style_diff():
     # Initialize a figure and axes
     fig, ax1 = plt.subplots(figsize=(10, 6))
@@ -586,17 +603,4 @@ def color_diff_log_inset_plot(savefig=None):
 
 
 if __name__ == "__main__":
-    from parquetdb.utils import matplotlib_utils
-
-    matplotlib_utils.set_palette("Zissou1")
-    # color_diff_plot()
-    # line_style_diff()
-    # color_diff_log_two_axes_plot()
-
-    # color_diff_log_inset_plot()
-    color_diff_log_inset_plot(
-        savefig=os.path.join(banchmark_dir, "benchmark_create_read_times.pdf")
-    )
-    color_diff_log_inset_plot(
-        savefig=os.path.join(banchmark_dir, "benchmark_create_read_times.png")
-    )
+    main()
