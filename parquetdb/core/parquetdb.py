@@ -20,7 +20,7 @@ import pyarrow.parquet as pq
 from parquetdb.core import types
 from parquetdb.utils import data_utils, mp_utils, pyarrow_utils
 from parquetdb.utils.config import config
-from parquetdb.utils.general_utils import is_directory_empty, timeit
+from parquetdb.utils.log_utils import set_verbose_level
 
 dill.settings["recurse"] = True
 # Logger setup
@@ -51,6 +51,9 @@ class NormalizeConfig:
     batch_readahead : int
         The number of batches to read ahead in a file.
         Default: 16
+    fileformat : pyarrow.dataset.ParquetFileFormat
+        The file format to use for the dataset.
+        Default: None
     fragment_readahead : int
         The number of files to read ahead, improving IO utilization at the cost of RAM usage.
         Default: 4
@@ -97,6 +100,7 @@ class NormalizeConfig:
     batch_size: int = 131_072
     batch_readahead: int = 16
     fragment_readahead: int = 4
+    fileformat: Optional[ds.ParquetFileFormat] = "parquet"
     fragment_scan_options: Optional[pa.dataset.FragmentScanOptions] = None
     memory_pool: Optional[pa.MemoryPool] = None
     filesystem: Optional[fs.FileSystem] = None
@@ -116,6 +120,13 @@ class NormalizeConfig:
         config.parquetdb_config.normalize_kwargs.existing_data_behavior
     )
     create_dir: bool = True
+
+    def __repr__(self):
+        tmp = "NormalizeConfig("
+        for key, value in self.__dict__.items():
+            tmp += f"{key}={value}, "
+        tmp += ")"
+        return tmp
 
 
 @dataclass
@@ -160,6 +171,7 @@ class ParquetDB:
         initial_fields: List[pa.Field] = None,
         serialize_python_objects: bool = False,
         use_multiprocessing: bool = False,
+        verbose: int = 1,
     ):
         """
         Initializes the ParquetDB object.
@@ -178,6 +190,10 @@ class ParquetDB:
         use_multiprocessing : bool, optional
             Whether to enable multiprocessing for operations.
             Default is False.
+        verbose: int, optional
+            Verbosity level for logging.
+            Default is 1.
+
 
         Examples
         --------
@@ -186,6 +202,11 @@ class ParquetDB:
         >>> fields = [pa.field('name', pa.string()), pa.field('age', pa.int32())]
         >>> db = ParquetDB(db_path='/path/to/db', initial_fields=fields)
         """
+        logger.info(f"Initializing ParquetDB with db_path: {db_path}")
+
+        logger.info(f"verbose: {verbose}")
+        set_verbose_level(verbose=verbose)
+
         self._db_path = db_path
         os.makedirs(self._db_path, exist_ok=True)
         self._serialize_python_objects = serialize_python_objects
@@ -209,10 +230,9 @@ class ParquetDB:
         # Applying config
         config.use_multiprocessing = use_multiprocessing
         config.serialize_python_objects = serialize_python_objects
-        config.apply()
 
     def __repr__(self):
-        return self.summary(show_column_names=True)
+        return self.summary(show_column_names=False)
 
     @property
     def db_path(self):
@@ -1168,13 +1188,18 @@ class ParquetDB:
         try:
             logger.info(f"Writing dataset to {dataset_dir}")
             logger.info(f"Basename template: {basename_template}")
+            logger.info(f"Retrieved data type : {type(retrieved_data)}")
+            logger.info(f"")
+            logger.info(f"Is Schema None : {schema is None}")
+
+            logger.info(f"Normalize config: {normalize_config}")
 
             ds.write_dataset(
                 retrieved_data,
                 dataset_dir,
                 basename_template=basename_template,
                 schema=schema,
-                format="parquet",
+                format=normalize_config.fileformat,
                 filesystem=normalize_config.filesystem,
                 file_options=normalize_config.file_options,
                 use_threads=normalize_config.use_threads,
@@ -1187,6 +1212,7 @@ class ParquetDB:
                 existing_data_behavior=normalize_config.existing_data_behavior,
                 create_dir=normalize_config.create_dir,
             )
+
             schema = self.get_schema()
 
             # If id not in  fails due to a transform do an error
