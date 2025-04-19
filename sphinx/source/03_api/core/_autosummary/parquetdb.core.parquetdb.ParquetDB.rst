@@ -26,6 +26,7 @@
       ~ParquetDB.get_current_files
       ~ParquetDB.get_field_metadata
       ~ParquetDB.get_field_names
+      ~ParquetDB.get_file_sizes
       ~ParquetDB.get_metadata
       ~ParquetDB.get_n_rows_per_row_group_per_file
       ~ParquetDB.get_number_of_row_groups_per_file
@@ -33,12 +34,14 @@
       ~ParquetDB.get_parquet_column_metadata_per_file
       ~ParquetDB.get_parquet_file_metadata_per_file
       ~ParquetDB.get_parquet_file_row_group_metadata_per_file
+      ~ParquetDB.get_row_group_sizes_per_file
       ~ParquetDB.get_schema
       ~ParquetDB.get_serialized_metadata_size_per_file
       ~ParquetDB.import_dataset
       ~ParquetDB.is_empty
       ~ParquetDB.merge_datasets
       ~ParquetDB.normalize
+      ~ParquetDB.preprocess_data_without_python_objects
       ~ParquetDB.preprocess_table
       ~ParquetDB.process_data_with_python_objects
       ~ParquetDB.read
