@@ -1,16 +1,17 @@
 import copy
-import os
-import logging
 import functools
+import logging
+import os
 import random
 import time
 
 logger = logging.getLogger(__name__)
-time_logger = logging.getLogger('timing')
+time_logger = logging.getLogger("timing")
 
 import numpy as np
 import pandas as pd
 import pyarrow as pa
+
 
 def timeit(func):
     """
@@ -33,19 +34,22 @@ def timeit(func):
         # Function logic here
         pass
     """
+
     @functools.wraps(func)
     def wrapper(*args, **kwargs):
         start_time = time.time()
         result = func(*args, **kwargs)
         end_time = time.time()
         elapsed_time = end_time - start_time
-        time_logger.debug(f"Function {func.__name__!r} executed in {elapsed_time:.4f} seconds")
+        time_logger.debug(
+            f"Function {func.__name__!r} executed in {elapsed_time:.4f} seconds"
+        )
         return result
 
     return wrapper
 
 
-def is_directory_empty(directory_path:str):
+def is_directory_empty(directory_path: str):
     """
     Checks if a given directory is empty.
 
@@ -92,7 +96,6 @@ def is_contained(list1, list2):
     return set(list1).issubset(set(list2))
 
 
-
 def generate_similar_data(template_data, num_entries):
     """
     Generates new data entries based on the structure and values of a template dataset.
@@ -116,6 +119,7 @@ def generate_similar_data(template_data, num_entries):
     >>> print(new_data)
     [{'id': 0, 'value': 9, 'name': 'item_5'}, {'id': 1, 'value': 11, 'name': 'item_89'}, ...]
     """
+
     def generate_value(value):
         if isinstance(value, int):
             return random.randint(value - 10, value + 10)
@@ -136,7 +140,7 @@ def generate_similar_data(template_data, num_entries):
     for i in range(num_entries):
         new_entry = copy.deepcopy(random.choice(template_data))
         for key, value in new_entry.items():
-            if key == 'id':
+            if key == "id":
                 new_entry[key] = i
             else:
                 new_entry[key] = generate_value(value)
@@ -145,51 +149,89 @@ def generate_similar_data(template_data, num_entries):
     return generated_data
 
 
-
-def generate_pydict_data(n_rows=100, n_columns=100, min_value=0, max_value=100000):
+def generate_pydict_data(n_rows=100, n_columns=100, min_value=0, max_value=100):
     data = {}
     for i in range(n_columns):
         column_name = f"column_{i}"
-        data[column_name] = [random.randint(min_value, max_value) for _ in range(n_rows)]
+        data[column_name] = [
+            random.randint(min_value, max_value) for _ in range(n_rows)
+        ]
 
     return data
+
 
 def generate_pydict_update_data(n_rows=100, n_columns=100, min_value=0, max_value=100):
     data = {}
     for i in range(n_columns):
         column_name = f"column_{i}"
-        data[column_name] = [random.randint(min_value, max_value) for _ in range(n_rows)]
-    data['id'] = [i for i in range(n_rows)]
+        data[column_name] = [
+            random.randint(min_value, max_value) for _ in range(n_rows)
+        ]
+    data["id"] = [i for i in range(n_rows)]
     return data
 
-def generate_pylist_data(n_rows=100, n_columns=100):
-    data=[]
+
+def generate_pylist_data(n_rows=100, n_columns=100, min_value=0, max_value=1000000):
+    data = []
     for _ in range(n_rows):
-        data.append({f'column_{i}':random.randint(0, 100000) for i in range(n_columns)})
+        data.append(
+            {
+                f"column_{i}": random.randint(min_value, max_value)
+                for i in range(n_columns)
+            }
+        )
     return data
 
-def generate_pylist_update_data(n_rows=100, n_columns=100):
+
+def generate_pylist_update_data(
+    n_rows=100, n_columns=100, min_value=0, max_value=1000000
+):
     data = []
     for i in range(n_rows):
-        row = {'id': i}  # Unique identifier for each row
-        row.update({f'column_{j}': random.randint(0, 100000) for j in range(n_columns)})
+        row = {"id": i}  # Unique identifier for each row
+        row.update(
+            {
+                f"column_{j}": random.randint(min_value, max_value)
+                for j in range(n_columns)
+            }
+        )
         data.append(row)
     return data
 
-def generate_pandas_data(n_rows=100, n_columns=100):
-    df=pd.DataFrame(generate_pydict_data(n_rows=n_rows, n_columns=n_columns))
-    return df
-    
-def generate_pandas_update_data(n_rows=100, n_columns=100):
-    df=pd.DataFrame(generate_pydict_update_data(n_rows=n_rows, n_columns=n_columns))
+
+def generate_pandas_data(n_rows=100, n_columns=100, min_value=0, max_value=1000000):
+    df = pd.DataFrame(
+        generate_pydict_data(
+            n_rows=n_rows, n_columns=n_columns, min_value=min_value, max_value=max_value
+        )
+    )
     return df
 
-def generate_table_data(n_rows=100, n_columns=100):
-    data=generate_pydict_data(n_rows=n_rows, n_columns=n_columns)
-    table=pa.Table.from_pydict(data)
+
+def generate_pandas_update_data(
+    n_rows=100, n_columns=100, min_value=0, max_value=1000000
+):
+    df = pd.DataFrame(
+        generate_pydict_update_data(
+            n_rows=n_rows, n_columns=n_columns, min_value=min_value, max_value=max_value
+        )
+    )
+    return df
+
+
+def generate_table_data(n_rows=100, n_columns=100, min_value=0, max_value=1000000):
+    data = generate_pydict_data(
+        n_rows=n_rows, n_columns=n_columns, min_value=min_value, max_value=max_value
+    )
+    table = pa.Table.from_pydict(data)
     return table
 
-def generate_table_update_data(n_rows=100, n_columns=100):
-    data=generate_pydict_update_data(n_rows=n_rows, n_columns=n_columns)
-    table=pa.Table.from_pydict(data)
+
+def generate_table_update_data(
+    n_rows=100, n_columns=100, min_value=0, max_value=1000000
+):
+    data = generate_pydict_update_data(
+        n_rows=n_rows, n_columns=n_columns, min_value=min_value, max_value=max_value
+    )
+    table = pa.Table.from_pydict(data)
     return table
