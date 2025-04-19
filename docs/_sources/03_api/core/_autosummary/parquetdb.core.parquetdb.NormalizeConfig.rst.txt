@@ -29,6 +29,7 @@
       ~NormalizeConfig.existing_data_behavior
       ~NormalizeConfig.file_options
       ~NormalizeConfig.file_visitor
+      ~NormalizeConfig.fileformat
       ~NormalizeConfig.filesystem
       ~NormalizeConfig.fragment_readahead
       ~NormalizeConfig.fragment_scan_options

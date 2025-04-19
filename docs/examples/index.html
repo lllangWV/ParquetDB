@@ -6,7 +6,7 @@
 <link rel="index" title="Index" href="../genindex.html" /><link rel="search" title="Search" href="../search.html" /><link rel="next" title="3D Alexandria Database" href="notebooks/Example%201%20-%203D%20Alexandria%20Database.html" /><link rel="prev" title="Parquet File Format" href="../02_internal/02%20-%20parquet_file_format.html" />
 
     <!-- Generated with Sphinx 7.4.7 and Furo 2024.08.06 -->
-        <title>Examples for the ParquetDB package - ParquetDB Docs: v0.24.1</title>
+        <title>Examples for the ParquetDB package - ParquetDB Docs: v0.25.1</title>
       <link rel="stylesheet" type="text/css" href="../_static/pygments.css?v=fa44fd50" />
     <link rel="stylesheet" type="text/css" href="../_static/styles/furo.css?v=354aac6f" />
     <link rel="stylesheet" type="text/css" href="../_static/copybutton.css?v=76b2166b" />
@@ -170,7 +170,7 @@
       </label>
     </div>
     <div class="header-center">
-      <a href="../index.html"><div class="brand">ParquetDB Docs: v0.24.1</div></a>
+      <a href="../index.html"><div class="brand">ParquetDB Docs: v0.25.1</div></a>
     </div>
     <div class="header-right">
       <div class="theme-toggle-container theme-toggle-header">
@@ -197,7 +197,7 @@
     <img class="sidebar-logo" src="../_static/ParquetDB_logo.png" alt="Logo"/>
   </div>
   
-  <span class="sidebar-brand-text">ParquetDB Docs: v0.24.1</span>
+  <span class="sidebar-brand-text">ParquetDB Docs: v0.25.1</span>
   
 </a><form class="sidebar-search-container" method="get" action="../search.html" role="search">
   <input class="sidebar-search" placeholder="Search" name="q" aria-label="Search">
@@ -230,6 +230,11 @@
 <li class="toctree-l2"><a class="reference internal" href="notebooks/Example%202%20-%203D%20Alexandria%20Advanced.html">3D Alexandria Advanced</a></li>
 <li class="toctree-l2"><a class="reference internal" href="notebooks/Example%203%20-%20Jarvis-dft_3d.html">ParquetDB with the Jarvis Dataset DFT_3D</a></li>
 <li class="toctree-l2"><a class="reference internal" href="notebooks/Example%204%20-%20Jarvis-dft_pbe_2d.html">ParquetDB with the Jarvis Dataset DFT PBE 2D</a></li>
+<li class="toctree-l2"><a class="reference internal" href="benchmarks/Needle-in-Haystack%20Benchmark.html">Needle-in-Haystack Benchmark Notebook</a></li>
+<li class="toctree-l2"><a class="reference internal" href="benchmarks/Input%20Update%20Benchmark.html">Input Update Benchmark Notebook</a></li>
+<li class="toctree-l2"><a class="reference internal" href="benchmarks/Create%20and%20Read%20Benchmark.html">Read/Write Benchmark Notebook</a></li>
+<li class="toctree-l2"><a class="reference internal" href="benchmarks/Update%20Into%20Constant%20Rows%20Benchmark.html">Update Benchmark Notebook</a></li>
+<li class="toctree-l2"><a class="reference internal" href="benchmarks/Full%20DB%20Updates%20Benchmark.html">Full DB Updates Benchmark Notebook</a></li>
 </ul>
 </li>
 <li class="toctree-l1 has-children"><a class="reference internal" href="../03_api/index.html">API Reference</a><input class="toctree-checkbox" id="toctree-checkbox-4" name="toctree-checkbox-4" role="switch" type="checkbox"/><label for="toctree-checkbox-4"><div class="visually-hidden">Toggle navigation of API Reference</div><i class="icon"><svg><use href="#svg-arrow-right"></use></svg></i></label><ul>
@@ -312,12 +317,37 @@ directory</a> of the package and showcase how to effectively use ParquetDB’s f
   <div>3D Alexandria Advanced</div>
 </a>
 <a class="reference internal" href="notebooks/Example%203%20-%20Jarvis-dft_3d.html">
-  <div><img alt="" src="../_images\examples_notebooks_Example_3_-_Jarvis-dft_3d_14_1.png"></div>
+  <div><img alt="" src="../_images\examples_notebooks_Example_3_-_Jarvis-dft_3d_15_1.png"></div>
   <div>ParquetDB with the Jarvis Dataset DFT_3D</div>
 </a>
 <a class="reference internal" href="notebooks/Example%204%20-%20Jarvis-dft_pbe_2d.html">
   <div><img alt="" src="../_images\examples_notebooks_Example_4_-_Jarvis-dft_pbe_2d_12_1.png"></div>
   <div>ParquetDB with the Jarvis Dataset DFT PBE 2D</div>
+</a>
+</div>
+</div>
+<div class="toctree-wrapper compound" id="rst-benchmark-gallery">
+<p class="caption" role="heading"><span class="caption-text">Benchmark Gallery</span></p>
+<div class="nbsphinx-gallery">
+<a class="reference internal" href="benchmarks/Needle-in-Haystack%20Benchmark.html">
+  <div><img alt="" src="../_images\examples_benchmarks_Needle-in-Haystack_Benchmark_26_1.png"></div>
+  <div>Needle-in-Haystack Benchmark Notebook</div>
+</a>
+<a class="reference internal" href="benchmarks/Input%20Update%20Benchmark.html">
+  <div><img alt="" src="../_images\examples_benchmarks_Input_Update_Benchmark_10_1.png"></div>
+  <div>Input Update Benchmark Notebook</div>
+</a>
+<a class="reference internal" href="benchmarks/Create%20and%20Read%20Benchmark.html">
+  <div><img alt="" src="../_images\examples_benchmarks_Create_and_Read_Benchmark_12_1.png"></div>
+  <div>Read/Write Benchmark Notebook</div>
+</a>
+<a class="reference internal" href="benchmarks/Update%20Into%20Constant%20Rows%20Benchmark.html">
+  <div><img alt="" src="../_images\examples_benchmarks_Update_Into_Constant_Rows_Benchmark_12_1.png"></div>
+  <div>Update Benchmark Notebook</div>
+</a>
+<a class="reference internal" href="benchmarks/Full%20DB%20Updates%20Benchmark.html">
+  <div><img alt="" src="../_images\examples_benchmarks_Full_DB_Updates_Benchmark_12_1.png"></div>
+  <div>Full DB Updates Benchmark Notebook</div>
 </a>
 </div>
 </div>
@@ -327,40 +357,17 @@ directory</a> of the package and showcase how to effectively use ParquetDB’s f
 <p class="caption" role="heading"><span class="caption-text">Example Gallery</span></p>
 <ul>
 <li class="toctree-l1"><a class="reference internal" href="notebooks/Example%201%20-%203D%20Alexandria%20Database.html">3D Alexandria Database</a><ul>
-<li class="toctree-l2"><a class="reference internal" href="notebooks/Example%201%20-%203D%20Alexandria%20Database.html#Setup">Setup</a><ul>
-<li class="toctree-l3"><a class="reference internal" href="notebooks/Example%201%20-%203D%20Alexandria%20Database.html#Setup-data-directories">Setup data directories</a></li>
-<li class="toctree-l3"><a class="reference internal" href="notebooks/Example%201%20-%203D%20Alexandria%20Database.html#Download-the-database">Download the database</a></li>
-</ul>
-</li>
-<li class="toctree-l2"><a class="reference internal" href="notebooks/Example%201%20-%203D%20Alexandria%20Database.html#Creating-the-database">Creating the database</a><ul>
-<li class="toctree-l3"><a class="reference internal" href="notebooks/Example%201%20-%203D%20Alexandria%20Database.html#Inputing-the-data">Inputing the data</a></li>
-</ul>
-</li>
+<li class="toctree-l2"><a class="reference internal" href="notebooks/Example%201%20-%203D%20Alexandria%20Database.html#Setup">Setup</a></li>
+<li class="toctree-l2"><a class="reference internal" href="notebooks/Example%201%20-%203D%20Alexandria%20Database.html#Creating-the-database">Creating the database</a></li>
 <li class="toctree-l2"><a class="reference internal" href="notebooks/Example%201%20-%203D%20Alexandria%20Database.html#Normalizing-the-dataset">Normalizing the dataset</a></li>
-<li class="toctree-l2"><a class="reference internal" href="notebooks/Example%201%20-%203D%20Alexandria%20Database.html#Basic-Operations">Basic Operations</a><ul>
-<li class="toctree-l3"><a class="reference internal" href="notebooks/Example%201%20-%203D%20Alexandria%20Database.html#Reading-a-single-column">Reading a single column</a></li>
-</ul>
-</li>
-<li class="toctree-l2"><a class="reference internal" href="notebooks/Example%201%20-%203D%20Alexandria%20Database.html#Reading-specific-ids">Reading specific ids</a><ul>
-<li class="toctree-l3"><a class="reference internal" href="notebooks/Example%201%20-%203D%20Alexandria%20Database.html#Finding-the-minimum-and-maximum-of-a-energy">Finding the minimum and maximum of a energy</a></li>
-<li class="toctree-l3"><a class="reference internal" href="notebooks/Example%201%20-%203D%20Alexandria%20Database.html#Reading-records-filtered-by-energy-above--1.0">Reading records filtered by energy above -1.0</a></li>
-<li class="toctree-l3"><a class="reference internal" href="notebooks/Example%201%20-%203D%20Alexandria%20Database.html#Reading-records-filtered-by-spg-204">Reading records filtered by spg 204</a></li>
-<li class="toctree-l3"><a class="reference internal" href="notebooks/Example%201%20-%203D%20Alexandria%20Database.html#Reading-records-filtered-by-spg-batches">Reading records filtered by spg batches</a></li>
-<li class="toctree-l3"><a class="reference internal" href="notebooks/Example%201%20-%203D%20Alexandria%20Database.html#Reading-lattice-matrix-for-space-group-204">Reading lattice matrix for space group 204</a></li>
-<li class="toctree-l3"><a class="reference internal" href="notebooks/Example%201%20-%203D%20Alexandria%20Database.html#Reading-nested-column-selection">Reading nested column selection</a></li>
-<li class="toctree-l3"><a class="reference internal" href="notebooks/Example%201%20-%203D%20Alexandria%20Database.html#Nested-structure-into-class">Nested structure into class</a></li>
-<li class="toctree-l3"><a class="reference internal" href="notebooks/Example%201%20-%203D%20Alexandria%20Database.html#Plotting-times">Plotting times</a></li>
-</ul>
-</li>
+<li class="toctree-l2"><a class="reference internal" href="notebooks/Example%201%20-%203D%20Alexandria%20Database.html#Basic-Operations">Basic Operations</a></li>
+<li class="toctree-l2"><a class="reference internal" href="notebooks/Example%201%20-%203D%20Alexandria%20Database.html#Reading-specific-ids">Reading specific ids</a></li>
 </ul>
 </li>
 <li class="toctree-l1"><a class="reference internal" href="notebooks/Example%202%20-%203D%20Alexandria%20Advanced.html">3D Alexandria Advanced</a><ul>
 <li class="toctree-l2"><a class="reference internal" href="notebooks/Example%202%20-%203D%20Alexandria%20Advanced.html#Key-Concepts:">Key Concepts:</a></li>
 <li class="toctree-l2"><a class="reference internal" href="notebooks/Example%202%20-%203D%20Alexandria%20Advanced.html#Material-Categories:">Material Categories:</a></li>
-<li class="toctree-l2"><a class="reference internal" href="notebooks/Example%202%20-%203D%20Alexandria%20Advanced.html#What-You'll-Learn-in-This-Section">What You’ll Learn in This Section</a><ul>
-<li class="toctree-l3"><a class="reference internal" href="notebooks/Example%202%20-%203D%20Alexandria%20Advanced.html#Setup">Setup</a></li>
-</ul>
-</li>
+<li class="toctree-l2"><a class="reference internal" href="notebooks/Example%202%20-%203D%20Alexandria%20Advanced.html#What-You'll-Learn-in-This-Section">What You’ll Learn in This Section</a></li>
 </ul>
 </li>
 <li class="toctree-l1"><a class="reference internal" href="notebooks/Example%203%20-%20Jarvis-dft_3d.html">ParquetDB with the Jarvis Dataset DFT_3D</a><ul>
@@ -379,6 +386,70 @@ directory</a> of the package and showcase how to effectively use ParquetDB’s f
 <li class="toctree-l2"><a class="reference internal" href="notebooks/Example%204%20-%20Jarvis-dft_pbe_2d.html#Creating-the-Parquet-Database">Creating the Parquet Database</a></li>
 <li class="toctree-l2"><a class="reference internal" href="notebooks/Example%204%20-%20Jarvis-dft_pbe_2d.html#Reading-the-Full-Table">Reading the Full Table</a></li>
 <li class="toctree-l2"><a class="reference internal" href="notebooks/Example%204%20-%20Jarvis-dft_pbe_2d.html#Plotting-the-Direct-Bandgap-of-the-dataset">Plotting the Direct Bandgap of the dataset</a></li>
+</ul>
+</li>
+</ul>
+</div>
+<div class="toctree-wrapper compound">
+<p class="caption" role="heading"><span class="caption-text">Benchmark Gallery</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="benchmarks/Needle-in-Haystack%20Benchmark.html">Needle-in-Haystack Benchmark Notebook</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="benchmarks/Needle-in-Haystack%20Benchmark.html#Benchmark-Details">Benchmark Details</a></li>
+<li class="toctree-l2"><a class="reference internal" href="benchmarks/Needle-in-Haystack%20Benchmark.html#System-Specifications">System Specifications</a></li>
+<li class="toctree-l2"><a class="reference internal" href="benchmarks/Needle-in-Haystack%20Benchmark.html#1.-Setup">1. Setup</a></li>
+<li class="toctree-l2"><a class="reference internal" href="benchmarks/Needle-in-Haystack%20Benchmark.html#2.-SQLite-Becnhmark">2. SQLite Becnhmark</a></li>
+<li class="toctree-l2"><a class="reference internal" href="benchmarks/Needle-in-Haystack%20Benchmark.html#3.-MongoDB-Benchmark">3. MongoDB Benchmark</a></li>
+<li class="toctree-l2"><a class="reference internal" href="benchmarks/Needle-in-Haystack%20Benchmark.html#4.-ParquetDB-Benchmark">4. ParquetDB Benchmark</a></li>
+<li class="toctree-l2"><a class="reference internal" href="benchmarks/Needle-in-Haystack%20Benchmark.html#5.-Load-&amp;-Preview-All-Results">5. Load &amp; Preview All Results</a></li>
+<li class="toctree-l2"><a class="reference internal" href="benchmarks/Needle-in-Haystack%20Benchmark.html#6.-Plot-Read-Times">6. Plot Read Times</a></li>
+<li class="toctree-l2"><a class="reference internal" href="benchmarks/Needle-in-Haystack%20Benchmark.html#6.-Discussion">6. Discussion</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="benchmarks/Input%20Update%20Benchmark.html">Input Update Benchmark Notebook</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="benchmarks/Input%20Update%20Benchmark.html#Benchmark-Details">Benchmark Details</a></li>
+<li class="toctree-l2"><a class="reference internal" href="benchmarks/Input%20Update%20Benchmark.html#System-Specifications">System Specifications</a></li>
+<li class="toctree-l2"><a class="reference internal" href="benchmarks/Input%20Update%20Benchmark.html#1.-Setup">1. Setup</a></li>
+<li class="toctree-l2"><a class="reference internal" href="benchmarks/Input%20Update%20Benchmark.html#2.-Initialize-Database">2. Initialize Database</a></li>
+<li class="toctree-l2"><a class="reference internal" href="benchmarks/Input%20Update%20Benchmark.html#3.-Run-Input-Update-Benchmark">3. Run Input Update Benchmark</a></li>
+<li class="toctree-l2"><a class="reference internal" href="benchmarks/Input%20Update%20Benchmark.html#4.-Load-and-Preview-Results">4. Load and Preview Results</a></li>
+<li class="toctree-l2"><a class="reference internal" href="benchmarks/Input%20Update%20Benchmark.html#5.-Plot-Update-Times">5. Plot Update Times</a></li>
+<li class="toctree-l2"><a class="reference internal" href="benchmarks/Input%20Update%20Benchmark.html#6.-Dicussion">6. Dicussion</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="benchmarks/Create%20and%20Read%20Benchmark.html">Read/Write Benchmark Notebook</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="benchmarks/Create%20and%20Read%20Benchmark.html#Benchmark-Details">Benchmark Details</a></li>
+<li class="toctree-l2"><a class="reference internal" href="benchmarks/Create%20and%20Read%20Benchmark.html#System-Specifications">System Specifications</a></li>
+<li class="toctree-l2"><a class="reference internal" href="benchmarks/Create%20and%20Read%20Benchmark.html#1.-Setup">1. Setup</a></li>
+<li class="toctree-l2"><a class="reference internal" href="benchmarks/Create%20and%20Read%20Benchmark.html#2.-SQLite-Read/Write-Benchmark">2. SQLite Read/Write Benchmark</a></li>
+<li class="toctree-l2"><a class="reference internal" href="benchmarks/Create%20and%20Read%20Benchmark.html#3.-MongoDB-Read/Write-Benchmark">3. MongoDB Read/Write Benchmark</a></li>
+<li class="toctree-l2"><a class="reference internal" href="benchmarks/Create%20and%20Read%20Benchmark.html#4.-ParquetDB-Read/Write-Benchmark">4. ParquetDB Read/Write Benchmark</a></li>
+<li class="toctree-l2"><a class="reference internal" href="benchmarks/Create%20and%20Read%20Benchmark.html#5.-Load-&amp;-Preview-Results">5. Load &amp; Preview Results</a></li>
+<li class="toctree-l2"><a class="reference internal" href="benchmarks/Create%20and%20Read%20Benchmark.html#6.-Plot-Create-&amp;-Read-Times">6. Plot Create &amp; Read Times</a></li>
+<li class="toctree-l2"><a class="reference internal" href="benchmarks/Create%20and%20Read%20Benchmark.html#6.-Dicussion">6. Dicussion</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="benchmarks/Update%20Into%20Constant%20Rows%20Benchmark.html">Update Benchmark Notebook</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="benchmarks/Update%20Into%20Constant%20Rows%20Benchmark.html#Benchmark-Details">Benchmark Details</a></li>
+<li class="toctree-l2"><a class="reference internal" href="benchmarks/Update%20Into%20Constant%20Rows%20Benchmark.html#System-Specifications">System Specifications</a></li>
+<li class="toctree-l2"><a class="reference internal" href="benchmarks/Update%20Into%20Constant%20Rows%20Benchmark.html#1.-Setup">1. Setup</a></li>
+<li class="toctree-l2"><a class="reference internal" href="benchmarks/Update%20Into%20Constant%20Rows%20Benchmark.html#2.-SQLite-Update-Benchmark">2. SQLite Update Benchmark</a></li>
+<li class="toctree-l2"><a class="reference internal" href="benchmarks/Update%20Into%20Constant%20Rows%20Benchmark.html#3.-MongoDB-Update-Benchmark">3. MongoDB Update Benchmark</a></li>
+<li class="toctree-l2"><a class="reference internal" href="benchmarks/Update%20Into%20Constant%20Rows%20Benchmark.html#4.-ParquetDB-Update-Benchmark">4. ParquetDB Update Benchmark</a></li>
+<li class="toctree-l2"><a class="reference internal" href="benchmarks/Update%20Into%20Constant%20Rows%20Benchmark.html#5.-Load-and-Preview-Results">5. Load and Preview Results</a></li>
+<li class="toctree-l2"><a class="reference internal" href="benchmarks/Update%20Into%20Constant%20Rows%20Benchmark.html#6.-Plot-Update-Times">6. Plot Update Times</a></li>
+<li class="toctree-l2"><a class="reference internal" href="benchmarks/Update%20Into%20Constant%20Rows%20Benchmark.html#6.-Dicussion">6. Dicussion</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="benchmarks/Full%20DB%20Updates%20Benchmark.html">Full DB Updates Benchmark Notebook</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="benchmarks/Full%20DB%20Updates%20Benchmark.html#Benchmark-Details">Benchmark Details</a></li>
+<li class="toctree-l2"><a class="reference internal" href="benchmarks/Full%20DB%20Updates%20Benchmark.html#System-Specifications">System Specifications</a></li>
+<li class="toctree-l2"><a class="reference internal" href="benchmarks/Full%20DB%20Updates%20Benchmark.html#1.-Setup">1. Setup</a></li>
+<li class="toctree-l2"><a class="reference internal" href="benchmarks/Full%20DB%20Updates%20Benchmark.html#2.-SQLite-Full-DB-Update-Benchmark">2. SQLite Full DB Update Benchmark</a></li>
+<li class="toctree-l2"><a class="reference internal" href="benchmarks/Full%20DB%20Updates%20Benchmark.html#3.-MongoDB-Full-DB-Update-Benchmark">3. MongoDB Full DB Update Benchmark</a></li>
+<li class="toctree-l2"><a class="reference internal" href="benchmarks/Full%20DB%20Updates%20Benchmark.html#4.-ParquetDB-Full-DB-Update-Benchmark">4. ParquetDB Full DB Update Benchmark</a></li>
+<li class="toctree-l2"><a class="reference internal" href="benchmarks/Full%20DB%20Updates%20Benchmark.html#5.-Load-and-Preview-Results">5. Load and Preview Results</a></li>
+<li class="toctree-l2"><a class="reference internal" href="benchmarks/Full%20DB%20Updates%20Benchmark.html#6.-Plot-Update-Times">6. Plot Update Times</a></li>
+<li class="toctree-l2"><a class="reference internal" href="benchmarks/Full%20DB%20Updates%20Benchmark.html#6.-Dicussion">6. Dicussion</a></li>
 </ul>
 </li>
 </ul>
@@ -442,7 +513,9 @@ directory</a> of the package and showcase how to effectively use ParquetDB’s f
           <div class="toc-tree">
             <ul>
 <li><a class="reference internal" href="#">Examples for the ParquetDB package</a><ul>
-<li><a class="reference internal" href="#contents">Contents</a></li>
+<li><a class="reference internal" href="#contents">Contents</a><ul>
+</ul>
+</li>
 </ul>
 </li>
 </ul>
@@ -454,7 +527,7 @@ directory</a> of the package and showcase how to effectively use ParquetDB’s f
       
     </aside>
   </div>
-</div><script src="../_static/documentation_options.js?v=0d70ca51"></script>
+</div><script src="../_static/documentation_options.js?v=7ca58008"></script>
     <script src="../_static/doctools.js?v=9a2dae69"></script>
     <script src="../_static/sphinx_highlight.js?v=dc90522c"></script>
     <script src="../_static/scripts/furo.js?v=5fa4622c"></script>

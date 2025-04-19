@@ -61,7 +61,6 @@ Now that you have successfully installed ParquetDB, here are some recommended ne
 - **Example Gallery**  
   Visit the :doc:`Example Gallery <examples/index>` section real use cases of ParquetDB.
 
-
 - **Explore PyArrow**  
   ParquetDB relies on PyArrow for powerful data type handling and filtering mechanisms. For more in-depth information on PyArrow's `Table <https://arrow.apache.org/docs/python/generated/pyarrow.Table.html>`__ structure, filtering, and other features, refer to the `PyArrow Documentation <https://arrow.apache.org/docs/python/getstarted.html>`__.
 
