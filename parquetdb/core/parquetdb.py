@@ -3039,7 +3039,12 @@ class ParquetDB:
 
     @staticmethod
     def preprocess_data_without_python_objects(data, schema=None):
+        """
+        Preprocesses data without python objects.
 
+        This method preprocesses data without python objects by converting it to a PyArrow Table.
+        """
+        logger.info("Preprocessing data without python objects")
         if isinstance(data, dict):
             logger.info("The incoming data is a dictonary of arrays")
             for key, value in data.items():
@@ -3099,6 +3104,7 @@ class ParquetDB:
             Tuple containing flattened arrays and schema.
 
         """
+        logger.info("Processing data with python objects")
         if isinstance(data, dict):
             df = pd.DataFrame.from_records(data)
         elif isinstance(data, list):
