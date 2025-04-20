@@ -19,11 +19,7 @@ from parquetdb.utils import pyarrow_utils
 
 logger = logging.getLogger("tests")
 
-# config.logging_config.loggers.timing.level='ERROR'
-config.logging_config.loggers.parquetdb.level = "DEBUG"
-# config.logging_config.loggers.tests.level='ERROR'
-# config.apply()
-
+VERBOSE = 2
 with open(os.path.join(config.tests_dir, "data", "alexandria_test.json"), "r") as f:
     alexandria_data = json.load(f)
 
@@ -34,7 +30,9 @@ class TestParquetDB(unittest.TestCase):
         self.temp_dir = tempfile.mkdtemp()
         self.temp_dir_2 = tempfile.mkdtemp()
 
-        self.db = ParquetDB(db_path=os.path.join(self.temp_dir, "test_db"))
+        self.db = ParquetDB(
+            db_path=os.path.join(self.temp_dir, "test_db"), verbose=VERBOSE
+        )
 
         # Create some test data
         self.test_data = [
@@ -1207,6 +1205,8 @@ class TestParquetDB(unittest.TestCase):
 
 
 if __name__ == "__main__":
+    unittest.main()
+
     # unittest.TextTestRunner().run(TestParquetDB('test_nested_data_handling'))
     # unittest.TextTestRunner().run(TestParquetDB('test_update_maintains_existing_extension_arrays'))
     # unittest.TextTestRunner().run(TestParquetDB('test_update_maintains_existing_extension_arrays'))
@@ -1224,29 +1224,9 @@ if __name__ == "__main__":
     # unittest.TextTestRunner().run(TestParquetDB("test_python_objects"))
     # unittest.TextTestRunner().run(TestParquetDB('test_update_multi_keys'))
     # unittest.TextTestRunner().run(TestParquetDB("test_transform"))
-
     # unittest.TextTestRunner().run(TestParquetDB("test_filter_delete"))
-    unittest.main()
-
     # unittest.TextTestRunner().run(TestParquetDB("test_drop_duplicates"))
 
     # for x in range(500):
     #     print(f"Iteration {x+1}")
     #     unittest.TextTestRunner().run(TestParquetDB("test_update_multi_keys"))
-
-
-# if __name__ == '__main__':
-#     for x in range(100):
-#         print(f"Iteration {x+1}")
-
-# Create a test suite and add your test case
-# suite = unittest.TestLoader().run(TestParquetDB('test_update_multi_keys'))
-# Create a test suite and add your test case
-# suite = unittest.TestLoader().loadTestsFromTestCase(TestParquetDB)
-
-# Run the tests
-# unittest.TextTestRunner().run(suite)
-# try:
-#     unittest.TextTestRunner().run(TestParquetDB('test_update_multi_keys'))
-# except Exception as e:
-#     break
