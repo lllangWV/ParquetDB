@@ -171,12 +171,14 @@ def generate_pydict_update_data(n_rows=100, n_columns=100, min_value=0, max_valu
     return data
 
 
-def generate_pylist_data(n_rows=100, n_columns=100, min_value=0, max_value=1000000):
+def generate_pylist_data(
+    n_rows=100, n_columns=100, min_value=0, max_value=1000000, prefix="column_"
+):
     data = []
     for _ in range(n_rows):
         data.append(
             {
-                f"column_{i}": random.randint(min_value, max_value)
+                f"{prefix}{i}": random.randint(min_value, max_value)
                 for i in range(n_columns)
             }
         )
