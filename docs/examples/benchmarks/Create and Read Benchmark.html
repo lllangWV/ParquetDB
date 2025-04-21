@@ -314,9 +314,10 @@
 <section id="System-Specifications">
 <h2>System Specifications<a class="headerlink" href="#System-Specifications" title="Link to this heading">¶</a></h2>
 <ul class="simple">
-<li><p>OS: Windows 10</p></li>
-<li><p>CPU: AMD Ryzen 7 3700X &#64; 3.6 GHz (8 cores, 16 logical)</p></li>
-<li><p>RAM: 128 GB DDR4 3600 MHz (4 × 32 GB)</p></li>
+<li><p><strong>Operating System:</strong> Windows 10</p></li>
+<li><p><strong>Processor:</strong> AMD Ryzen 7 3700X 8‑Core &#64; 3.6 MHz (8 cores, 16 logical processors)</p></li>
+<li><p><strong>Memory:</strong> 128 GB DDR4‑3600 MHz (4×32 GB DIMMs)</p></li>
+<li><p><strong>Storage</strong>: SATA HDD 2TB (Model: ST2000DM008-2FR102)</p></li>
 </ul>
 </section>
 <section id="1.-Setup">
@@ -681,7 +682,7 @@
 <section id="5.-Load-&amp;-Preview-Results">
 <h2>5. Load &amp; Preview Results<a class="headerlink" href="#5.-Load-&-Preview-Results" title="Link to this heading">¶</a></h2>
 <div class="nbinput docutils container">
-<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[5]:
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[2]:
 </pre></div>
 </div>
 <div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">df_sql</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">read_csv</span><span class="p">(</span><span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">sqlite_dir</span><span class="p">,</span> <span class="s1">&#39;sqlite_benchmark.csv&#39;</span><span class="p">))</span>
@@ -692,7 +693,7 @@
 </div>
 </div>
 <div class="nboutput nblast docutils container">
-<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[5]:
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[2]:
 </pre></div>
 </div>
 <div class="output_area docutils container">
@@ -721,7 +722,7 @@
 <section id="6.-Plot-Create-&amp;-Read-Times">
 <h2>6. Plot Create &amp; Read Times<a class="headerlink" href="#6.-Plot-Create-&-Read-Times" title="Link to this heading">¶</a></h2>
 <div class="nbinput docutils container">
-<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[8]:
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[3]:
 </pre></div>
 </div>
 <div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">plt</span><span class="o">.</span><span class="n">rcParams</span><span class="o">.</span><span class="n">update</span><span class="p">({</span>
@@ -832,7 +833,7 @@
     <span class="n">width</span><span class="o">=</span><span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">scale</span><span class="si">}</span><span class="s2">%&quot;</span><span class="p">,</span>
     <span class="n">height</span><span class="o">=</span><span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">scale</span><span class="si">}</span><span class="s2">%&quot;</span><span class="p">,</span>
     <span class="n">loc</span><span class="o">=</span><span class="s2">&quot;upper left&quot;</span><span class="p">,</span>
-    <span class="n">bbox_to_anchor</span><span class="o">=</span><span class="p">(</span><span class="mf">0.05</span><span class="p">,</span> <span class="o">-</span><span class="mf">0.03</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="mi">1</span><span class="p">),</span>
+    <span class="n">bbox_to_anchor</span><span class="o">=</span><span class="p">(</span><span class="mf">0.06</span><span class="p">,</span> <span class="o">-</span><span class="mf">0.03</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="mi">1</span><span class="p">),</span>
     <span class="n">bbox_transform</span><span class="o">=</span><span class="n">ax1</span><span class="o">.</span><span class="n">transAxes</span><span class="p">,</span>
     <span class="n">borderpad</span><span class="o">=</span><span class="mi">2</span><span class="p">,</span>
 <span class="p">)</span>
@@ -928,6 +929,8 @@
 <span class="n">ax1</span><span class="o">.</span><span class="n">legend</span><span class="p">(</span><span class="n">lines1</span> <span class="o">+</span> <span class="n">lines2</span><span class="p">,</span> <span class="n">labels1</span> <span class="o">+</span> <span class="n">labels2</span><span class="p">,</span> <span class="n">loc</span><span class="o">=</span><span class="s2">&quot;upper center&quot;</span><span class="p">,</span> <span class="n">bbox_to_anchor</span><span class="o">=</span><span class="p">(</span><span class="mf">0.15</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="mi">1</span><span class="p">))</span>
 <span class="n">ax1</span><span class="o">.</span><span class="n">set_title</span><span class="p">(</span><span class="s2">&quot;Benchmark for Create and Read:</span><span class="se">\n</span><span class="s2">SQLite, MongoDB, and ParquetDB with 100 integer columns&quot;</span><span class="p">)</span>
 <span class="n">plt</span><span class="o">.</span><span class="n">tight_layout</span><span class="p">()</span>
+
+<span class="n">plt</span><span class="o">.</span><span class="n">savefig</span><span class="p">(</span><span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">bench_dir</span><span class="p">,</span><span class="s2">&quot;create-read_benchmark.pdf&quot;</span><span class="p">))</span>
 <span class="n">plt</span><span class="o">.</span><span class="n">show</span><span class="p">()</span>
 <br/></pre></div>
 </div>
@@ -937,7 +940,7 @@
 </div>
 <div class="output_area stderr docutils container">
 <div class="highlight"><pre>
-C:\Users\lllang\AppData\Local\Temp\ipykernel_51240\3525761244.py:204: UserWarning: This figure includes Axes that are not compatible with tight_layout, so results might be incorrect.
+C:\Users\lllang\AppData\Local\Temp\ipykernel_17352\263859993.py:204: UserWarning: This figure includes Axes that are not compatible with tight_layout, so results might be incorrect.
   plt.tight_layout()
 </pre></div></div>
 </div>

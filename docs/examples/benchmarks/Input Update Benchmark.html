@@ -328,8 +328,9 @@
 <h2>System Specifications<a class="headerlink" href="#System-Specifications" title="Link to this heading">¶</a></h2>
 <ul class="simple">
 <li><p><strong>Operating System:</strong> Windows 10</p></li>
-<li><p><strong>Processor:</strong> AMD Ryzen 7 3700X 8‑Core &#64; 3.6 GHz (8 cores, 16 logical)</p></li>
+<li><p><strong>Processor:</strong> AMD Ryzen 7 3700X 8‑Core &#64; 3.6 MHz (8 cores, 16 logical processors)</p></li>
 <li><p><strong>Memory:</strong> 128 GB DDR4‑3600 MHz (4×32 GB DIMMs)</p></li>
+<li><p><strong>Storage</strong>: SATA HDD 2TB (Model: ST2000DM008-2FR102)</p></li>
 </ul>
 <hr class="docutils" />
 </section>
@@ -352,10 +353,10 @@
 <span class="kn">from</span> <span class="nn">parquetdb.utils</span> <span class="kn">import</span> <span class="n">general_utils</span>
 
 <span class="c1"># Set up data directory</span>
-<span class="n">save_dir</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">config</span><span class="o">.</span><span class="n">data_dir</span><span class="p">,</span> <span class="s1">&#39;benchmarks&#39;</span><span class="p">,</span> <span class="s1">&#39;parquetdb&#39;</span><span class="p">)</span>
-<span class="n">root_dir</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">dirname</span><span class="p">(</span><span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">abspath</span><span class="p">(</span><span class="vm">__file__</span><span class="p">))</span>
+<span class="n">bench_dir</span><span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">config</span><span class="o">.</span><span class="n">data_dir</span><span class="p">,</span> <span class="s1">&#39;benchmarks&#39;</span><span class="p">)</span>
+<span class="n">save_dir</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">bench_dir</span><span class="p">,</span> <span class="s1">&#39;parquetdb&#39;</span><span class="p">)</span>
 <span class="n">os</span><span class="o">.</span><span class="n">makedirs</span><span class="p">(</span><span class="n">save_dir</span><span class="p">,</span> <span class="n">exist_ok</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
-<span class="n">db_path</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">root_dir</span><span class="p">,</span> <span class="s1">&#39;BenchmarkDB&#39;</span><span class="p">)</span>
+<span class="n">db_path</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">save_dir</span><span class="p">,</span> <span class="s1">&#39;BenchmarkDB&#39;</span><span class="p">)</span>
 <br/></pre></div>
 </div>
 </div>
@@ -486,7 +487,7 @@ Benchmark results saved to Z:\data\parquetdb\data\benchmarks\parquetdb\parquetdb
 <section id="4.-Load-and-Preview-Results">
 <h2>4. Load and Preview Results<a class="headerlink" href="#4.-Load-and-Preview-Results" title="Link to this heading">¶</a></h2>
 <div class="nbinput docutils container">
-<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[4]:
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[3]:
 </pre></div>
 </div>
 <div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">csv_path</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">save_dir</span><span class="p">,</span> <span class="s1">&#39;parquetdb_input_update_benchmark.csv&#39;</span><span class="p">)</span>
@@ -496,7 +497,7 @@ Benchmark results saved to Z:\data\parquetdb\data\benchmarks\parquetdb\parquetdb
 </div>
 </div>
 <div class="nboutput nblast docutils container">
-<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[4]:
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[3]:
 </pre></div>
 </div>
 <div class="output_area rendered_html docutils container">
@@ -594,7 +595,7 @@ Benchmark results saved to Z:\data\parquetdb\data\benchmarks\parquetdb\parquetdb
 
 <span class="c1"># Inset axes</span>
 <span class="n">ax_in</span> <span class="o">=</span> <span class="n">inset_axes</span><span class="p">(</span><span class="n">ax</span><span class="p">,</span> <span class="n">width</span><span class="o">=</span><span class="s1">&#39;36%&#39;</span><span class="p">,</span> <span class="n">height</span><span class="o">=</span><span class="s1">&#39;36%&#39;</span><span class="p">,</span> <span class="n">loc</span><span class="o">=</span><span class="s1">&#39;upper left&#39;</span><span class="p">,</span>
-                   <span class="n">bbox_to_anchor</span><span class="o">=</span><span class="p">(</span><span class="mf">0.05</span><span class="p">,</span> <span class="o">-</span><span class="mf">0.03</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="mi">1</span><span class="p">),</span> <span class="n">bbox_transform</span><span class="o">=</span><span class="n">ax</span><span class="o">.</span><span class="n">transAxes</span><span class="p">)</span>
+                   <span class="n">bbox_to_anchor</span><span class="o">=</span><span class="p">(</span><span class="mf">0.1</span><span class="p">,</span> <span class="o">-</span><span class="mf">0.03</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="mi">1</span><span class="p">),</span> <span class="n">bbox_transform</span><span class="o">=</span><span class="n">ax</span><span class="o">.</span><span class="n">transAxes</span><span class="p">)</span>
 <span class="k">for</span> <span class="n">key</span><span class="p">,</span> <span class="n">grp</span> <span class="ow">in</span> <span class="n">df</span><span class="o">.</span><span class="n">groupby</span><span class="p">(</span><span class="s1">&#39;input_data_type&#39;</span><span class="p">):</span>
     <span class="n">ax_in</span><span class="o">.</span><span class="n">plot</span><span class="p">(</span>
         <span class="n">grp</span><span class="p">[</span><span class="s1">&#39;n_rows&#39;</span><span class="p">],</span> <span class="n">grp</span><span class="p">[</span><span class="s1">&#39;update_times&#39;</span><span class="p">],</span>
@@ -602,15 +603,31 @@ Benchmark results saved to Z:\data\parquetdb\data\benchmarks\parquetdb\parquetdb
     <span class="p">)</span>
 <span class="n">ax_in</span><span class="o">.</span><span class="n">set_xscale</span><span class="p">(</span><span class="s1">&#39;log&#39;</span><span class="p">)</span>
 <span class="n">ax_in</span><span class="o">.</span><span class="n">set_yscale</span><span class="p">(</span><span class="s1">&#39;log&#39;</span><span class="p">)</span>
-<span class="n">ax_in</span><span class="o">.</span><span class="n">xaxis</span><span class="o">.</span><span class="n">set_major_locator</span><span class="p">(</span><span class="n">ticker</span><span class="o">.</span><span class="n">LogLocator</span><span class="p">(</span><span class="n">numticks</span><span class="o">=</span><span class="mi">9</span><span class="p">))</span>
-<span class="n">ax_in</span><span class="o">.</span><span class="n">xaxis</span><span class="o">.</span><span class="n">set_minor_locator</span><span class="p">(</span><span class="n">ticker</span><span class="o">.</span><span class="n">LogLocator</span><span class="p">(</span><span class="n">subs</span><span class="o">=</span><span class="s1">&#39;all&#39;</span><span class="p">,</span> <span class="n">numticks</span><span class="o">=</span><span class="mi">9</span><span class="p">))</span>
+
+<span class="n">nticks</span> <span class="o">=</span> <span class="mi">9</span>
+<span class="n">maj_loc</span> <span class="o">=</span> <span class="n">ticker</span><span class="o">.</span><span class="n">LogLocator</span><span class="p">(</span><span class="n">numticks</span><span class="o">=</span><span class="n">nticks</span><span class="p">)</span>
+<span class="n">min_loc</span> <span class="o">=</span> <span class="n">ticker</span><span class="o">.</span><span class="n">LogLocator</span><span class="p">(</span><span class="n">subs</span><span class="o">=</span><span class="s2">&quot;all&quot;</span><span class="p">,</span> <span class="n">numticks</span><span class="o">=</span><span class="n">nticks</span><span class="p">)</span>
+<span class="n">ax_in</span><span class="o">.</span><span class="n">xaxis</span><span class="o">.</span><span class="n">set_major_locator</span><span class="p">(</span><span class="n">maj_loc</span><span class="p">)</span>
+<span class="n">ax_in</span><span class="o">.</span><span class="n">xaxis</span><span class="o">.</span><span class="n">set_minor_locator</span><span class="p">(</span><span class="n">min_loc</span><span class="p">)</span>
+
+<span class="c1"># Set the same linestyle and make the spine thicker for visibility</span>
+<span class="n">ax_in</span><span class="o">.</span><span class="n">spines</span><span class="p">[</span><span class="s2">&quot;left&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">set_linestyle</span><span class="p">(</span><span class="s2">&quot;solid&quot;</span><span class="p">)</span>
+<span class="n">ax_in</span><span class="o">.</span><span class="n">spines</span><span class="p">[</span><span class="s2">&quot;left&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">set_linewidth</span><span class="p">(</span><span class="mf">2.5</span><span class="p">)</span>  <span class="c1"># Increase the line width for visibility</span>
+
+<span class="n">ax_in</span><span class="o">.</span><span class="n">tick_params</span><span class="p">(</span>
+    <span class="n">axis</span><span class="o">=</span><span class="s2">&quot;both&quot;</span><span class="p">,</span> <span class="n">which</span><span class="o">=</span><span class="s2">&quot;major&quot;</span><span class="p">,</span> <span class="n">length</span><span class="o">=</span><span class="mi">6</span><span class="p">,</span> <span class="n">width</span><span class="o">=</span><span class="mf">1.5</span><span class="p">,</span> <span class="n">direction</span><span class="o">=</span><span class="s2">&quot;out&quot;</span>
+<span class="p">)</span>
+<span class="n">ax_in</span><span class="o">.</span><span class="n">tick_params</span><span class="p">(</span><span class="n">axis</span><span class="o">=</span><span class="s2">&quot;x&quot;</span><span class="p">,</span> <span class="n">which</span><span class="o">=</span><span class="s2">&quot;minor&quot;</span><span class="p">,</span> <span class="n">length</span><span class="o">=</span><span class="mi">3</span><span class="p">,</span> <span class="n">width</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span> <span class="n">direction</span><span class="o">=</span><span class="s2">&quot;out&quot;</span><span class="p">)</span>
+<span class="n">ax_in</span><span class="o">.</span><span class="n">tick_params</span><span class="p">(</span><span class="n">axis</span><span class="o">=</span><span class="s2">&quot;y&quot;</span><span class="p">,</span> <span class="n">which</span><span class="o">=</span><span class="s2">&quot;minor&quot;</span><span class="p">,</span> <span class="n">length</span><span class="o">=</span><span class="mi">3</span><span class="p">,</span> <span class="n">width</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span> <span class="n">direction</span><span class="o">=</span><span class="s2">&quot;out&quot;</span><span class="p">)</span>
+
 <span class="n">ax_in</span><span class="o">.</span><span class="n">set_xlabel</span><span class="p">(</span><span class="s1">&#39;Rows (log)&#39;</span><span class="p">,</span> <span class="n">fontsize</span><span class="o">=</span><span class="mi">8</span><span class="p">)</span>
-<span class="n">ax_in</span><span class="o">.</span><span class="n">set_ylabel</span><span class="p">(</span><span class="s1">&#39;Time (log)&#39;</span><span class="p">,</span> <span class="n">fontsize</span><span class="o">=</span><span class="mi">8</span><span class="p">)</span>
+<span class="n">ax_in</span><span class="o">.</span><span class="n">set_ylabel</span><span class="p">(</span><span class="s1">&#39;Update Time (log)&#39;</span><span class="p">,</span> <span class="n">fontsize</span><span class="o">=</span><span class="mi">8</span><span class="p">)</span>
 <span class="n">ax_in</span><span class="o">.</span><span class="n">grid</span><span class="p">(</span><span class="kc">True</span><span class="p">)</span>
 
 <span class="n">ax</span><span class="o">.</span><span class="n">legend</span><span class="p">(</span><span class="n">handles</span><span class="o">=</span><span class="n">handles</span><span class="p">,</span> <span class="n">loc</span><span class="o">=</span><span class="s1">&#39;upper center&#39;</span><span class="p">,</span> <span class="n">bbox_to_anchor</span><span class="o">=</span><span class="p">(</span><span class="mf">0.12</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="mi">1</span><span class="p">))</span>
 <span class="n">ax</span><span class="o">.</span><span class="n">set_title</span><span class="p">(</span><span class="s1">&#39;Input Update Benchmark for ParquetDB&#39;</span><span class="p">)</span>
 <span class="n">plt</span><span class="o">.</span><span class="n">tight_layout</span><span class="p">()</span>
+<span class="n">plt</span><span class="o">.</span><span class="n">savefig</span><span class="p">(</span><span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">bench_dir</span><span class="p">,</span><span class="s2">&quot;input-type-update_benchmark.pdf&quot;</span><span class="p">))</span>
 <span class="n">plt</span><span class="o">.</span><span class="n">show</span><span class="p">()</span>
 </pre></div>
 </div>
@@ -620,7 +637,7 @@ Benchmark results saved to Z:\data\parquetdb\data\benchmarks\parquetdb\parquetdb
 </div>
 <div class="output_area stderr docutils container">
 <div class="highlight"><pre>
-C:\Users\lllang\AppData\Local\Temp\ipykernel_58992\1358684999.py:45: UserWarning: This figure includes Axes that are not compatible with tight_layout, so results might be incorrect.
+C:\Users\lllang\AppData\Local\Temp\ipykernel_22152\1546944237.py:60: UserWarning: This figure includes Axes that are not compatible with tight_layout, so results might be incorrect.
   plt.tight_layout()
 </pre></div></div>
 </div>

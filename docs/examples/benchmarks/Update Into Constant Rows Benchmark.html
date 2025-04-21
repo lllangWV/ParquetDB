@@ -314,9 +314,10 @@
 <section id="System-Specifications">
 <h2>System Specifications<a class="headerlink" href="#System-Specifications" title="Link to this heading">¶</a></h2>
 <ul class="simple">
-<li><p>OS: Windows 10</p></li>
-<li><p>CPU: AMD Ryzen 7 3700X &#64; 3.6 GHz (8 cores, 16 logical processors)</p></li>
-<li><p>RAM: 128 GB DDR4 3600 MHz</p></li>
+<li><p><strong>Operating System:</strong> Windows 10</p></li>
+<li><p><strong>Processor:</strong> AMD Ryzen 7 3700X 8‑Core &#64; 3.6 MHz (8 cores, 16 logical processors)</p></li>
+<li><p><strong>Memory:</strong> 128 GB DDR4‑3600 MHz (4×32 GB DIMMs)</p></li>
+<li><p><strong>Storage</strong>: SATA HDD 2TB (Model: ST2000DM008-2FR102)</p></li>
 </ul>
 </section>
 <section id="1.-Setup">
@@ -710,7 +711,7 @@ ParquetDB update 1000000 rows: 27.3471s
 <section id="5.-Load-and-Preview-Results">
 <h2>5. Load and Preview Results<a class="headerlink" href="#5.-Load-and-Preview-Results" title="Link to this heading">¶</a></h2>
 <div class="nbinput docutils container">
-<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[5]:
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[2]:
 </pre></div>
 </div>
 <div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">df_sql</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">read_csv</span><span class="p">(</span><span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">sqlite_dir</span><span class="p">,</span> <span class="s2">&quot;sqlite_update_benchmark.csv&quot;</span><span class="p">))</span>
@@ -722,7 +723,7 @@ ParquetDB update 1000000 rows: 27.3471s
 </div>
 </div>
 <div class="nboutput nblast docutils container">
-<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[5]:
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[2]:
 </pre></div>
 </div>
 <div class="output_area docutils container">
@@ -752,7 +753,7 @@ ParquetDB update 1000000 rows: 27.3471s
 <h2>6. Plot Update Times<a class="headerlink" href="#6.-Plot-Update-Times" title="Link to this heading">¶</a></h2>
 <p>Plot update times vs. number of rows for each backend with inset log–log.</p>
 <div class="nbinput docutils container">
-<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[7]:
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[4]:
 </pre></div>
 </div>
 <div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="kn">import</span> <span class="nn">matplotlib.pyplot</span> <span class="k">as</span> <span class="nn">plt</span>
@@ -817,6 +818,8 @@ ParquetDB update 1000000 rows: 27.3471s
         <span class="n">marker</span><span class="o">=</span><span class="n">markers</span><span class="p">[</span><span class="s2">&quot;parquetdb&quot;</span><span class="p">],</span>
         <span class="n">fillstyle</span><span class="o">=</span><span class="n">fill</span><span class="p">[</span><span class="s2">&quot;parquetdb&quot;</span><span class="p">])</span>
 
+<span class="n">ax_inset</span><span class="o">.</span><span class="n">grid</span><span class="p">(</span><span class="kc">True</span><span class="p">)</span>
+
 
 <span class="c1"># Set log scale for both axes in the inset</span>
 <span class="n">ax_inset</span><span class="o">.</span><span class="n">set_xscale</span><span class="p">(</span><span class="s2">&quot;log&quot;</span><span class="p">)</span>
@@ -854,6 +857,7 @@ ParquetDB update 1000000 rows: 27.3471s
 <span class="s2">&quot;Update Benchmark: </span><span class="se">\n</span><span class="s2"> SQLite, MongoDB, and ParquetDB with 100 integer columns&quot;</span>
 <span class="p">)</span>
 <span class="n">plt</span><span class="o">.</span><span class="n">tight_layout</span><span class="p">()</span>
+<span class="n">plt</span><span class="o">.</span><span class="n">savefig</span><span class="p">(</span><span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">bench_dir</span><span class="p">,</span><span class="s2">&quot;update-into-constant-rows_benchmark.pdf&quot;</span><span class="p">))</span>
 <span class="n">plt</span><span class="o">.</span><span class="n">show</span><span class="p">()</span>
 </pre></div>
 </div>
@@ -863,7 +867,7 @@ ParquetDB update 1000000 rows: 27.3471s
 </div>
 <div class="output_area stderr docutils container">
 <div class="highlight"><pre>
-C:\Users\lllang\AppData\Local\Temp\ipykernel_56700\4058276864.py:99: UserWarning: This figure includes Axes that are not compatible with tight_layout, so results might be incorrect.
+C:\Users\lllang\AppData\Local\Temp\ipykernel_48688\1553411592.py:101: UserWarning: This figure includes Axes that are not compatible with tight_layout, so results might be incorrect.
   plt.tight_layout()
 </pre></div></div>
 </div>

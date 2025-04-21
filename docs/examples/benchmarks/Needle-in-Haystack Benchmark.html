@@ -328,9 +328,10 @@
 <section id="System-Specifications">
 <h2>System Specifications<a class="headerlink" href="#System-Specifications" title="Link to this heading">¶</a></h2>
 <ul class="simple">
-<li><p><strong>OS:</strong> Windows 10</p></li>
-<li><p><strong>CPU:</strong> AMD Ryzen 7 3700X &#64; 3.6 GHz (8 physical cores, 16 logical)</p></li>
-<li><p><strong>RAM:</strong> 128 GB DDR4‑3600 MHz (4×32 GB)</p></li>
+<li><p><strong>Operating System:</strong> Windows 10</p></li>
+<li><p><strong>Processor:</strong> AMD Ryzen 7 3700X 8‑Core &#64; 3.6 MHz (8 cores, 16 logical processors)</p></li>
+<li><p><strong>Memory:</strong> 128 GB DDR4‑3600 MHz (4×32 GB DIMMs)</p></li>
+<li><p><strong>Storage</strong>: SATA HDD 2TB (Model: ST2000DM008-2FR102)</p></li>
 </ul>
 <hr class="docutils" />
 </section>
@@ -678,7 +679,7 @@
 <section id="5.-Load-&amp;-Preview-All-Results">
 <h2>5. Load &amp; Preview All Results<a class="headerlink" href="#5.-Load-&-Preview-All-Results" title="Link to this heading">¶</a></h2>
 <div class="nbinput nblast docutils container">
-<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[10]:
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[2]:
 </pre></div>
 </div>
 <div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">df_sql_no</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">read_csv</span><span class="p">(</span><span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">sqlite_dir</span><span class="p">,</span> <span class="s2">&quot;sqlite_noidx.csv&quot;</span><span class="p">))</span>
@@ -695,7 +696,7 @@
 <section id="6.-Plot-Read-Times">
 <h2>6. Plot Read Times<a class="headerlink" href="#6.-Plot-Read-Times" title="Link to this heading">¶</a></h2>
 <div class="nbinput docutils container">
-<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[13]:
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[4]:
 </pre></div>
 </div>
 <div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">plt</span><span class="o">.</span><span class="n">rcParams</span><span class="o">.</span><span class="n">update</span><span class="p">({</span>
@@ -730,7 +731,7 @@
 
 <span class="c1"># Inset</span>
 <span class="n">ax_in</span> <span class="o">=</span> <span class="n">inset_axes</span><span class="p">(</span><span class="n">ax</span><span class="p">,</span> <span class="n">width</span><span class="o">=</span><span class="s2">&quot;36%&quot;</span><span class="p">,</span> <span class="n">height</span><span class="o">=</span><span class="s2">&quot;36%&quot;</span><span class="p">,</span> <span class="n">loc</span><span class="o">=</span><span class="s2">&quot;upper left&quot;</span><span class="p">,</span>
-                   <span class="n">bbox_to_anchor</span><span class="o">=</span><span class="p">(</span><span class="mf">0.05</span><span class="p">,</span><span class="o">-</span><span class="mf">0.03</span><span class="p">,</span><span class="mi">1</span><span class="p">,</span><span class="mi">1</span><span class="p">),</span> <span class="n">bbox_transform</span><span class="o">=</span><span class="n">ax</span><span class="o">.</span><span class="n">transAxes</span><span class="p">)</span>
+                   <span class="n">bbox_to_anchor</span><span class="o">=</span><span class="p">(</span><span class="mf">0.1</span><span class="p">,</span><span class="o">-</span><span class="mf">0.03</span><span class="p">,</span><span class="mi">1</span><span class="p">,</span><span class="mi">1</span><span class="p">),</span> <span class="n">bbox_transform</span><span class="o">=</span><span class="n">ax</span><span class="o">.</span><span class="n">transAxes</span><span class="p">)</span>
 <span class="k">for</span> <span class="n">label</span><span class="p">,</span> <span class="n">df_</span> <span class="ow">in</span> <span class="p">[(</span><span class="s2">&quot;SQLite no idx&quot;</span><span class="p">,</span> <span class="n">df_sql_no</span><span class="p">),</span> <span class="p">(</span><span class="s2">&quot;SQLite idx&quot;</span><span class="p">,</span> <span class="n">df_sql_ix</span><span class="p">),</span>
                    <span class="p">(</span><span class="s2">&quot;Mongo no idx&quot;</span><span class="p">,</span> <span class="n">df_mg_no</span><span class="p">),</span> <span class="p">(</span><span class="s2">&quot;Mongo idx&quot;</span><span class="p">,</span> <span class="n">df_mg_ix</span><span class="p">),</span>
                    <span class="p">(</span><span class="s2">&quot;ParquetDB&quot;</span><span class="p">,</span> <span class="n">df_pq</span><span class="p">)]:</span>
@@ -743,6 +744,8 @@
 <span class="n">ax</span><span class="o">.</span><span class="n">legend</span><span class="p">(</span><span class="n">loc</span><span class="o">=</span><span class="s2">&quot;upper center&quot;</span><span class="p">,</span> <span class="n">bbox_to_anchor</span><span class="o">=</span><span class="p">(</span><span class="mf">0.12</span><span class="p">,</span><span class="mi">0</span><span class="p">,</span><span class="mi">1</span><span class="p">,</span><span class="mi">1</span><span class="p">))</span>
 <span class="n">ax</span><span class="o">.</span><span class="n">set_title</span><span class="p">(</span><span class="s2">&quot;Needle‑in‑Haystack Read Benchmark&quot;</span><span class="p">)</span>
 <span class="n">plt</span><span class="o">.</span><span class="n">tight_layout</span><span class="p">()</span>
+
+<span class="n">plt</span><span class="o">.</span><span class="n">savefig</span><span class="p">(</span><span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">bench_dir</span><span class="p">,</span><span class="s2">&quot;needle-in-haystack_benchmark.pdf&quot;</span><span class="p">))</span>
 <span class="n">plt</span><span class="o">.</span><span class="n">show</span><span class="p">()</span>
 </pre></div>
 </div>
@@ -752,7 +755,7 @@
 </div>
 <div class="output_area stderr docutils container">
 <div class="highlight"><pre>
-C:\Users\lllang\AppData\Local\Temp\ipykernel_22252\3519610802.py:45: UserWarning: This figure includes Axes that are not compatible with tight_layout, so results might be incorrect.
+C:\Users\lllang\AppData\Local\Temp\ipykernel_49100\3178427722.py:45: UserWarning: This figure includes Axes that are not compatible with tight_layout, so results might be incorrect.
   plt.tight_layout()
 </pre></div></div>
 </div>
