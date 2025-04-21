@@ -27,6 +27,7 @@ directory`_ of the package and showcase how to effectively use ParquetDB's featu
     benchmarks/Create and Read Benchmark
     benchmarks/Update Into Constant Rows Benchmark
     benchmarks/Full DB Updates Benchmark
+    benchmarks/Small Benchmark
 
 Contents
 --------
@@ -49,3 +50,4 @@ Contents
    benchmarks/Create and Read Benchmark
    benchmarks/Update Into Constant Rows Benchmark
    benchmarks/Full DB Updates Benchmark
+   benchmarks/Small Benchmark
