@@ -76,7 +76,7 @@ logging_config = {
     "loggers": {
         "parquetdb": {
             "level": "INFO",
-            "handlers": ["console", "file"],
+            "handlers": ["console"],  # , "file"],
             "propagate": True,
         },
         "user": {"level": "DEBUG", "handlers": ["user_console"], "propagate": False},
