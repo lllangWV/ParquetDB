@@ -2892,15 +2892,18 @@ class ParquetDB:
         - Thread-safe for file counting
         """
         logger.info("Getting save path")
-        n_files = len(
-            glob(os.path.join(self.db_path, f"{self.dataset_name}_*.parquet"))
-        )
+        files = glob(os.path.join(self.db_path, f"{self.dataset_name}_*.parquet"))
+        n_files = len(files)
         save_path = None
         if n_files == 0:
             save_path = os.path.join(self.db_path, f"{self.dataset_name}_0.parquet")
         else:
+            max_index = 0
+            for file in files:
+                index = int(file.split("_")[-1].split(".")[0])
+                max_index = max(max_index, index)
             save_path = os.path.join(
-                self.db_path, f"{self.dataset_name}_{n_files}.parquet"
+                self.db_path, f"{self.dataset_name}_{max_index+1}.parquet"
             )
         logger.info(f"Save path: {save_path}")
         return save_path
