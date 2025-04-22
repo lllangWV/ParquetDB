@@ -43,6 +43,16 @@
   },
   {
    "cell_type": "code",
+   "execution_count": null,
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "!pip install parquetdb\n",
+    "!pip install pymongo"
+   ]
+  },
+  {
+   "cell_type": "code",
    "execution_count": 1,
    "metadata": {},
    "outputs": [],
