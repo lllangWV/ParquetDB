@@ -84,8 +84,8 @@ extensions = [
     "sphinxcontrib.video",
     "sphinx_design",
     "sphinx.ext.githubpages",
-    "sphinx.ext.napoleon", 
-    'numpydoc',
+    "sphinx.ext.napoleon",
+    "numpydoc",
     "sphinx.ext.autodoc",
     "sphinx.ext.autosummary",
     # "sphinx-nbexamples",
@@ -121,18 +121,23 @@ napoleon_use_ivar = True
 napoleon_use_rtype = False
 napoleon_use_param = False
 napoleon_custom_sections = [
-    ('My Custom Section', 'params_style'),  # Custom section treated like parameters
-    ('Plot Appearance', 'params_style'),  # Custom section treated like parameters
-    ('Surface Configuration', 'params_style'),  # Custom section treated like parameters
-    ('Spin Settings', 'params_style'),  # Custom section treated like parameters
-    ('Axes and Labels', 'params_style'),  # Custom section treated like parameters
-    ('Brillouin Zone Styling', 'params_style'),  # Custom section treated like parameters
-    ('Advanced Configurations', 'params_style'),  # Custom section treated like parameters
-    ('Isoslider Settings', 'params_style'),  # Custom section treated like parameters
-    ('Miscellaneous', 'params_style'),  # Custom section treated like parameters
-    'Methods'
+    ("My Custom Section", "params_style"),  # Custom section treated like parameters
+    ("Plot Appearance", "params_style"),  # Custom section treated like parameters
+    ("Surface Configuration", "params_style"),  # Custom section treated like parameters
+    ("Spin Settings", "params_style"),  # Custom section treated like parameters
+    ("Axes and Labels", "params_style"),  # Custom section treated like parameters
+    (
+        "Brillouin Zone Styling",
+        "params_style",
+    ),  # Custom section treated like parameters
+    (
+        "Advanced Configurations",
+        "params_style",
+    ),  # Custom section treated like parameters
+    ("Isoslider Settings", "params_style"),  # Custom section treated like parameters
+    ("Miscellaneous", "params_style"),  # Custom section treated like parameters
+    "Methods",
 ]
-
 
 
 numpydoc_use_plots = True
@@ -159,7 +164,7 @@ exclude_patterns = ["_build", "Thumbs.db", ".DS_Store"]
 
 html_title = f"ParquetDB Docs: v{version}"
 html_theme = "furo"
-html_logo = os.path.join("media","images", "ParquetDB_logo.png")
+html_logo = os.path.join("media", "images", "ParquetDB_logo.png")
 html_static_path = []
 # html_theme_options = {
 #     # "logo": {"logo_link": "index.html"}  # Links to the root of your documentation
@@ -170,7 +175,7 @@ html_context = {
     "logo_link": "index.html",  # Specify the link for the logo if needed
 }
 
-html_css_files = ["css/custom.css"]
+html_css_files = ["css/custom.css", "notebook.css"]
 
 html_js_files = ["js/custom.js"]
 
