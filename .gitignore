@@ -151,3 +151,7 @@ update_package.md
 /sphinx/README.md
 sphinx/source/examples/
 github_repos/
+
+env_dev.yml
+env_material.yml
+env.yml
