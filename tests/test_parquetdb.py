@@ -749,13 +749,16 @@ class TestParquetDB(unittest.TestCase):
         incoming_data = [
             {"id_1": 100, "id_2": 10, "field_2": "there"},
             {"id_1": 5, "id_2": 5},
-            {"id_1": 33, "id_2": 13},  # Note: emp_id 4 doesn't exist in employees
+            {
+                "id_1": 33,
+                "id_2": 13,
+            },  # Note: id_1 33, id_2 13 doesn't exist in current_data
             {
                 "id_1": 33,
                 "id_2": 12,
                 "field_2": "field_2",
                 "field_3": "field_3",
-            },  # Note: emp_id 4 doesn't exist in employees
+            },
         ]
 
         incoming_table = ParquetDB.construct_table(incoming_data)
@@ -763,6 +766,8 @@ class TestParquetDB(unittest.TestCase):
         self.db.update(incoming_table, update_keys=["id_1", "id_2"])
 
         table = self.db.read()
+        df = table.to_pandas()
+        logger.debug(f"Dataframe: \n {df}")
         assert table["field_1"].combine_chunks().to_pylist() == [
             "here",
             None,
@@ -1205,7 +1210,7 @@ class TestParquetDB(unittest.TestCase):
 
 
 if __name__ == "__main__":
-    unittest.main()
+    # unittest.main()
 
     # unittest.TextTestRunner().run(TestParquetDB('test_nested_data_handling'))
     # unittest.TextTestRunner().run(TestParquetDB('test_update_maintains_existing_extension_arrays'))
@@ -1225,7 +1230,9 @@ if __name__ == "__main__":
     # unittest.TextTestRunner().run(TestParquetDB('test_update_multi_keys'))
     # unittest.TextTestRunner().run(TestParquetDB("test_transform"))
     # unittest.TextTestRunner().run(TestParquetDB("test_filter_delete"))
-    # unittest.TextTestRunner().run(TestParquetDB("test_drop_duplicates"))
+    # unittest.TextTestRunner().run(TestParquetDB("test_drop_duplicates"))test_update_multi_keys
+
+    unittest.TextTestRunner().run(TestParquetDB("test_update_multi_keys"))
 
     # for x in range(500):
     #     print(f"Iteration {x+1}")
