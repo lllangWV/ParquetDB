@@ -1092,11 +1092,11 @@ class ParquetDB:
         if new_db_path:
             dataset_dir = new_db_path
             dataset_name = os.path.basename(new_db_path)
-            basename_template = f"tmp_{dataset_name}_{{i}}.parquet"
+            basename_template = f"tmp-{dataset_name}_{{i}}.parquet"
         else:
             dataset_dir = self.db_path
             dataset_name = self.dataset_name
-            basename_template = f"tmp_{self.dataset_name}_{{i}}.parquet"
+            basename_template = f"tmp-{self.dataset_name}_{{i}}.parquet"
 
         try:
             retrieved_data = self._load_data(
@@ -1220,7 +1220,7 @@ class ParquetDB:
                 a = 1 / 0
 
             # Remove main files to replace with tmp files
-            tmp_files = glob(os.path.join(dataset_dir, f"tmp_{dataset_name}_*.parquet"))
+            tmp_files = glob(os.path.join(dataset_dir, f"tmp-{dataset_name}_*.parquet"))
             if len(tmp_files) != 0:
                 main_files = glob(
                     os.path.join(dataset_dir, f"{dataset_name}_*.parquet")
@@ -1229,18 +1229,18 @@ class ParquetDB:
                     if os.path.isfile(file_path):
                         os.remove(file_path)
 
-            tmp_files = glob(os.path.join(dataset_dir, f"tmp_{dataset_name}_*.parquet"))
+            tmp_files = glob(os.path.join(dataset_dir, f"tmp-{dataset_name}_*.parquet"))
             for file_path in tmp_files:
-                file_name = os.path.basename(file_path).replace("tmp_", "")
+                file_name = os.path.basename(file_path).replace("tmp-", "")
                 new_file_path = os.path.join(dataset_dir, file_name)
                 os.rename(file_path, new_file_path)
         except Exception as e:
             logger.exception(f"exception writing final table to {dataset_dir}: {e}")
 
-            tmp_files = glob(os.path.join(dataset_dir, f"tmp_{dataset_name}_*.parquet"))
+            tmp_files = glob(os.path.join(dataset_dir, f"tmp-{dataset_name}_*.parquet"))
             for file_path in tmp_files:
 
-                file_name = os.path.basename(file_path).replace("tmp_", "")
+                file_name = os.path.basename(file_path).replace("tmp-", "")
                 new_file_path = os.path.join(dataset_dir, file_name)
                 os.rename(file_path, new_file_path)
 

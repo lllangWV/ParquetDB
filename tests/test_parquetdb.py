@@ -679,6 +679,13 @@ class TestParquetDB(unittest.TestCase):
             normalize_config=NormalizeConfig(load_format="batches", batch_size=1),
         )
         table = self.db.read()
+        df = table.to_pandas()
+        logger.debug(f"Dataframe: \n {df}")
+
+        array = table["pbc"].combine_chunks().to_numpy_ndarray().tolist()
+
+        logger.debug(f"array: \n {array}")
+
         assert table["pbc"].combine_chunks().to_numpy_ndarray().tolist() == [
             [1, 0, 0],
             [0, 1, 0],
@@ -1146,7 +1153,6 @@ class TestParquetDB(unittest.TestCase):
         table = self.db.read()
         assert table.column_names == ["id", "name"]
 
-        new_db_path = os.path.join(self.temp_dir_2)
         self.db.transform(
             lambda table: table.drop_columns(columns=["name"]),
             new_db_path=self.temp_dir_2,
@@ -1210,7 +1216,7 @@ class TestParquetDB(unittest.TestCase):
 
 
 if __name__ == "__main__":
-    # unittest.main()
+    unittest.main()
 
     # unittest.TextTestRunner().run(TestParquetDB('test_nested_data_handling'))
     # unittest.TextTestRunner().run(TestParquetDB('test_update_maintains_existing_extension_arrays'))
@@ -1232,7 +1238,7 @@ if __name__ == "__main__":
     # unittest.TextTestRunner().run(TestParquetDB("test_filter_delete"))
     # unittest.TextTestRunner().run(TestParquetDB("test_drop_duplicates"))test_update_multi_keys
 
-    unittest.TextTestRunner().run(TestParquetDB("test_update_multi_keys"))
+    # unittest.TextTestRunner().run(TestParquetDB("test_update_multi_keys"))
 
     # for x in range(500):
     #     print(f"Iteration {x+1}")
