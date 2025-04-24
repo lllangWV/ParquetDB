@@ -31,7 +31,7 @@ dynamic = ["version"]
 
 dependencies = [
     "python-dotenv",
-    "pyarrow",
+    "pyarrow==17.0.0",
     "pandas",
     "variconfig",
     "matplotlib",
@@ -52,6 +52,12 @@ dev = [
     "pymatgen"
 ]
 
+tests = [
+    "pytest",
+    "pytest-cov",
+    "pymatgen"
+]
+
 docs= [
     "ipython",
     "pymongo",
@@ -66,7 +72,7 @@ docs= [
     "sphinxcontrib-video",
     "pandoc",
     "furo",
-    "numpydoc",
+    "numpydoc"
 ]
 
 

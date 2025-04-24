@@ -51,7 +51,7 @@ Initialize a ParquetDB instance by specifying the path the name of the dataset
 ```python
 from parquetdb import ParquetDB
 
-db = ParquetDB(dataset_name='parquetdb')
+db = ParquetDB(db_path='parquetdb')
 ```
 
 ### Adding Data
@@ -74,6 +74,8 @@ Normalization is a crucial process for ensuring the optimal performance and effi
 This method does not return anything but modifies the dataset directory in place, ensuring a more consistent and efficient structure for future operations.
 
 ```python
+from parquetdb import NormalizeConfig
+
 db.normalize(
     normalize_config=NormalizeConfig(
     load_format='batches',      # Uses the batch generator to normalize
@@ -94,7 +96,7 @@ Read data from the database using the `read` method. You can filter data by IDs,
 all_employees = db.read()
 
 # Read specific columns
-names = db.read( columns=['name'])
+names = db.read(columns=['name'])
 
 # Read data with filters
 from pyarrow import compute as pc

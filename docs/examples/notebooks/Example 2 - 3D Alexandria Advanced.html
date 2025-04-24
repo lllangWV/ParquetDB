@@ -6,7 +6,7 @@
 <link rel="index" title="Index" href="../../genindex.html" /><link rel="search" title="Search" href="../../search.html" /><link rel="next" title="ParquetDB with the Jarvis Dataset DFT_3D" href="Example%203%20-%20Jarvis-dft_3d.html" /><link rel="prev" title="3D Alexandria Database" href="Example%201%20-%203D%20Alexandria%20Database.html" />
 
     <!-- Generated with Sphinx 7.4.7 and Furo 2024.08.06 -->
-        <title>3D Alexandria Advanced - ParquetDB Docs: v0.24.1</title>
+        <title>3D Alexandria Advanced - ParquetDB Docs: v0.25.1</title>
       <link rel="stylesheet" type="text/css" href="../../_static/pygments.css?v=fa44fd50" />
     <link rel="stylesheet" type="text/css" href="../../_static/styles/furo.css?v=354aac6f" />
     <link rel="stylesheet" type="text/css" href="../../_static/copybutton.css?v=76b2166b" />
@@ -14,6 +14,7 @@
     <link rel="stylesheet" type="text/css" href="../../_static/nbsphinx-code-cells.css?v=2aa19091" />
     <link rel="stylesheet" type="text/css" href="../../_static/styles/furo-extensions.css?v=302659d7" />
     <link rel="stylesheet" type="text/css" href="../../_static/css/custom.css" />
+    <link rel="stylesheet" type="text/css" href="../../_static/notebook.css?v=3901a606" />
     
     
 
@@ -170,7 +171,7 @@
       </label>
     </div>
     <div class="header-center">
-      <a href="../../index.html"><div class="brand">ParquetDB Docs: v0.24.1</div></a>
+      <a href="../../index.html"><div class="brand">ParquetDB Docs: v0.25.1</div></a>
     </div>
     <div class="header-right">
       <div class="theme-toggle-container theme-toggle-header">
@@ -197,7 +198,7 @@
     <img class="sidebar-logo" src="../../_static/ParquetDB_logo.png" alt="Logo"/>
   </div>
   
-  <span class="sidebar-brand-text">ParquetDB Docs: v0.24.1</span>
+  <span class="sidebar-brand-text">ParquetDB Docs: v0.25.1</span>
   
 </a><form class="sidebar-search-container" method="get" action="../../search.html" role="search">
   <input class="sidebar-search" placeholder="Search" name="q" aria-label="Search">
@@ -230,6 +231,12 @@
 <li class="toctree-l2 current current-page"><a class="current reference internal" href="#">3D Alexandria Advanced</a></li>
 <li class="toctree-l2"><a class="reference internal" href="Example%203%20-%20Jarvis-dft_3d.html">ParquetDB with the Jarvis Dataset DFT_3D</a></li>
 <li class="toctree-l2"><a class="reference internal" href="Example%204%20-%20Jarvis-dft_pbe_2d.html">ParquetDB with the Jarvis Dataset DFT PBE 2D</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../benchmarks/Needle-in-Haystack%20Benchmark.html">Needle-in-Haystack Benchmark Notebook</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../benchmarks/Input%20Update%20Benchmark.html">Input Update Benchmark Notebook</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../benchmarks/Create%20and%20Read%20Benchmark.html">Read/Write Benchmark Notebook</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../benchmarks/Update%20Into%20Constant%20Rows%20Benchmark.html">Update Benchmark Notebook</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../benchmarks/Full%20DB%20Updates%20Benchmark.html">Full DB Updates Benchmark Notebook</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../benchmarks/Small%20Benchmark.html">Small Benchmark</a></li>
 </ul>
 </li>
 <li class="toctree-l1 has-children"><a class="reference internal" href="../../03_api/index.html">API Reference</a><input class="toctree-checkbox" id="toctree-checkbox-4" name="toctree-checkbox-4" role="switch" type="checkbox"/><label for="toctree-checkbox-4"><div class="visually-hidden">Toggle navigation of API Reference</div><i class="icon"><svg><use href="#svg-arrow-right"></use></svg></i></label><ul>
@@ -360,7 +367,15 @@ database.</p>
 <section id="Setup">
 <h3>Setup<a class="headerlink" href="#Setup" title="Link to this heading">¶</a></h3>
 <div class="nbinput nblast docutils container">
-<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[1]:
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[ ]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="o">!</span>pip<span class="w"> </span>install<span class="w"> </span>parquetdb
+</pre></div>
+</div>
+</div>
+<div class="nbinput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[10]:
 </pre></div>
 </div>
 <div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="kn">import</span> <span class="nn">os</span>
@@ -380,7 +395,7 @@ database.</p>
 </div>
 </div>
 <div class="nbinput docutils container">
-<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[2]:
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[11]:
 </pre></div>
 </div>
 <div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">db_path</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span>
@@ -415,135 +430,6 @@ METADATA
 ############################################################
 COLUMN DETAILS
 ############################################################
-• Columns:
-    - composition.F
-    - data.stress
-    - composition.C
-    - composition.Pu
-    - composition.Kr
-    - composition.Se
-    - composition.Rh
-    - composition.Co
-    - composition.Te
-    - composition.H
-    - id
-    - composition.Np
-    - structure.lattice.gamma
-    - structure.lattice.a
-    - @module
-    - composition.Zn
-    - composition.Cs
-    - data.prototype_id
-    - composition.O
-    - data.elements
-    - composition.Na
-    - data.e_phase_separation
-    - entry_id
-    - composition.Si
-    - composition.Ti
-    - structure.lattice.matrix
-    - composition.Cd
-    - composition.Dy
-    - composition.K
-    - composition.Pb
-    - composition.Sm
-    - composition.Ac
-    - composition.In
-    - structure.sites
-    - composition.Ba
-    - composition.Bi
-    - composition.Mo
-    - composition.Re
-    - composition.P
-    - data.nsites
-    - composition.Ce
-    - correction
-    - composition.Ni
-    - composition.Y
-    - structure.lattice.c
-    - composition.Mg
-    - composition.Cr
-    - composition.Ir
-    - structure.lattice.b
-    - data.decomposition
-    - composition.Pr
-    - composition.S
-    - composition.Th
-    - composition.Sr
-    - data.mat_id
-    - composition.He
-    - composition.Pm
-    - composition.Tc
-    - data.spg
-    - structure.lattice.pbc
-    - composition.Ho
-    - energy
-    - composition.Ta
-    - composition.Eu
-    - parameters.dummy_field
-    - @class
-    - composition.Cu
-    - composition.W
-    - composition.Fe
-    - structure.@module
-    - energy_adjustments
-    - composition.U
-    - structure.lattice.beta
-    - composition.Ne
-    - composition.V
-    - composition.Sb
-    - composition.Lu
-    - data.band_gap_ind
-    - data.band_gap_dir
-    - composition.N
-    - composition.Hf
-    - composition.Tl
-    - composition.Tm
-    - composition.Ar
-    - structure.@class
-    - data.dos_ef
-    - composition.Er
-    - composition.Pt
-    - composition.Xe
-    - composition.I
-    - composition.Mn
-    - composition.Ga
-    - composition.Yb
-    - composition.Ag
-    - composition.Pa
-    - composition.Nd
-    - data.location
-    - data.formula
-    - composition.Pd
-    - composition.Rb
-    - data.energy_total
-    - data.e_above_hull
-    - structure.lattice.volume
-    - composition.Hg
-    - composition.Al
-    - composition.Sc
-    - composition.Tb
-    - composition.Zr
-    - composition.Br
-    - composition.Gd
-    - composition.Ca
-    - structure.lattice.alpha
-    - composition.Ru
-    - composition.Ge
-    - composition.B
-    - data.e_form
-    - composition.Li
-    - composition.Sn
-    - composition.Os
-    - composition.Nb
-    - composition.Be
-    - composition.Cl
-    - composition.Au
-    - composition.La
-    - data.total_mag
-    - composition.As
-    - structure.charge
-    - data.energy_corrected
 
 </pre></div></div>
 </div>
@@ -609,7 +495,7 @@ COLUMN DETAILS
 <p>Here, I do not want the entire table, just the ids. If you read all the columns, you will likely run out of memory.</p>
 <p>I will also get the band gap values to verify the results.</p>
 <div class="nbinput docutils container">
-<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[18]:
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[4]:
 </pre></div>
 </div>
 <div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">start_time</span> <span class="o">=</span> <span class="n">time</span><span class="o">.</span><span class="n">time</span><span class="p">()</span>
@@ -653,14 +539,14 @@ Number of semiconductors: 428588
 Number of insulators: 59913
 Number of metals: 2255051
 Number of semimetals: 3905069
-Time to find electronic categories: 0.2260 seconds
+Time to find electronic categories: 0.9017 seconds
 </pre></div></div>
 </div>
 <p>Great, we have the number of materials in each category and it took about ~0.27 seconds.</p>
 <p>Again, to highlight the usefulness of ParquetDB, if we were to do this with the data in json format, it would take ~600 seconds for each individual query unless we extracted the different categories at the same time. Still take at minimum ~600 seconds to do this.</p>
 <p>Now, let’s plot the distribution of band gaps for each category.</p>
 <div class="nbinput docutils container">
-<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[20]:
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[24]:
 </pre></div>
 </div>
 <div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="k">def</span> <span class="nf">plot_band_gap_distribution</span><span class="p">(</span>
@@ -677,7 +563,8 @@ Time to find electronic categories: 0.2260 seconds
     <span class="n">df_insulators</span> <span class="o">=</span> <span class="n">insulator_table</span><span class="o">.</span><span class="n">to_pandas</span><span class="p">()</span>
 
     <span class="c1"># Create a 2x2 grid of subplots</span>
-    <span class="n">fig</span><span class="p">,</span> <span class="n">axs</span> <span class="o">=</span> <span class="n">plt</span><span class="o">.</span><span class="n">subplots</span><span class="p">(</span><span class="mi">2</span><span class="p">,</span> <span class="mi">2</span><span class="p">,</span> <span class="n">figsize</span><span class="o">=</span><span class="p">(</span><span class="mi">14</span><span class="p">,</span> <span class="mi">10</span><span class="p">))</span>
+    <span class="c1"># fig, axs = plt.subplots(2, 2, figsize=(8, 8))</span>
+    <span class="n">fig</span><span class="p">,</span> <span class="n">axs</span> <span class="o">=</span> <span class="n">plt</span><span class="o">.</span><span class="n">subplots</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="mi">4</span><span class="p">,</span> <span class="n">figsize</span><span class="o">=</span><span class="p">(</span><span class="mi">18</span><span class="p">,</span> <span class="mi">6</span><span class="p">))</span>
     <span class="n">axs</span> <span class="o">=</span> <span class="n">axs</span><span class="o">.</span><span class="n">flatten</span><span class="p">()</span>  <span class="c1"># Flatten the 2D array for easy iteration</span>
 
     <span class="c1"># Define a helper function for plotting the distributions</span>
@@ -697,6 +584,16 @@ Time to find electronic categories: 0.2260 seconds
             <span class="n">alpha</span><span class="o">=</span><span class="mf">0.5</span><span class="p">,</span>
             <span class="n">label</span><span class="o">=</span><span class="s2">&quot;Indirect Band Gap&quot;</span><span class="p">,</span>
             <span class="n">color</span><span class="o">=</span><span class="s2">&quot;tab:orange&quot;</span><span class="p">,</span>
+        <span class="p">)</span>
+
+        <span class="c1"># Add text to indicate the total number of materials</span>
+        <span class="n">total_count</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="n">df</span><span class="p">)</span>
+        <span class="n">ax</span><span class="o">.</span><span class="n">text</span><span class="p">(</span>
+            <span class="mf">0.6</span><span class="p">,</span> <span class="mf">0.6</span><span class="p">,</span>
+            <span class="sa">f</span><span class="s2">&quot;Total materials </span><span class="se">\n</span><span class="s2"> </span><span class="si">{</span><span class="n">total_count</span><span class="si">:</span><span class="s2">,</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">,</span>
+            <span class="n">transform</span><span class="o">=</span><span class="n">ax</span><span class="o">.</span><span class="n">transAxes</span><span class="p">,</span>
+            <span class="n">fontsize</span><span class="o">=</span><span class="mi">12</span><span class="p">,</span>
+            <span class="n">bbox</span><span class="o">=</span><span class="nb">dict</span><span class="p">(</span><span class="n">facecolor</span><span class="o">=</span><span class="s1">&#39;white&#39;</span><span class="p">,</span> <span class="n">alpha</span><span class="o">=</span><span class="mf">0.7</span><span class="p">,</span> <span class="n">boxstyle</span><span class="o">=</span><span class="s1">&#39;round,pad=0.5&#39;</span><span class="p">)</span>
         <span class="p">)</span>
 
         <span class="c1"># Set x limits based on min and max of both distributions</span>
@@ -735,7 +632,7 @@ Time to find electronic categories: 0.2260 seconds
 <span class="n">plot_band_gap_distribution</span><span class="p">(</span>
     <span class="n">semiconductor_table</span><span class="p">,</span> <span class="n">semimetal_table</span><span class="p">,</span> <span class="n">metal_table</span><span class="p">,</span> <span class="n">insulator_table</span>
 <span class="p">)</span>
-</pre></div>
+<br/></pre></div>
 </div>
 </div>
 <div class="nboutput docutils container">
@@ -754,7 +651,7 @@ Insulators: Direct Band Gap (Minimum, Maximum): (3.0001, 18.3179), Indirect Band
 </div>
 <div class="output_area stderr docutils container">
 <div class="highlight"><pre>
-C:\Users\lllang\AppData\Local\Temp\ipykernel_26724\3990681113.py:51: UserWarning: Attempting to set identical low and high xlims makes transformation singular; automatically expanding.
+C:\Users\lllang\AppData\Local\Temp\ipykernel_72436\2214734742.py:62: UserWarning: Attempting to set identical low and high xlims makes transformation singular; automatically expanding.
   ax.set_xlim(min_gap_dir, max_gap_dir)
 </pre></div></div>
 </div>
@@ -762,7 +659,7 @@ C:\Users\lllang\AppData\Local\Temp\ipykernel_26724\3990681113.py:51: UserWarning
 <div class="prompt empty docutils container">
 </div>
 <div class="output_area docutils container">
-<img alt="../../_images/examples_notebooks_Example_2_-_3D_Alexandria_Advanced_9_2.png" src="../../_images/examples_notebooks_Example_2_-_3D_Alexandria_Advanced_9_2.png" />
+<img alt="../../_images/examples_notebooks_Example_2_-_3D_Alexandria_Advanced_10_2.png" src="../../_images/examples_notebooks_Example_2_-_3D_Alexandria_Advanced_10_2.png" />
 </div>
 </div>
 <p>Great this is a good visualization of the band gap distribution for each category. This is a good way to check if our filters are working as expected.</p>
@@ -773,7 +670,7 @@ C:\Users\lllang\AppData\Local\Temp\ipykernel_26724\3990681113.py:51: UserWarning
 <p>For this task we need to create a dictionary which will keep track of the number of times an element appears in each category.</p>
 <p>Let’s look at the schema to figure out what columns would be best to use for this task.</p>
 <div class="nbinput docutils container">
-<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[6]:
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[25]:
 </pre></div>
 </div>
 <div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">schema</span> <span class="o">=</span> <span class="n">db</span><span class="o">.</span><span class="n">get_schema</span><span class="p">()</span>
@@ -942,7 +839,7 @@ structure.sites: list&lt;element: struct&lt;abc: list&lt;element: double&gt;, la
 <div><p>Note: You may have noticed the <code class="docutils literal notranslate"><span class="pre">composition.</span></code> columns with elements. In Alexandria3D, the compsosition is stored in a dictionary where the key is the element and the value is the number of atoms. When data is stored in ParquetDB, we have to combine schema across all materials. This means adding null element fields to each row even though they are not present the original material. We can achieve what we want by using this, but it would be a bit messy.</p>
 </div></blockquote>
 <div class="nbinput docutils container">
-<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[7]:
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[26]:
 </pre></div>
 </div>
 <div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">table</span> <span class="o">=</span> <span class="n">db</span><span class="o">.</span><span class="n">read</span><span class="p">(</span><span class="n">columns</span><span class="o">=</span><span class="p">[</span><span class="s2">&quot;id&quot;</span><span class="p">,</span> <span class="s2">&quot;data.elements&quot;</span><span class="p">],</span> <span class="n">ids</span><span class="o">=</span><span class="p">[</span><span class="mi">0</span><span class="p">,</span> <span class="mi">10</span><span class="p">,</span> <span class="mi">100</span><span class="p">,</span> <span class="mi">1000</span><span class="p">,</span> <span class="mi">10000</span><span class="p">])</span>
@@ -953,7 +850,7 @@ structure.sites: list&lt;element: struct&lt;abc: list&lt;element: double&gt;, la
 </div>
 </div>
 <div class="nboutput nblast docutils container">
-<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[7]:
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[26]:
 </pre></div>
 </div>
 <div class="output_area rendered_html docutils container">
@@ -1011,7 +908,7 @@ structure.sites: list&lt;element: struct&lt;abc: list&lt;element: double&gt;, la
 </div>
 <p>Let’s create the dictionary to store the results for each element</p>
 <div class="nbinput docutils container">
-<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[8]:
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[27]:
 </pre></div>
 </div>
 <div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">symbols</span> <span class="o">=</span> <span class="p">[</span>
@@ -1062,7 +959,7 @@ structure.sites: list&lt;element: struct&lt;abc: list&lt;element: double&gt;, la
 <p>When performing searches over a column, it is recommended to use the <a class="reference external" href="https://arrow.apache.org/docs/python/api/compute.html" rel="noopener noreferrer" target="_blank">pyarrow compute methods</a>. This is because the compute methods are optimized in C++ and are much faster than the python methods. The methods perform the operations in parallel, making them much faster for large datasets. They are not bound by the GIL, so they can use all the cores of the machine.</p>
 <p>However, I could not find a method to handle the list column in the way I wanted. So I will create a method from that uses the compute methods. In this way, I fully take advantage of the compute method’s parallel processing capabilities.</p>
 <div class="nbinput docutils container">
-<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[9]:
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[28]:
 </pre></div>
 </div>
 <div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="c1"># This method will filter a column to see if a list column contains the value we want</span>
@@ -1125,7 +1022,7 @@ Filtered Table
 </div>
 <p>Now, let’s use this method to build distributions per electronic category.</p>
 <div class="nbinput nblast docutils container">
-<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[10]:
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[29]:
 </pre></div>
 </div>
 <div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">semiconductor_elements</span> <span class="o">=</span> <span class="n">copy</span><span class="o">.</span><span class="n">deepcopy</span><span class="p">(</span><span class="n">element_dict</span><span class="p">)</span>
@@ -1164,7 +1061,7 @@ Filtered Table
 </div>
 </div>
 <div class="nbinput docutils container">
-<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[12]:
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[32]:
 </pre></div>
 </div>
 <div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">tmp_dict</span> <span class="o">=</span> <span class="p">{</span>
@@ -1177,27 +1074,20 @@ Filtered Table
 
 <span class="n">fig</span><span class="p">,</span> <span class="n">ax</span> <span class="o">=</span> <span class="n">plot_periodic_table_heatmap</span><span class="p">(</span><span class="n">element_df</span><span class="p">,</span> <span class="n">property_name</span><span class="o">=</span><span class="s2">&quot;value&quot;</span><span class="p">)</span>
 <span class="n">ax</span><span class="o">.</span><span class="n">set_title</span><span class="p">(</span><span class="s2">&quot;Semiconductors (0.1 &lt;= E$_g$ &lt;= 3.0)</span><span class="se">\n</span><span class="s2"> Element Occurrences Distribution&quot;</span><span class="p">)</span>
+
+<span class="n">fig</span><span class="o">.</span><span class="n">set_size_inches</span><span class="p">(</span><span class="mi">10</span><span class="p">,</span> <span class="mi">6</span><span class="p">)</span>
 </pre></div>
 </div>
-</div>
-<div class="nboutput docutils container">
-<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[12]:
-</pre></div>
-</div>
-<div class="output_area docutils container">
-<div class="highlight"><pre>
-Text(0.5, 1.0, &#39;Semiconductors (0.1 &lt;= E$_g$ &lt;= 3.0)\n Element Occurrences Distribution&#39;)
-</pre></div></div>
 </div>
 <div class="nboutput nblast docutils container">
 <div class="prompt empty docutils container">
 </div>
 <div class="output_area docutils container">
-<img alt="../../_images/examples_notebooks_Example_2_-_3D_Alexandria_Advanced_21_1.png" src="../../_images/examples_notebooks_Example_2_-_3D_Alexandria_Advanced_21_1.png" />
+<img alt="../../_images/examples_notebooks_Example_2_-_3D_Alexandria_Advanced_22_0.png" src="../../_images/examples_notebooks_Example_2_-_3D_Alexandria_Advanced_22_0.png" />
 </div>
 </div>
 <div class="nbinput docutils container">
-<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[14]:
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[33]:
 </pre></div>
 </div>
 <div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">tmp_dict</span> <span class="o">=</span> <span class="p">{</span>
@@ -1210,27 +1100,19 @@ Text(0.5, 1.0, &#39;Semiconductors (0.1 &lt;= E$_g$ &lt;= 3.0)\n Element Occurre
 
 <span class="n">fig</span><span class="p">,</span> <span class="n">ax</span> <span class="o">=</span> <span class="n">plot_periodic_table_heatmap</span><span class="p">(</span><span class="n">element_df</span><span class="p">,</span> <span class="n">property_name</span><span class="o">=</span><span class="s2">&quot;value&quot;</span><span class="p">)</span>
 <span class="n">ax</span><span class="o">.</span><span class="n">set_title</span><span class="p">(</span><span class="s2">&quot;Small Gap Materials (Eg &lt; 0.1)</span><span class="se">\n</span><span class="s2"> Element Occurrences Distribution&quot;</span><span class="p">)</span>
+<span class="n">fig</span><span class="o">.</span><span class="n">set_size_inches</span><span class="p">(</span><span class="mi">10</span><span class="p">,</span> <span class="mi">6</span><span class="p">)</span>
 </pre></div>
 </div>
-</div>
-<div class="nboutput docutils container">
-<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[14]:
-</pre></div>
-</div>
-<div class="output_area docutils container">
-<div class="highlight"><pre>
-Text(0.5, 1.0, &#39;Small Gap Materials (Eg &lt; 0.1)\n Element Occurrences Distribution&#39;)
-</pre></div></div>
 </div>
 <div class="nboutput nblast docutils container">
 <div class="prompt empty docutils container">
 </div>
 <div class="output_area docutils container">
-<img alt="../../_images/examples_notebooks_Example_2_-_3D_Alexandria_Advanced_22_1.png" src="../../_images/examples_notebooks_Example_2_-_3D_Alexandria_Advanced_22_1.png" />
+<img alt="../../_images/examples_notebooks_Example_2_-_3D_Alexandria_Advanced_23_0.png" src="../../_images/examples_notebooks_Example_2_-_3D_Alexandria_Advanced_23_0.png" />
 </div>
 </div>
 <div class="nbinput docutils container">
-<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[15]:
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[34]:
 </pre></div>
 </div>
 <div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">tmp_dict</span> <span class="o">=</span> <span class="p">{</span>
@@ -1243,27 +1125,19 @@ Text(0.5, 1.0, &#39;Small Gap Materials (Eg &lt; 0.1)\n Element Occurrences Dist
 
 <span class="n">fig</span><span class="p">,</span> <span class="n">ax</span> <span class="o">=</span> <span class="n">plot_periodic_table_heatmap</span><span class="p">(</span><span class="n">element_df</span><span class="p">,</span> <span class="n">property_name</span><span class="o">=</span><span class="s2">&quot;value&quot;</span><span class="p">)</span>
 <span class="n">ax</span><span class="o">.</span><span class="n">set_title</span><span class="p">(</span><span class="s2">&quot;Metals (Eg = 0)</span><span class="se">\n</span><span class="s2"> Element Occurrences Distribution&quot;</span><span class="p">)</span>
+<span class="n">fig</span><span class="o">.</span><span class="n">set_size_inches</span><span class="p">(</span><span class="mi">10</span><span class="p">,</span> <span class="mi">6</span><span class="p">)</span>
 </pre></div>
 </div>
-</div>
-<div class="nboutput docutils container">
-<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[15]:
-</pre></div>
-</div>
-<div class="output_area docutils container">
-<div class="highlight"><pre>
-Text(0.5, 1.0, &#39;Metals (Eg = 0)\n Element Occurrences Distribution&#39;)
-</pre></div></div>
 </div>
 <div class="nboutput nblast docutils container">
 <div class="prompt empty docutils container">
 </div>
 <div class="output_area docutils container">
-<img alt="../../_images/examples_notebooks_Example_2_-_3D_Alexandria_Advanced_23_1.png" src="../../_images/examples_notebooks_Example_2_-_3D_Alexandria_Advanced_23_1.png" />
+<img alt="../../_images/examples_notebooks_Example_2_-_3D_Alexandria_Advanced_24_0.png" src="../../_images/examples_notebooks_Example_2_-_3D_Alexandria_Advanced_24_0.png" />
 </div>
 </div>
 <div class="nbinput docutils container">
-<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[16]:
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[35]:
 </pre></div>
 </div>
 <div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">tmp_dict</span> <span class="o">=</span> <span class="p">{</span>
@@ -1276,23 +1150,15 @@ Text(0.5, 1.0, &#39;Metals (Eg = 0)\n Element Occurrences Distribution&#39;)
 
 <span class="n">fig</span><span class="p">,</span> <span class="n">ax</span> <span class="o">=</span> <span class="n">plot_periodic_table_heatmap</span><span class="p">(</span><span class="n">element_df</span><span class="p">,</span> <span class="n">property_name</span><span class="o">=</span><span class="s2">&quot;value&quot;</span><span class="p">)</span>
 <span class="n">ax</span><span class="o">.</span><span class="n">set_title</span><span class="p">(</span><span class="s2">&quot;Insulators (Eg &gt; 3.0)</span><span class="se">\n</span><span class="s2"> Element Occurrences Distribution&quot;</span><span class="p">)</span>
+<span class="n">fig</span><span class="o">.</span><span class="n">set_size_inches</span><span class="p">(</span><span class="mi">10</span><span class="p">,</span> <span class="mi">6</span><span class="p">)</span>
 </pre></div>
 </div>
-</div>
-<div class="nboutput docutils container">
-<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[16]:
-</pre></div>
-</div>
-<div class="output_area docutils container">
-<div class="highlight"><pre>
-Text(0.5, 1.0, &#39;Insulators (Eg &gt; 3.0)\n Element Occurrences Distribution&#39;)
-</pre></div></div>
 </div>
 <div class="nboutput nblast docutils container">
 <div class="prompt empty docutils container">
 </div>
 <div class="output_area docutils container">
-<img alt="../../_images/examples_notebooks_Example_2_-_3D_Alexandria_Advanced_24_1.png" src="../../_images/examples_notebooks_Example_2_-_3D_Alexandria_Advanced_24_1.png" />
+<img alt="../../_images/examples_notebooks_Example_2_-_3D_Alexandria_Advanced_25_0.png" src="../../_images/examples_notebooks_Example_2_-_3D_Alexandria_Advanced_25_0.png" />
 </div>
 </div>
 </section>
@@ -1377,7 +1243,7 @@ Text(0.5, 1.0, &#39;Insulators (Eg &gt; 3.0)\n Element Occurrences Distribution&
       
     </aside>
   </div>
-</div><script src="../../_static/documentation_options.js?v=0d70ca51"></script>
+</div><script src="../../_static/documentation_options.js?v=7ca58008"></script>
     <script src="../../_static/doctools.js?v=9a2dae69"></script>
     <script src="../../_static/sphinx_highlight.js?v=dc90522c"></script>
     <script src="../../_static/scripts/furo.js?v=5fa4622c"></script>

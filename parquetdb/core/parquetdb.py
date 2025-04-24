@@ -20,7 +20,7 @@ import pyarrow.parquet as pq
 from parquetdb.core import types
 from parquetdb.utils import data_utils, mp_utils, pyarrow_utils
 from parquetdb.utils.config import config
-from parquetdb.utils.general_utils import is_directory_empty, timeit
+from parquetdb.utils.log_utils import set_verbose_level
 
 dill.settings["recurse"] = True
 # Logger setup
@@ -51,6 +51,9 @@ class NormalizeConfig:
     batch_readahead : int
         The number of batches to read ahead in a file.
         Default: 16
+    fileformat : pyarrow.dataset.ParquetFileFormat
+        The file format to use for the dataset.
+        Default: None
     fragment_readahead : int
         The number of files to read ahead, improving IO utilization at the cost of RAM usage.
         Default: 4
@@ -97,8 +100,8 @@ class NormalizeConfig:
     batch_size: int = 131_072
     batch_readahead: int = 16
     fragment_readahead: int = 4
+    fileformat: Optional[ds.ParquetFileFormat] = "parquet"
     fragment_scan_options: Optional[pa.dataset.FragmentScanOptions] = None
-    use_threads: bool = True
     memory_pool: Optional[pa.MemoryPool] = None
     filesystem: Optional[fs.FileSystem] = None
     file_options: Optional[ds.FileWriteOptions] = None
@@ -117,6 +120,13 @@ class NormalizeConfig:
         config.parquetdb_config.normalize_kwargs.existing_data_behavior
     )
     create_dir: bool = True
+
+    def __repr__(self):
+        tmp = "NormalizeConfig("
+        for key, value in self.__dict__.items():
+            tmp += f"{key}={value}, "
+        tmp += ")"
+        return tmp
 
 
 @dataclass
@@ -159,8 +169,9 @@ class ParquetDB:
         self,
         db_path,
         initial_fields: List[pa.Field] = None,
-        serialize_python_objects: bool = True,
+        serialize_python_objects: bool = False,
         use_multiprocessing: bool = False,
+        verbose: int = 1,
     ):
         """
         Initializes the ParquetDB object.
@@ -179,6 +190,10 @@ class ParquetDB:
         use_multiprocessing : bool, optional
             Whether to enable multiprocessing for operations.
             Default is False.
+        verbose: int, optional
+            Verbosity level for logging.
+            Default is 1.
+
 
         Examples
         --------
@@ -187,6 +202,11 @@ class ParquetDB:
         >>> fields = [pa.field('name', pa.string()), pa.field('age', pa.int32())]
         >>> db = ParquetDB(db_path='/path/to/db', initial_fields=fields)
         """
+        logger.info(f"Initializing ParquetDB with db_path: {db_path}")
+
+        logger.info(f"verbose: {verbose}")
+        set_verbose_level(verbose=verbose)
+
         self._db_path = db_path
         os.makedirs(self._db_path, exist_ok=True)
         self._serialize_python_objects = serialize_python_objects
@@ -210,10 +230,9 @@ class ParquetDB:
         # Applying config
         config.use_multiprocessing = use_multiprocessing
         config.serialize_python_objects = serialize_python_objects
-        config.apply()
 
     def __repr__(self):
-        return self.summary(show_column_names=True)
+        return self.summary(show_column_names=False)
 
     @property
     def db_path(self):
@@ -1169,13 +1188,18 @@ class ParquetDB:
         try:
             logger.info(f"Writing dataset to {dataset_dir}")
             logger.info(f"Basename template: {basename_template}")
+            logger.info(f"Retrieved data type : {type(retrieved_data)}")
+            logger.info(f"")
+            logger.info(f"Is Schema None : {schema is None}")
+
+            logger.info(f"Normalize config: {normalize_config}")
 
             ds.write_dataset(
                 retrieved_data,
                 dataset_dir,
                 basename_template=basename_template,
                 schema=schema,
-                format="parquet",
+                format=normalize_config.fileformat,
                 filesystem=normalize_config.filesystem,
                 file_options=normalize_config.file_options,
                 use_threads=normalize_config.use_threads,
@@ -1188,9 +1212,10 @@ class ParquetDB:
                 existing_data_behavior=normalize_config.existing_data_behavior,
                 create_dir=normalize_config.create_dir,
             )
+
             schema = self.get_schema()
 
-            # If any happen goes missing due to a transform do an error
+            # If id not in  fails due to a transform do an error
             if "id" not in schema.names:
                 a = 1 / 0
 
@@ -2867,15 +2892,18 @@ class ParquetDB:
         - Thread-safe for file counting
         """
         logger.info("Getting save path")
-        n_files = len(
-            glob(os.path.join(self.db_path, f"{self.dataset_name}_*.parquet"))
-        )
+        files = glob(os.path.join(self.db_path, f"{self.dataset_name}_*.parquet"))
+        n_files = len(files)
         save_path = None
         if n_files == 0:
             save_path = os.path.join(self.db_path, f"{self.dataset_name}_0.parquet")
         else:
+            max_index = 0
+            for file in files:
+                index = int(file.split("_")[-1].split(".")[0])
+                max_index = max(max_index, index)
             save_path = os.path.join(
-                self.db_path, f"{self.dataset_name}_{n_files}.parquet"
+                self.db_path, f"{self.dataset_name}_{max_index+1}.parquet"
             )
         logger.info(f"Save path: {save_path}")
         return save_path
@@ -2974,9 +3002,14 @@ class ParquetDB:
             or isinstance(data, dict)
             or isinstance(data, list)
         ):
-            incoming_array, schema = ParquetDB.process_data_with_python_objects(
-                data, schema, serialize_python_objects
-            )
+            if serialize_python_objects:
+                incoming_array, schema = ParquetDB.process_data_with_python_objects(
+                    data, schema, serialize_python_objects
+                )
+            else:
+                incoming_array, schema = (
+                    ParquetDB.preprocess_data_without_python_objects(data, schema)
+                )
         else:
             raise ValueError(
                 "Data must be a dictionary of arrays, a list of dictionaries, a pandas dataframe, or a pyarrow table"
@@ -3008,6 +3041,48 @@ class ParquetDB:
         return pa.Table.from_arrays(incoming_array, schema=schema)
 
     @staticmethod
+    def preprocess_data_without_python_objects(data, schema=None):
+        """
+        Preprocesses data without python objects.
+
+        This method preprocesses data without python objects by converting it to a PyArrow Table.
+        """
+        logger.info("Preprocessing data without python objects")
+        if isinstance(data, dict):
+            logger.info("The incoming data is a dictonary of arrays")
+            for key, value in data.items():
+                if not isinstance(value, List):
+                    data[key] = [value]
+            table = pa.Table.from_pydict(data)
+            incoming_array = table.to_struct_array()
+            incoming_array = incoming_array.flatten()
+            incoming_schema = table.schema
+
+        elif isinstance(data, list):
+            logger.info("Incoming data is a list of dictionaries")
+            # Convert to pyarrow array to get the schema. This method is faster than .from_pylist
+            # As from_pylist iterates through record in a python loop, but pa.array handles this in C++/cython
+            incoming_array = pa.array(data)
+            incoming_schema = pa.schema(incoming_array.type)
+            incoming_array = incoming_array.flatten()
+
+        elif isinstance(data, pd.DataFrame):
+            logger.info("Incoming data is a pandas dataframe")
+            table = pa.Table.from_pandas(data)
+            incoming_array = table.to_struct_array()
+            incoming_array = incoming_array.flatten()
+            incoming_schema = table.schema
+
+        else:
+            raise ValueError(
+                "Data must be a dictionary of arrays, a list of dictionaries, or a pandas dataframe"
+            )
+        # If schema is not provided, use the incoming schema
+        if schema is None:
+            schema = incoming_schema
+        return incoming_array, incoming_schema
+
+    @staticmethod
     def process_data_with_python_objects(
         data,
         schema=None,
@@ -3032,6 +3107,7 @@ class ParquetDB:
             Tuple containing flattened arrays and schema.
 
         """
+        logger.info("Processing data with python objects")
         if isinstance(data, dict):
             df = pd.DataFrame.from_records(data)
         elif isinstance(data, list):

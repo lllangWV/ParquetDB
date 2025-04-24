@@ -6,13 +6,14 @@
 <link rel="index" title="Index" href="../../../genindex.html" /><link rel="search" title="Search" href="../../../search.html" /><link rel="next" title="NormalizeConfig" href="../normalize_config.html" /><link rel="prev" title="ParquetDB" href="../parquetdb.html" />
 
     <!-- Generated with Sphinx 7.4.7 and Furo 2024.08.06 -->
-        <title>parquetdb.core.parquetdb.ParquetDB - ParquetDB Docs: v0.24.1</title>
+        <title>parquetdb.core.parquetdb.ParquetDB - ParquetDB Docs: v0.25.1</title>
       <link rel="stylesheet" type="text/css" href="../../../_static/pygments.css?v=fa44fd50" />
     <link rel="stylesheet" type="text/css" href="../../../_static/styles/furo.css?v=354aac6f" />
     <link rel="stylesheet" type="text/css" href="../../../_static/copybutton.css?v=76b2166b" />
     <link rel="stylesheet" type="text/css" href="../../../_static/sphinx-design.min.css?v=95c83b7e" />
     <link rel="stylesheet" type="text/css" href="../../../_static/styles/furo-extensions.css?v=302659d7" />
     <link rel="stylesheet" type="text/css" href="../../../_static/css/custom.css" />
+    <link rel="stylesheet" type="text/css" href="../../../_static/notebook.css?v=3901a606" />
     
     
 
@@ -169,7 +170,7 @@
       </label>
     </div>
     <div class="header-center">
-      <a href="../../../index.html"><div class="brand">ParquetDB Docs: v0.24.1</div></a>
+      <a href="../../../index.html"><div class="brand">ParquetDB Docs: v0.25.1</div></a>
     </div>
     <div class="header-right">
       <div class="theme-toggle-container theme-toggle-header">
@@ -196,7 +197,7 @@
     <img class="sidebar-logo" src="../../../_static/ParquetDB_logo.png" alt="Logo"/>
   </div>
   
-  <span class="sidebar-brand-text">ParquetDB Docs: v0.24.1</span>
+  <span class="sidebar-brand-text">ParquetDB Docs: v0.25.1</span>
   
 </a><form class="sidebar-search-container" method="get" action="../../../search.html" role="search">
   <input class="sidebar-search" placeholder="Search" name="q" aria-label="Search">
@@ -229,6 +230,12 @@
 <li class="toctree-l2"><a class="reference internal" href="../../../examples/notebooks/Example%202%20-%203D%20Alexandria%20Advanced.html">3D Alexandria Advanced</a></li>
 <li class="toctree-l2"><a class="reference internal" href="../../../examples/notebooks/Example%203%20-%20Jarvis-dft_3d.html">ParquetDB with the Jarvis Dataset DFT_3D</a></li>
 <li class="toctree-l2"><a class="reference internal" href="../../../examples/notebooks/Example%204%20-%20Jarvis-dft_pbe_2d.html">ParquetDB with the Jarvis Dataset DFT PBE 2D</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../../examples/benchmarks/Needle-in-Haystack%20Benchmark.html">Needle-in-Haystack Benchmark Notebook</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../../examples/benchmarks/Input%20Update%20Benchmark.html">Input Update Benchmark Notebook</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../../examples/benchmarks/Create%20and%20Read%20Benchmark.html">Read/Write Benchmark Notebook</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../../examples/benchmarks/Update%20Into%20Constant%20Rows%20Benchmark.html">Update Benchmark Notebook</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../../examples/benchmarks/Full%20DB%20Updates%20Benchmark.html">Full DB Updates Benchmark Notebook</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../../../examples/benchmarks/Small%20Benchmark.html">Small Benchmark</a></li>
 </ul>
 </li>
 <li class="toctree-l1 current has-children"><a class="reference internal" href="../../index.html">API Reference</a><input checked="" class="toctree-checkbox" id="toctree-checkbox-4" name="toctree-checkbox-4" role="switch" type="checkbox"/><label for="toctree-checkbox-4"><div class="visually-hidden">Toggle navigation of API Reference</div><i class="icon"><svg><use href="#svg-arrow-right"></use></svg></i></label><ul class="current">
@@ -298,10 +305,10 @@
 <h1>parquetdb.core.parquetdb.ParquetDB<a class="headerlink" href="#parquetdb-core-parquetdb-parquetdb" title="Link to this heading">¶</a></h1>
 <dl class="py class">
 <dt class="sig sig-object py" id="parquetdb.core.parquetdb.ParquetDB">
-<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">ParquetDB</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">db_path</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">initial_fields</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">List</span><span class="p"><span class="pre">[</span></span><span class="pre">Field</span><span class="p"><span class="pre">]</span></span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">serialize_python_objects</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">bool</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">True</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">use_multiprocessing</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">bool</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">False</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#parquetdb.core.parquetdb.ParquetDB" title="Link to this definition">¶</a></dt>
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">ParquetDB</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">db_path</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">initial_fields</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">List</span><span class="p"><span class="pre">[</span></span><span class="pre">Field</span><span class="p"><span class="pre">]</span></span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">serialize_python_objects</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">bool</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">False</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">use_multiprocessing</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">bool</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">False</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">verbose</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">int</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">1</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#parquetdb.core.parquetdb.ParquetDB" title="Link to this definition">¶</a></dt>
 <dd><dl class="py method">
 <dt class="sig sig-object py" id="parquetdb.core.parquetdb.ParquetDB.__init__">
-<span class="sig-name descname"><span class="pre">__init__</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">db_path</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">initial_fields</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">List</span><span class="p"><span class="pre">[</span></span><span class="pre">Field</span><span class="p"><span class="pre">]</span></span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">serialize_python_objects</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">bool</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">True</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">use_multiprocessing</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">bool</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">False</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#parquetdb.core.parquetdb.ParquetDB.__init__" title="Link to this definition">¶</a></dt>
+<span class="sig-name descname"><span class="pre">__init__</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">db_path</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">initial_fields</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">List</span><span class="p"><span class="pre">[</span></span><span class="pre">Field</span><span class="p"><span class="pre">]</span></span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">serialize_python_objects</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">bool</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">False</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">use_multiprocessing</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">bool</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">False</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">verbose</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">int</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">1</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#parquetdb.core.parquetdb.ParquetDB.__init__" title="Link to this definition">¶</a></dt>
 <dd><p>Initializes the ParquetDB object.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters<span class="colon">:</span></dt>
@@ -314,6 +321,8 @@ Default is None (empty list).</p></li>
 Default is True.</p></li>
 <li><p><strong>use_multiprocessing</strong> (<em>bool, optional</em>) – Whether to enable multiprocessing for operations.
 Default is False.</p></li>
+<li><p><strong>verbose</strong> (<em>int, optional</em>) – Verbosity level for logging.
+Default is 1.</p></li>
 </ul>
 </dd>
 </dl>
@@ -369,26 +378,32 @@ Default is False.</p></li>
 <tr class="row-odd"><td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">get_field_names</span></code>([columns, include_cols])</p></td>
 <td><p>Get the names of fields/columns in the dataset schema.</p></td>
 </tr>
-<tr class="row-even"><td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">get_metadata</span></code>([return_bytes])</p></td>
+<tr class="row-even"><td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">get_file_sizes</span></code>([verbose])</p></td>
+<td><p>Get the size of each file in the dataset in MB.</p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">get_metadata</span></code>([return_bytes])</p></td>
 <td><p>Retrieves the metadata of the dataset table.</p></td>
 </tr>
-<tr class="row-odd"><td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">get_n_rows_per_row_group_per_file</span></code>([as_dict])</p></td>
+<tr class="row-even"><td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">get_n_rows_per_row_group_per_file</span></code>([as_dict])</p></td>
 <td><p>Get the number of rows in each row group for each file.</p></td>
 </tr>
-<tr class="row-even"><td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">get_number_of_row_groups_per_file</span></code>()</p></td>
+<tr class="row-odd"><td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">get_number_of_row_groups_per_file</span></code>()</p></td>
 <td><p>Get the number of row groups in each Parquet file in the dataset.</p></td>
 </tr>
-<tr class="row-odd"><td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">get_number_of_rows_per_file</span></code>()</p></td>
+<tr class="row-even"><td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">get_number_of_rows_per_file</span></code>()</p></td>
 <td><p>Get the number of rows in each Parquet file in the dataset.</p></td>
 </tr>
-<tr class="row-even"><td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">get_parquet_column_metadata_per_file</span></code>([as_dict])</p></td>
+<tr class="row-odd"><td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">get_parquet_column_metadata_per_file</span></code>([as_dict])</p></td>
 <td><p>Get detailed metadata for each column in each row group in each file.</p></td>
 </tr>
-<tr class="row-odd"><td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">get_parquet_file_metadata_per_file</span></code>([as_dict])</p></td>
+<tr class="row-even"><td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">get_parquet_file_metadata_per_file</span></code>([as_dict])</p></td>
 <td><p>Get the metadata for each Parquet file in the dataset.</p></td>
 </tr>
-<tr class="row-even"><td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">get_parquet_file_row_group_metadata_per_file</span></code>([...])</p></td>
+<tr class="row-odd"><td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">get_parquet_file_row_group_metadata_per_file</span></code>([...])</p></td>
 <td><p>Get detailed metadata for each row group in each Parquet file.</p></td>
+</tr>
+<tr class="row-even"><td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">get_row_group_sizes_per_file</span></code>([verbose])</p></td>
+<td><p>Get the size of each row group for each file.</p></td>
 </tr>
 <tr class="row-odd"><td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">get_schema</span></code>()</p></td>
 <td><p>Get the PyArrow schema of the dataset.</p></td>
@@ -408,46 +423,49 @@ Default is False.</p></li>
 <tr class="row-even"><td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">normalize</span></code>([normalize_config])</p></td>
 <td><p>Normalize the dataset by restructuring files for optimal performance.</p></td>
 </tr>
-<tr class="row-odd"><td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">preprocess_table</span></code>(table[, ...])</p></td>
+<tr class="row-odd"><td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">preprocess_data_without_python_objects</span></code>(data)</p></td>
+<td><p>Preprocesses data without python objects.</p></td>
+</tr>
+<tr class="row-even"><td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">preprocess_table</span></code>(table[, ...])</p></td>
 <td><p>Preprocesses a PyArrow table by flattening nested structures and handling special field types.</p></td>
 </tr>
-<tr class="row-even"><td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">process_data_with_python_objects</span></code>(data[, ...])</p></td>
+<tr class="row-odd"><td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">process_data_with_python_objects</span></code>(data[, ...])</p></td>
 <td><p>Processes input data and handles Python object serialization.</p></td>
 </tr>
-<tr class="row-odd"><td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">read</span></code>([ids, columns, filters, load_format, ...])</p></td>
+<tr class="row-even"><td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">read</span></code>([ids, columns, filters, load_format, ...])</p></td>
 <td><p>Reads data from the database with flexible filtering and formatting options.</p></td>
 </tr>
-<tr class="row-even"><td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">rename_dataset</span></code>(new_name[, remove_dest])</p></td>
+<tr class="row-odd"><td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">rename_dataset</span></code>(new_name[, remove_dest])</p></td>
 <td><p>Renames the current dataset directory and all contained files.</p></td>
 </tr>
-<tr class="row-odd"><td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">rename_fields</span></code>(name_map[, normalize_config])</p></td>
+<tr class="row-even"><td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">rename_fields</span></code>(name_map[, normalize_config])</p></td>
 <td><p>Rename fields/columns in the dataset using a mapping dictionary.</p></td>
 </tr>
-<tr class="row-even"><td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">restore_database</span></code>(backup_path)</p></td>
+<tr class="row-odd"><td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">restore_database</span></code>(backup_path)</p></td>
 <td><p>Restores the dataset from a previous backup.</p></td>
 </tr>
-<tr class="row-odd"><td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">set_field_metadata</span></code>(fields_metadata[, update])</p></td>
+<tr class="row-even"><td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">set_field_metadata</span></code>(fields_metadata[, update])</p></td>
 <td><p>Sets or updates metadata for specific fields/columns in the dataset.</p></td>
 </tr>
-<tr class="row-even"><td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">set_metadata</span></code>(metadata[, update])</p></td>
+<tr class="row-odd"><td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">set_metadata</span></code>(metadata[, update])</p></td>
 <td><p>Sets or updates the metadata of the dataset table.</p></td>
 </tr>
-<tr class="row-odd"><td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">sort_fields</span></code>([normalize_config])</p></td>
+<tr class="row-even"><td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">sort_fields</span></code>([normalize_config])</p></td>
 <td><p>Sort the fields/columns of the dataset alphabetically by name.</p></td>
 </tr>
-<tr class="row-even"><td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">summary</span></code>([show_column_names, ...])</p></td>
+<tr class="row-odd"><td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">summary</span></code>([show_column_names, ...])</p></td>
 <td><p>Generate a formatted summary string containing database information and metadata.</p></td>
 </tr>
-<tr class="row-odd"><td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">to_nested</span></code>([nested_dataset_dir, ...])</p></td>
+<tr class="row-even"><td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">to_nested</span></code>([nested_dataset_dir, ...])</p></td>
 <td><p>Converts the current dataset to a nested structure optimized for querying nested data.</p></td>
 </tr>
-<tr class="row-even"><td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">transform</span></code>(transform_callable[, new_db_path, ...])</p></td>
+<tr class="row-odd"><td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">transform</span></code>(transform_callable[, new_db_path, ...])</p></td>
 <td><p>Transform the entire dataset using a user-provided callable.</p></td>
 </tr>
-<tr class="row-odd"><td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">update</span></code>(data[, schema, metadata, ...])</p></td>
+<tr class="row-even"><td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">update</span></code>(data[, schema, metadata, ...])</p></td>
 <td><p>Updates existing records in the database by matching on specified key fields.</p></td>
 </tr>
-<tr class="row-even"><td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">update_schema</span></code>([field_dict, schema, ...])</p></td>
+<tr class="row-odd"><td><p><code class="xref py py-obj docutils literal notranslate"><span class="pre">update_schema</span></code>([field_dict, schema, ...])</p></td>
 <td><p>Updates the schema of the table in the dataset.</p></td>
 </tr>
 </tbody>
@@ -568,7 +586,7 @@ Default is False.</p></li>
       
     </aside>
   </div>
-</div><script src="../../../_static/documentation_options.js?v=0d70ca51"></script>
+</div><script src="../../../_static/documentation_options.js?v=7ca58008"></script>
     <script src="../../../_static/doctools.js?v=9a2dae69"></script>
     <script src="../../../_static/sphinx_highlight.js?v=dc90522c"></script>
     <script src="../../../_static/scripts/furo.js?v=5fa4622c"></script>

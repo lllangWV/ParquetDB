@@ -6,7 +6,7 @@
 <link rel="index" title="Index" href="../../genindex.html" /><link rel="search" title="Search" href="../../search.html" /><link rel="next" title="3D Alexandria Advanced" href="Example%202%20-%203D%20Alexandria%20Advanced.html" /><link rel="prev" title="Examples for the ParquetDB package" href="../index.html" />
 
     <!-- Generated with Sphinx 7.4.7 and Furo 2024.08.06 -->
-        <title>3D Alexandria Database - ParquetDB Docs: v0.24.1</title>
+        <title>3D Alexandria Database - ParquetDB Docs: v0.25.1</title>
       <link rel="stylesheet" type="text/css" href="../../_static/pygments.css?v=fa44fd50" />
     <link rel="stylesheet" type="text/css" href="../../_static/styles/furo.css?v=354aac6f" />
     <link rel="stylesheet" type="text/css" href="../../_static/copybutton.css?v=76b2166b" />
@@ -14,6 +14,7 @@
     <link rel="stylesheet" type="text/css" href="../../_static/nbsphinx-code-cells.css?v=2aa19091" />
     <link rel="stylesheet" type="text/css" href="../../_static/styles/furo-extensions.css?v=302659d7" />
     <link rel="stylesheet" type="text/css" href="../../_static/css/custom.css" />
+    <link rel="stylesheet" type="text/css" href="../../_static/notebook.css?v=3901a606" />
     
     
 
@@ -170,7 +171,7 @@
       </label>
     </div>
     <div class="header-center">
-      <a href="../../index.html"><div class="brand">ParquetDB Docs: v0.24.1</div></a>
+      <a href="../../index.html"><div class="brand">ParquetDB Docs: v0.25.1</div></a>
     </div>
     <div class="header-right">
       <div class="theme-toggle-container theme-toggle-header">
@@ -197,7 +198,7 @@
     <img class="sidebar-logo" src="../../_static/ParquetDB_logo.png" alt="Logo"/>
   </div>
   
-  <span class="sidebar-brand-text">ParquetDB Docs: v0.24.1</span>
+  <span class="sidebar-brand-text">ParquetDB Docs: v0.25.1</span>
   
 </a><form class="sidebar-search-container" method="get" action="../../search.html" role="search">
   <input class="sidebar-search" placeholder="Search" name="q" aria-label="Search">
@@ -230,6 +231,12 @@
 <li class="toctree-l2"><a class="reference internal" href="Example%202%20-%203D%20Alexandria%20Advanced.html">3D Alexandria Advanced</a></li>
 <li class="toctree-l2"><a class="reference internal" href="Example%203%20-%20Jarvis-dft_3d.html">ParquetDB with the Jarvis Dataset DFT_3D</a></li>
 <li class="toctree-l2"><a class="reference internal" href="Example%204%20-%20Jarvis-dft_pbe_2d.html">ParquetDB with the Jarvis Dataset DFT PBE 2D</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../benchmarks/Needle-in-Haystack%20Benchmark.html">Needle-in-Haystack Benchmark Notebook</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../benchmarks/Input%20Update%20Benchmark.html">Input Update Benchmark Notebook</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../benchmarks/Create%20and%20Read%20Benchmark.html">Read/Write Benchmark Notebook</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../benchmarks/Update%20Into%20Constant%20Rows%20Benchmark.html">Update Benchmark Notebook</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../benchmarks/Full%20DB%20Updates%20Benchmark.html">Full DB Updates Benchmark Notebook</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../benchmarks/Small%20Benchmark.html">Small Benchmark</a></li>
 </ul>
 </li>
 <li class="toctree-l1 has-children"><a class="reference internal" href="../../03_api/index.html">API Reference</a><input class="toctree-checkbox" id="toctree-checkbox-4" name="toctree-checkbox-4" role="switch" type="checkbox"/><label for="toctree-checkbox-4"><div class="visually-hidden">Toggle navigation of API Reference</div><i class="icon"><svg><use href="#svg-arrow-right"></use></svg></i></label><ul>
@@ -299,7 +306,16 @@
 <h1>3D Alexandria Database<a class="headerlink" href="#3D-Alexandria-Database" title="Link to this heading">¶</a></h1>
 <p><img alt="alexandria_3d" src="../../_images/alexandria_3d_database.png" /></p>
 <div class="nbinput nblast docutils container">
-<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[41]:
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[ ]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="o">!</span>pip<span class="w"> </span>install<span class="w"> </span>parquetdb
+<span class="o">!</span>pip<span class="w"> </span>install<span class="w"> </span>pymatgen
+</pre></div>
+</div>
+</div>
+<div class="nbinput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[1]:
 </pre></div>
 </div>
 <div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="kn">import</span> <span class="nn">json</span>
@@ -326,7 +342,7 @@
 <section id="Setup-data-directories">
 <h3>Setup data directories<a class="headerlink" href="#Setup-data-directories" title="Link to this heading">¶</a></h3>
 <div class="nbinput nblast docutils container">
-<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[42]:
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[2]:
 </pre></div>
 </div>
 <div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">base_dir</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">config</span><span class="o">.</span><span class="n">data_dir</span><span class="p">,</span> <span class="s2">&quot;external&quot;</span><span class="p">,</span> <span class="s2">&quot;alexandria&quot;</span><span class="p">,</span> <span class="s2">&quot;AlexandriaDB&quot;</span><span class="p">)</span>
@@ -339,7 +355,7 @@
 <h3>Download the database<a class="headerlink" href="#Download-the-database" title="Link to this heading">¶</a></h3>
 <p>Lets download the database</p>
 <div class="nbinput docutils container">
-<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[43]:
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[3]:
 </pre></div>
 </div>
 <div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="k">def</span> <span class="nf">download_alexandria_database</span><span class="p">(</span><span class="n">base_dir</span><span class="p">,</span> <span class="n">from_scratch</span><span class="o">=</span><span class="kc">False</span><span class="p">):</span>
@@ -378,7 +394,7 @@ Z:\data\parquetdb\data\external\alexandria\uncompressed
 <section id="Creating-the-database">
 <h2>Creating the database<a class="headerlink" href="#Creating-the-database" title="Link to this heading">¶</a></h2>
 <div class="nbinput docutils container">
-<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[46]:
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[4]:
 </pre></div>
 </div>
 <div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">db</span> <span class="o">=</span> <span class="n">ParquetDB</span><span class="p">(</span><span class="n">db_path</span><span class="o">=</span><span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">base_dir</span><span class="p">,</span> <span class="s2">&quot;alexandria_3D&quot;</span><span class="p">))</span>
@@ -391,17 +407,19 @@ Z:\data\parquetdb\data\external\alexandria\uncompressed
 </div>
 <div class="output_area docutils container">
 <div class="highlight"><pre>
+[INFO] 2025-04-22 09:14:49 - parquetdb.core.parquetdb[205][__init__] - Initializing ParquetDB with db_path: Z:\data\parquetdb\data\external\alexandria\AlexandriaDB\alexandria_3D
+[INFO] 2025-04-22 09:14:49 - parquetdb.core.parquetdb[207][__init__] - verbose: 1
 ============================================================
 PARQUETDB SUMMARY
 ============================================================
 Database path: Z:\data\parquetdb\data\external\alexandria\AlexandriaDB\alexandria_3D
 
-• Number of columns: 1
-• Number of rows: 0
+• Number of columns: 128
+• Number of rows: 4389295
 • Number of files: 1
-• Number of rows per file: [0]
-• Number of row groups per file: [1]
-• Serialized metadata size per file: [312] Bytes
+• Number of rows per file: [4389295]
+• Number of row groups per file: [22]
+• Serialized metadata size per file: [377883] Bytes
 
 ############################################################
 METADATA
@@ -410,14 +428,12 @@ METADATA
 ############################################################
 COLUMN DETAILS
 ############################################################
-• Columns:
-    - id
 
 </pre></div></div>
 </div>
 <p>Lets Define some dictionaries to store some benchmark results</p>
 <div class="nbinput nblast docutils container">
-<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[47]:
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[5]:
 </pre></div>
 </div>
 <div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">benchmark_dict</span> <span class="o">=</span> <span class="p">{</span>
@@ -435,7 +451,7 @@ COLUMN DETAILS
 <p>Here I am just iterating over the json files and creating the database. I am also storing how long it takes to load each json file, how many materials, and how long it takes to input the data into the database.</p>
 <p>This dataset is rather large, so you may have to choose the normalization parameters depending on how much RAM you have. If you do not have enough tweak the <code class="docutils literal notranslate"><span class="pre">batch_size</span></code>, <code class="docutils literal notranslate"><span class="pre">batch_readahead</span></code>, <code class="docutils literal notranslate"><span class="pre">fragment_readahead</span></code> parameters.</p>
 <div class="nbinput docutils container">
-<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[48]:
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[6]:
 </pre></div>
 </div>
 <div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="k">def</span> <span class="nf">create_database_if_empty</span><span class="p">(</span><span class="n">db</span><span class="p">,</span> <span class="n">alexandria_dir</span><span class="p">,</span> <span class="n">normalize_config</span><span class="o">=</span><span class="n">NormalizeConfig</span><span class="p">()):</span>
@@ -528,183 +544,6 @@ COLUMN DETAILS
 <div class="output_area docutils container">
 <div class="highlight"><pre>
 Starting task: create_database_if_empty
-The dataset does not exist. Creating it.
-Processing file: alexandria_001.json
-Number of materials: 100000
-Time taken to create dataset: 9.207536935806274
-----------------------------------------------------------------------------------------------------
-Processing file: alexandria_002.json
-Number of materials: 100000
-Time taken to create dataset: 9.03726840019226
-----------------------------------------------------------------------------------------------------
-Processing file: alexandria_003.json
-Number of materials: 100000
-Time taken to create dataset: 7.272280693054199
-----------------------------------------------------------------------------------------------------
-Processing file: alexandria_004.json
-Number of materials: 100000
-Time taken to create dataset: 6.3968799114227295
-----------------------------------------------------------------------------------------------------
-Processing file: alexandria_005.json
-Number of materials: 100000
-Time taken to create dataset: 9.731169700622559
-----------------------------------------------------------------------------------------------------
-Processing file: alexandria_006.json
-Number of materials: 100000
-Time taken to create dataset: 7.279998540878296
-----------------------------------------------------------------------------------------------------
-Processing file: alexandria_007.json
-Number of materials: 100000
-Time taken to create dataset: 7.452792167663574
-----------------------------------------------------------------------------------------------------
-Processing file: alexandria_008.json
-Number of materials: 100000
-Time taken to create dataset: 6.5389344692230225
-----------------------------------------------------------------------------------------------------
-Processing file: alexandria_009.json
-Number of materials: 100000
-Time taken to create dataset: 12.014537334442139
-----------------------------------------------------------------------------------------------------
-Processing file: alexandria_010.json
-Number of materials: 100000
-Time taken to create dataset: 7.618973016738892
-----------------------------------------------------------------------------------------------------
-Processing file: alexandria_011.json
-Number of materials: 100000
-Time taken to create dataset: 8.03697943687439
-----------------------------------------------------------------------------------------------------
-Processing file: alexandria_012.json
-Number of materials: 100000
-Time taken to create dataset: 6.7988600730896
-----------------------------------------------------------------------------------------------------
-Processing file: alexandria_013.json
-Number of materials: 100000
-Time taken to create dataset: 6.983482122421265
-----------------------------------------------------------------------------------------------------
-Processing file: alexandria_014.json
-Number of materials: 100000
-Time taken to create dataset: 7.620621919631958
-----------------------------------------------------------------------------------------------------
-Processing file: alexandria_015.json
-Number of materials: 100000
-Time taken to create dataset: 7.09317684173584
-----------------------------------------------------------------------------------------------------
-Processing file: alexandria_016.json
-Number of materials: 100000
-Time taken to create dataset: 7.633606433868408
-----------------------------------------------------------------------------------------------------
-Processing file: alexandria_017.json
-Number of materials: 100000
-Time taken to create dataset: 7.403124570846558
-----------------------------------------------------------------------------------------------------
-Processing file: alexandria_018.json
-Number of materials: 100000
-Time taken to create dataset: 7.627993822097778
-----------------------------------------------------------------------------------------------------
-Processing file: alexandria_019.json
-Number of materials: 100000
-Time taken to create dataset: 7.117793560028076
-----------------------------------------------------------------------------------------------------
-Processing file: alexandria_020.json
-Number of materials: 100000
-Time taken to create dataset: 7.894531011581421
-----------------------------------------------------------------------------------------------------
-Processing file: alexandria_021.json
-Number of materials: 100000
-Time taken to create dataset: 6.83626651763916
-----------------------------------------------------------------------------------------------------
-Processing file: alexandria_022.json
-Number of materials: 100000
-Time taken to create dataset: 6.791656732559204
-----------------------------------------------------------------------------------------------------
-Processing file: alexandria_023.json
-Number of materials: 100000
-Time taken to create dataset: 6.708625555038452
-----------------------------------------------------------------------------------------------------
-Processing file: alexandria_024.json
-Number of materials: 100000
-Time taken to create dataset: 8.351858377456665
-----------------------------------------------------------------------------------------------------
-Processing file: alexandria_025.json
-Number of materials: 100000
-Time taken to create dataset: 7.344949007034302
-----------------------------------------------------------------------------------------------------
-Processing file: alexandria_026.json
-Number of materials: 100000
-Time taken to create dataset: 27.566998958587646
-----------------------------------------------------------------------------------------------------
-Processing file: alexandria_027.json
-Number of materials: 100000
-Time taken to create dataset: 7.999422073364258
-----------------------------------------------------------------------------------------------------
-Processing file: alexandria_028.json
-Number of materials: 100000
-Time taken to create dataset: 8.236054182052612
-----------------------------------------------------------------------------------------------------
-Processing file: alexandria_029.json
-Number of materials: 100000
-Time taken to create dataset: 8.136978387832642
-----------------------------------------------------------------------------------------------------
-Processing file: alexandria_030.json
-Number of materials: 100000
-Time taken to create dataset: 7.855477571487427
-----------------------------------------------------------------------------------------------------
-Processing file: alexandria_031.json
-Number of materials: 100000
-Time taken to create dataset: 7.7916247844696045
-----------------------------------------------------------------------------------------------------
-Processing file: alexandria_032.json
-Number of materials: 100000
-Time taken to create dataset: 6.601974010467529
-----------------------------------------------------------------------------------------------------
-Processing file: alexandria_033.json
-Number of materials: 100000
-Time taken to create dataset: 6.663681983947754
-----------------------------------------------------------------------------------------------------
-Processing file: alexandria_034.json
-Number of materials: 100000
-Time taken to create dataset: 7.94143009185791
-----------------------------------------------------------------------------------------------------
-Processing file: alexandria_035.json
-Number of materials: 100000
-Time taken to create dataset: 7.299615859985352
-----------------------------------------------------------------------------------------------------
-Processing file: alexandria_036.json
-Number of materials: 100000
-Time taken to create dataset: 6.486094951629639
-----------------------------------------------------------------------------------------------------
-Processing file: alexandria_037.json
-Number of materials: 100000
-Time taken to create dataset: 8.335729360580444
-----------------------------------------------------------------------------------------------------
-Processing file: alexandria_038.json
-Number of materials: 100000
-Time taken to create dataset: 6.945127248764038
-----------------------------------------------------------------------------------------------------
-Processing file: alexandria_039.json
-Number of materials: 100000
-Time taken to create dataset: 7.50490403175354
-----------------------------------------------------------------------------------------------------
-Processing file: alexandria_040.json
-Number of materials: 100000
-Time taken to create dataset: 7.409191131591797
-----------------------------------------------------------------------------------------------------
-Processing file: alexandria_041.json
-Number of materials: 100000
-Time taken to create dataset: 7.5053534507751465
-----------------------------------------------------------------------------------------------------
-Processing file: alexandria_042.json
-Number of materials: 100000
-Time taken to create dataset: 7.061246871948242
-----------------------------------------------------------------------------------------------------
-Processing file: alexandria_043.json
-Number of materials: 100000
-Time taken to create dataset: 6.405843496322632
-----------------------------------------------------------------------------------------------------
-Processing file: alexandria_044.json
-Number of materials: 89295
-Time taken to create dataset: 5.768043756484985
-----------------------------------------------------------------------------------------------------
 Done with task: create_database_if_empty
 --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 </pre></div></div>
@@ -716,7 +555,7 @@ Done with task: create_database_if_empty
 <p>It is best practive to normalize the dataset after all the data has been inputed. This will optimize the performance of the database.</p>
 <p>First let’s see how the data is distributed in the row groups.</p>
 <div class="nbinput docutils container">
-<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[49]:
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[7]:
 </pre></div>
 </div>
 <div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">summary</span> <span class="o">=</span> <span class="n">db</span><span class="o">.</span><span class="n">summary</span><span class="p">(</span><span class="n">show_row_group_metadata</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
@@ -736,174 +575,34 @@ Database path: Z:\data\parquetdb\data\external\alexandria\AlexandriaDB\alexandri
 
 • Number of columns: 128
 • Number of rows: 4389295
-• Number of files: 44
-• Number of rows per file: [100000, 100000, 100000, 100000, 100000, 100000, 100000, 100000, 100000, 100000, 100000, 100000, 100000, 100000, 100000, 100000, 100000, 100000, 100000, 100000, 100000, 100000, 100000, 100000, 100000, 100000, 100000, 100000, 100000, 100000, 100000, 100000, 100000, 100000, 100000, 100000, 100000, 100000, 89295, 100000, 100000, 100000, 100000, 100000]
-• Number of row groups per file: [4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 1, 1, 1, 1, 1, 4, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 4, 1, 1, 1, 1, 4, 4, 4, 4, 4]
+• Number of files: 1
+• Number of rows per file: [4389295]
+• Number of row groups per file: [22]
 • Number of rows per row group per file:
     - alexandria_3D_0.parquet:
-        - Row group 0: 32768 rows
-        - Row group 1: 32768 rows
-        - Row group 2: 32768 rows
-        - Row group 3: 1696 rows
-    - alexandria_3D_1.parquet:
-        - Row group 0: 32768 rows
-        - Row group 1: 32768 rows
-        - Row group 2: 32768 rows
-        - Row group 3: 1696 rows
-    - alexandria_3D_10.parquet:
-        - Row group 0: 32768 rows
-        - Row group 1: 32768 rows
-        - Row group 2: 32768 rows
-        - Row group 3: 1696 rows
-    - alexandria_3D_11.parquet:
-        - Row group 0: 32768 rows
-        - Row group 1: 32768 rows
-        - Row group 2: 32768 rows
-        - Row group 3: 1696 rows
-    - alexandria_3D_12.parquet:
-        - Row group 0: 32768 rows
-        - Row group 1: 32768 rows
-        - Row group 2: 32768 rows
-        - Row group 3: 1696 rows
-    - alexandria_3D_13.parquet:
-        - Row group 0: 32768 rows
-        - Row group 1: 32768 rows
-        - Row group 2: 32768 rows
-        - Row group 3: 1696 rows
-    - alexandria_3D_14.parquet:
-        - Row group 0: 32768 rows
-        - Row group 1: 32768 rows
-        - Row group 2: 32768 rows
-        - Row group 3: 1696 rows
-    - alexandria_3D_15.parquet:
-        - Row group 0: 32768 rows
-        - Row group 1: 32768 rows
-        - Row group 2: 32768 rows
-        - Row group 3: 1696 rows
-    - alexandria_3D_16.parquet:
-        - Row group 0: 32768 rows
-        - Row group 1: 32768 rows
-        - Row group 2: 32768 rows
-        - Row group 3: 1696 rows
-    - alexandria_3D_17.parquet:
-        - Row group 0: 32768 rows
-        - Row group 1: 32768 rows
-        - Row group 2: 32768 rows
-        - Row group 3: 1696 rows
-    - alexandria_3D_18.parquet:
-        - Row group 0: 32768 rows
-        - Row group 1: 32768 rows
-        - Row group 2: 32768 rows
-        - Row group 3: 1696 rows
-    - alexandria_3D_19.parquet:
-        - Row group 0: 32768 rows
-        - Row group 1: 32768 rows
-        - Row group 2: 32768 rows
-        - Row group 3: 1696 rows
-    - alexandria_3D_2.parquet:
-        - Row group 0: 32768 rows
-        - Row group 1: 32768 rows
-        - Row group 2: 32768 rows
-        - Row group 3: 1696 rows
-    - alexandria_3D_20.parquet:
-        - Row group 0: 32768 rows
-        - Row group 1: 32768 rows
-        - Row group 2: 32768 rows
-        - Row group 3: 1696 rows
-    - alexandria_3D_21.parquet:
-        - Row group 0: 32768 rows
-        - Row group 1: 32768 rows
-        - Row group 2: 32768 rows
-        - Row group 3: 1696 rows
-    - alexandria_3D_22.parquet:
-        - Row group 0: 32768 rows
-        - Row group 1: 32768 rows
-        - Row group 2: 32768 rows
-        - Row group 3: 1696 rows
-    - alexandria_3D_23.parquet:
-        - Row group 0: 32768 rows
-        - Row group 1: 32768 rows
-        - Row group 2: 32768 rows
-        - Row group 3: 1696 rows
-    - alexandria_3D_24.parquet:
-        - Row group 0: 32768 rows
-        - Row group 1: 32768 rows
-        - Row group 2: 32768 rows
-        - Row group 3: 1696 rows
-    - alexandria_3D_25.parquet:
-        - Row group 0: 100000 rows
-    - alexandria_3D_26.parquet:
-        - Row group 0: 100000 rows
-    - alexandria_3D_27.parquet:
-        - Row group 0: 100000 rows
-    - alexandria_3D_28.parquet:
-        - Row group 0: 100000 rows
-    - alexandria_3D_29.parquet:
-        - Row group 0: 100000 rows
-    - alexandria_3D_3.parquet:
-        - Row group 0: 32768 rows
-        - Row group 1: 32768 rows
-        - Row group 2: 32768 rows
-        - Row group 3: 1696 rows
-    - alexandria_3D_30.parquet:
-        - Row group 0: 100000 rows
-    - alexandria_3D_31.parquet:
-        - Row group 0: 100000 rows
-    - alexandria_3D_32.parquet:
-        - Row group 0: 100000 rows
-    - alexandria_3D_33.parquet:
-        - Row group 0: 100000 rows
-    - alexandria_3D_34.parquet:
-        - Row group 0: 100000 rows
-    - alexandria_3D_35.parquet:
-        - Row group 0: 100000 rows
-    - alexandria_3D_36.parquet:
-        - Row group 0: 100000 rows
-    - alexandria_3D_37.parquet:
-        - Row group 0: 100000 rows
-    - alexandria_3D_38.parquet:
-        - Row group 0: 100000 rows
-    - alexandria_3D_39.parquet:
-        - Row group 0: 100000 rows
-    - alexandria_3D_4.parquet:
-        - Row group 0: 32768 rows
-        - Row group 1: 32768 rows
-        - Row group 2: 32768 rows
-        - Row group 3: 1696 rows
-    - alexandria_3D_40.parquet:
-        - Row group 0: 100000 rows
-    - alexandria_3D_41.parquet:
-        - Row group 0: 100000 rows
-    - alexandria_3D_42.parquet:
-        - Row group 0: 100000 rows
-    - alexandria_3D_43.parquet:
-        - Row group 0: 89295 rows
-    - alexandria_3D_5.parquet:
-        - Row group 0: 32768 rows
-        - Row group 1: 32768 rows
-        - Row group 2: 32768 rows
-        - Row group 3: 1696 rows
-    - alexandria_3D_6.parquet:
-        - Row group 0: 32768 rows
-        - Row group 1: 32768 rows
-        - Row group 2: 32768 rows
-        - Row group 3: 1696 rows
-    - alexandria_3D_7.parquet:
-        - Row group 0: 32768 rows
-        - Row group 1: 32768 rows
-        - Row group 2: 32768 rows
-        - Row group 3: 1696 rows
-    - alexandria_3D_8.parquet:
-        - Row group 0: 32768 rows
-        - Row group 1: 32768 rows
-        - Row group 2: 32768 rows
-        - Row group 3: 1696 rows
-    - alexandria_3D_9.parquet:
-        - Row group 0: 32768 rows
-        - Row group 1: 32768 rows
-        - Row group 2: 32768 rows
-        - Row group 3: 1696 rows
-• Serialized metadata size per file: [74101, 77444, 77856, 77696, 78981, 76117, 74681, 75387, 77761, 77151, 73789, 78065, 76137, 75769, 77500, 72899, 79079, 77137, 30983, 31079, 31034, 31038, 31521, 75599, 31495, 30344, 31060, 31337, 31354, 31177, 31163, 31191, 30452, 30605, 75367, 30766, 31097, 30715, 30329, 74876, 76781, 78952, 78372, 77480] Bytes
+        - Row group 0: 200000 rows
+        - Row group 1: 200000 rows
+        - Row group 2: 200000 rows
+        - Row group 3: 200000 rows
+        - Row group 4: 200000 rows
+        - Row group 5: 200000 rows
+        - Row group 6: 200000 rows
+        - Row group 7: 200000 rows
+        - Row group 8: 200000 rows
+        - Row group 9: 200000 rows
+        - Row group 10: 200000 rows
+        - Row group 11: 200000 rows
+        - Row group 12: 200000 rows
+        - Row group 13: 200000 rows
+        - Row group 14: 200000 rows
+        - Row group 15: 200000 rows
+        - Row group 16: 200000 rows
+        - Row group 17: 200000 rows
+        - Row group 18: 200000 rows
+        - Row group 19: 200000 rows
+        - Row group 20: 200000 rows
+        - Row group 21: 189295 rows
+• Serialized metadata size per file: [377883] Bytes
 
 ############################################################
 METADATA
@@ -917,7 +616,7 @@ COLUMN DETAILS
 </div>
 <p>Let’s check the file size of the parquet files.</p>
 <div class="nbinput docutils container">
-<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[50]:
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[8]:
 </pre></div>
 </div>
 <div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="k">def</span> <span class="nf">list_file_sizes</span><span class="p">(</span><span class="n">directory</span><span class="p">,</span> <span class="n">in_MB</span><span class="o">=</span><span class="kc">True</span><span class="p">):</span>
@@ -949,55 +648,12 @@ COLUMN DETAILS
 </div>
 <div class="output_area docutils container">
 <div class="highlight"><pre>
-alexandria_3D_0.parquet: 63.217278480529785 MB
-alexandria_3D_1.parquet: 66.39281272888184 MB
-alexandria_3D_10.parquet: 67.79165077209473 MB
-alexandria_3D_11.parquet: 76.40940952301025 MB
-alexandria_3D_12.parquet: 64.72634792327881 MB
-alexandria_3D_13.parquet: 61.073683738708496 MB
-alexandria_3D_14.parquet: 59.82237529754639 MB
-alexandria_3D_15.parquet: 59.66804218292236 MB
-alexandria_3D_16.parquet: 79.35534191131592 MB
-alexandria_3D_17.parquet: 65.30797958374023 MB
-alexandria_3D_18.parquet: 53.305752754211426 MB
-alexandria_3D_19.parquet: 67.49996185302734 MB
-alexandria_3D_2.parquet: 80.63626098632812 MB
-alexandria_3D_20.parquet: 60.81020164489746 MB
-alexandria_3D_21.parquet: 71.9999008178711 MB
-alexandria_3D_22.parquet: 57.005184173583984 MB
-alexandria_3D_23.parquet: 76.82518005371094 MB
-alexandria_3D_24.parquet: 69.84022235870361 MB
-alexandria_3D_25.parquet: 73.2688102722168 MB
-alexandria_3D_26.parquet: 70.60673236846924 MB
-alexandria_3D_27.parquet: 79.58608531951904 MB
-alexandria_3D_28.parquet: 79.32598686218262 MB
-alexandria_3D_29.parquet: 72.01288318634033 MB
-alexandria_3D_3.parquet: 58.68510627746582 MB
-alexandria_3D_30.parquet: 68.60778427124023 MB
-alexandria_3D_31.parquet: 53.06931400299072 MB
-alexandria_3D_32.parquet: 53.88803291320801 MB
-alexandria_3D_33.parquet: 73.62857913970947 MB
-alexandria_3D_34.parquet: 63.31537055969238 MB
-alexandria_3D_35.parquet: 51.56621837615967 MB
-alexandria_3D_36.parquet: 80.69254112243652 MB
-alexandria_3D_37.parquet: 59.53824043273926 MB
-alexandria_3D_38.parquet: 64.71589279174805 MB
-alexandria_3D_39.parquet: 66.9590711593628 MB
-alexandria_3D_4.parquet: 58.02934169769287 MB
-alexandria_3D_40.parquet: 66.78332233428955 MB
-alexandria_3D_41.parquet: 61.57388782501221 MB
-alexandria_3D_42.parquet: 52.7365026473999 MB
-alexandria_3D_43.parquet: 46.13230228424072 MB
-alexandria_3D_5.parquet: 72.92802429199219 MB
-alexandria_3D_6.parquet: 66.0786542892456 MB
-alexandria_3D_7.parquet: 71.52147197723389 MB
-alexandria_3D_8.parquet: 68.42291927337646 MB
-alexandria_3D_9.parquet: 73.67225074768066 MB
+alexandria_3D_0.parquet: 2767.1490955352783 MB
 </pre></div></div>
 </div>
 <p>Let’s also check the size of the row groups.</p>
 <div class="nbinput docutils container">
-<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[51]:
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[9]:
 </pre></div>
 </div>
 <div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">row_group_metadata_per_file</span> <span class="o">=</span> <span class="n">db</span><span class="o">.</span><span class="n">get_parquet_file_row_group_metadata_per_file</span><span class="p">(</span>
@@ -1027,176 +683,36 @@ alexandria_3D_9.parquet: 73.67225074768066 MB
 <div class="output_area docutils container">
 <div class="highlight"><pre>
 alexandria_3D_0.parquet
-     0: 33.88526916503906 MB
-     1: 28.67838764190674 MB
-     2: 26.826565742492676 MB
-     3: 1.0584754943847656 MB
-alexandria_3D_1.parquet
-     0: 23.262088775634766 MB
-     1: 34.650197982788086 MB
-     2: 36.09531307220459 MB
-     3: 1.8985786437988281 MB
-alexandria_3D_10.parquet
-     0: 28.755844116210938 MB
-     1: 31.349617958068848 MB
-     2: 33.02553176879883 MB
-     3: 1.9675817489624023 MB
-alexandria_3D_11.parquet
-     0: 48.49870491027832 MB
-     1: 29.866143226623535 MB
-     2: 28.96322250366211 MB
-     3: 1.456308364868164 MB
-alexandria_3D_12.parquet
-     0: 35.41706848144531 MB
-     1: 27.881027221679688 MB
-     2: 27.899497985839844 MB
-     3: 1.2672271728515625 MB
-alexandria_3D_13.parquet
-     0: 29.536629676818848 MB
-     1: 28.44379234313965 MB
-     2: 27.21775722503662 MB
-     3: 1.3715496063232422 MB
-alexandria_3D_14.parquet
-     0: 32.75925064086914 MB
-     1: 25.701278686523438 MB
-     2: 24.80800437927246 MB
-     3: 1.0945501327514648 MB
-alexandria_3D_15.parquet
-     0: 28.813363075256348 MB
-     1: 24.955053329467773 MB
-     2: 27.343029022216797 MB
-     3: 2.002194404602051 MB
-alexandria_3D_16.parquet
-     0: 38.87716007232666 MB
-     1: 44.16834259033203 MB
-     2: 30.809864044189453 MB
-     3: 1.4979143142700195 MB
-alexandria_3D_17.parquet
-     0: 31.438282012939453 MB
-     1: 29.75895881652832 MB
-     2: 31.682196617126465 MB
-     3: 1.9960041046142578 MB
-alexandria_3D_18.parquet
-     0: 26.820265769958496 MB
-     1: 21.677895545959473 MB
-     2: 24.17652416229248 MB
-     3: 1.1478967666625977 MB
-alexandria_3D_19.parquet
-     0: 30.522936820983887 MB
-     1: 37.90152645111084 MB
-     2: 27.28691577911377 MB
-     3: 1.362447738647461 MB
-alexandria_3D_2.parquet
-     0: 39.840396881103516 MB
-     1: 35.17914295196533 MB
-     2: 37.78933525085449 MB
-     3: 1.4440546035766602 MB
-alexandria_3D_20.parquet
-     0: 28.389055252075195 MB
-     1: 26.526031494140625 MB
-     2: 30.0849027633667 MB
-     3: 1.1245336532592773 MB
-alexandria_3D_21.parquet
-     0: 26.3947114944458 MB
-     1: 39.86369228363037 MB
-     2: 34.58688449859619 MB
-     3: 1.5055503845214844 MB
-alexandria_3D_22.parquet
-     0: 30.08759593963623 MB
-     1: 24.752853393554688 MB
-     2: 23.644336700439453 MB
-     3: 1.2023286819458008 MB
-alexandria_3D_23.parquet
-     0: 33.71604251861572 MB
-     1: 43.66508960723877 MB
-     2: 33.232436180114746 MB
-     3: 1.5115013122558594 MB
-alexandria_3D_24.parquet
-     0: 33.69458198547363 MB
-     1: 29.915438652038574 MB
-     2: 33.283854484558105 MB
-     3: 2.087203025817871 MB
-alexandria_3D_25.parquet
-     0: 113.63787937164307 MB
-alexandria_3D_26.parquet
-     0: 110.95186138153076 MB
-alexandria_3D_27.parquet
-     0: 121.27318477630615 MB
-alexandria_3D_28.parquet
-     0: 120.9677734375 MB
-alexandria_3D_29.parquet
-     0: 114.41764545440674 MB
-alexandria_3D_3.parquet
-     0: 27.135764122009277 MB
-     1: 26.59963893890381 MB
-     2: 28.526336669921875 MB
-     3: 1.7803220748901367 MB
-alexandria_3D_30.parquet
-     0: 111.70868110656738 MB
-alexandria_3D_31.parquet
-     0: 87.3005952835083 MB
-alexandria_3D_32.parquet
-     0: 88.21440029144287 MB
-alexandria_3D_33.parquet
-     0: 115.94622802734375 MB
-alexandria_3D_34.parquet
-     0: 102.83384799957275 MB
-alexandria_3D_35.parquet
-     0: 86.06189823150635 MB
-alexandria_3D_36.parquet
-     0: 120.09446239471436 MB
-alexandria_3D_37.parquet
-     0: 95.56644344329834 MB
-alexandria_3D_38.parquet
-     0: 106.56142330169678 MB
-alexandria_3D_39.parquet
-     0: 106.53310775756836 MB
-alexandria_3D_4.parquet
-     0: 26.864155769348145 MB
-     1: 30.033101081848145 MB
-     2: 24.01892852783203 MB
-     3: 1.1299266815185547 MB
-alexandria_3D_40.parquet
-     0: 107.71124458312988 MB
-alexandria_3D_41.parquet
-     0: 98.69949913024902 MB
-alexandria_3D_42.parquet
-     0: 86.55539226531982 MB
-alexandria_3D_43.parquet
-     0: 76.38001537322998 MB
-alexandria_3D_5.parquet
-     0: 30.619487762451172 MB
-     1: 40.44719314575195 MB
-     2: 31.88987159729004 MB
-     3: 1.137807846069336 MB
-alexandria_3D_6.parquet
-     0: 28.624879837036133 MB
-     1: 27.89090061187744 MB
-     2: 35.02172374725342 MB
-     3: 1.4424219131469727 MB
-alexandria_3D_7.parquet
-     0: 43.56060314178467 MB
-     1: 27.994236946105957 MB
-     2: 29.434123039245605 MB
-     3: 1.6086492538452148 MB
-alexandria_3D_8.parquet
-     0: 28.378860473632812 MB
-     1: 33.01034450531006 MB
-     2: 35.88528060913086 MB
-     3: 1.7302274703979492 MB
-alexandria_3D_9.parquet
-     0: 42.97386932373047 MB
-     1: 33.387916564941406 MB
-     2: 26.984159469604492 MB
-     3: 1.7877273559570312 MB
-Average row group size: 36.577393547827455 MB
+     0: 201.08054542541504 MB
+     1: 220.59319686889648 MB
+     2: 197.38053512573242 MB
+     3: 187.26845264434814 MB
+     4: 227.97186374664307 MB
+     5: 192.6089096069336 MB
+     6: 216.52346420288086 MB
+     7: 198.00727558135986 MB
+     8: 227.92319583892822 MB
+     9: 226.87678337097168 MB
+     10: 244.66320514678955 MB
+     11: 215.52607440948486 MB
+     12: 198.7313060760498 MB
+     13: 204.19597339630127 MB
+     14: 192.36825561523438 MB
+     15: 217.40732860565186 MB
+     16: 215.3526430130005 MB
+     17: 201.5632438659668 MB
+     18: 189.40394115447998 MB
+     19: 200.09145641326904 MB
+     20: 208.74722480773926 MB
+     21: 206.02736282348633 MB
+Average row group size: 208.65055626088923 MB
 </pre></div></div>
 </div>
 <p>For the most optimal performance we should aim for 2GB per file and about 200-500MB per row group.</p>
 <p>Currently for a row group with 32,768 rows the size of the row group is ~30MB. To get to 200MB we should put 200MB/30MB more rows in the row group or ~200,000 rows.</p>
 <p>If each rowgroup is about 200MB at 200,000 rows then we should have 2GB/200MB = 10 row groups per file. or 2,000,000 rows per file.</p>
 <div class="nbinput docutils container">
-<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[52]:
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[10]:
 </pre></div>
 </div>
 <div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="k">def</span> <span class="nf">normalize_dataset</span><span class="p">(</span><span class="n">db</span><span class="p">,</span> <span class="n">normalize_config</span><span class="o">=</span><span class="n">NormalizeConfig</span><span class="p">()):</span>
@@ -1267,7 +783,7 @@ Database path: Z:\data\parquetdb\data\external\alexandria\AlexandriaDB\alexandri
     - alexandria_3D_2.parquet:
         - Row group 0: 200000 rows
         - Row group 1: 189295 rows
-• Serialized metadata size per file: [180510, 178802, 48142] Bytes
+• Serialized metadata size per file: [180572, 178843, 48142] Bytes
 
 ############################################################
 METADATA
@@ -1281,7 +797,7 @@ COLUMN DETAILS
 </div>
 <p>Let’s check the file sizes and row group sizes again.</p>
 <div class="nbinput docutils container">
-<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[53]:
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[11]:
 </pre></div>
 </div>
 <div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">file_sizes</span> <span class="o">=</span> <span class="n">list_file_sizes</span><span class="p">(</span><span class="n">db</span><span class="o">.</span><span class="n">db_path</span><span class="p">)</span>
@@ -1316,40 +832,40 @@ COLUMN DETAILS
 </div>
 <div class="output_area docutils container">
 <div class="highlight"><pre>
-alexandria_3D_0.parquet: 1261.1049909591675 MB
-alexandria_3D_1.parquet: 1251.4470014572144 MB
-alexandria_3D_2.parquet: 254.18889236450195 MB
+alexandria_3D_0.parquet: 1261.4758415222168 MB
+alexandria_3D_1.parquet: 1251.6552095413208 MB
+alexandria_3D_2.parquet: 254.18556213378906 MB
 alexandria_3D_0.parquet
-     0: 203.45607089996338 MB
-     1: 217.69878768920898 MB
-     2: 197.38053512573242 MB
-     3: 187.29719257354736 MB
-     4: 227.97186374664307 MB
-     5: 192.6089096069336 MB
-     6: 216.6963243484497 MB
-     7: 198.1317253112793 MB
-     8: 226.02880668640137 MB
-     9: 226.7027463912964 MB
+     0: 201.72274780273438 MB
+     1: 219.45661544799805 MB
+     2: 197.442889213562 MB
+     3: 187.3084535598755 MB
+     4: 227.44355964660645 MB
+     5: 192.6088399887085 MB
+     6: 216.52346420288086 MB
+     7: 198.00727558135986 MB
+     8: 227.92319583892822 MB
+     9: 226.87678337097168 MB
 alexandria_3D_1.parquet
-     0: 244.55265712738037 MB
-     1: 210.91666316986084 MB
-     2: 204.90382862091064 MB
-     3: 204.14434432983398 MB
-     4: 192.36827659606934 MB
-     5: 217.43347454071045 MB
-     6: 215.3526430130005 MB
-     7: 201.5632438659668 MB
-     8: 189.40411949157715 MB
-     9: 200.09713077545166 MB
+     0: 244.66320514678955 MB
+     1: 215.52607440948486 MB
+     2: 198.7313995361328 MB
+     3: 203.92721366882324 MB
+     4: 191.9358901977539 MB
+     5: 218.27143096923828 MB
+     6: 215.63258838653564 MB
+     7: 201.5486354827881 MB
+     8: 191.0305995941162 MB
+     9: 199.67366981506348 MB
 alexandria_3D_2.parquet
      0: 208.74722480773926 MB
-     1: 206.02736282348633 MB
-Average row group size: 208.6129059791565 MB
+     1: 206.0274362564087 MB
+Average row group size: 208.6831451329318 MB
 </pre></div></div>
 </div>
 <p>Here we see that the row groups are about 200MB and the file sizes are a 1GB. This is a little smaller because the less files the more common metadata is stored together. I would try to store all the data in the same file in this case</p>
 <div class="nbinput docutils container">
-<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[54]:
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[12]:
 </pre></div>
 </div>
 <div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">normalize_config</span> <span class="o">=</span> <span class="n">NormalizeConfig</span><span class="p">(</span>
@@ -1412,7 +928,7 @@ Database path: Z:\data\parquetdb\data\external\alexandria\AlexandriaDB\alexandri
         - Row group 19: 200000 rows
         - Row group 20: 200000 rows
         - Row group 21: 189295 rows
-• Serialized metadata size per file: [377883] Bytes
+• Serialized metadata size per file: [377929] Bytes
 
 ############################################################
 METADATA
@@ -1422,7 +938,7 @@ METADATA
 COLUMN DETAILS
 ############################################################
 
-alexandria_3D_0.parquet: 2767.1490955352783 MB
+alexandria_3D_0.parquet: 2767.2842226028442 MB
 </pre></div></div>
 </div>
 </section>
@@ -1433,7 +949,7 @@ alexandria_3D_0.parquet: 2767.1490955352783 MB
 <h3>Reading a single column<a class="headerlink" href="#Reading-a-single-column" title="Link to this heading">¶</a></h3>
 <p>If one were to want a single property for all materials in alexandria, if it were in json format, we would have to iterate over and read all the json files to collect the property.</p>
 <div class="nbinput docutils container">
-<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[55]:
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[13]:
 </pre></div>
 </div>
 <div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">total_time_to_read_from_json</span> <span class="o">=</span> <span class="nb">sum</span><span class="p">(</span><span class="n">benchmark_dict</span><span class="p">[</span><span class="s2">&quot;json_load_times&quot;</span><span class="p">])</span>
@@ -1468,8 +984,8 @@ alexandria_3D_0.parquet: 2767.1490955352783 MB
 Starting task: read_single_column
 (4389295, 1)
 --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
-Time to read from parquetdb: 0.06 seconds
-Time to read from json: 589.19 seconds
+Time to read from parquetdb: 0.04 seconds
+Time to read from json: 0.00 seconds
 </pre></div></div>
 </div>
 </section>
@@ -1479,7 +995,7 @@ Time to read from json: 589.19 seconds
 <p>Now, if we were to want speific columns, at minimum time to do this in json format would be the same time as iterating over the json files.</p>
 <p>In ParquetDB, it is much simpler and less memory intensive to read specific ids.</p>
 <div class="nbinput docutils container">
-<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[ ]:
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[14]:
 </pre></div>
 </div>
 <div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="k">def</span> <span class="nf">read_specific_ids</span><span class="p">(</span><span class="n">db</span><span class="p">):</span>
@@ -1592,14 +1108,14 @@ Data : 129
 [&#39;@class&#39;, &#39;@module&#39;, &#39;composition.Ac&#39;, &#39;composition.Ag&#39;, &#39;composition.Al&#39;, &#39;composition.Ar&#39;, &#39;composition.As&#39;, &#39;composition.Au&#39;, &#39;composition.B&#39;, &#39;composition.Ba&#39;, &#39;composition.Be&#39;, &#39;composition.Bi&#39;, &#39;composition.Br&#39;, &#39;composition.C&#39;, &#39;composition.Ca&#39;, &#39;composition.Cd&#39;, &#39;composition.Ce&#39;, &#39;composition.Cl&#39;, &#39;composition.Co&#39;, &#39;composition.Cr&#39;, &#39;composition.Cs&#39;, &#39;composition.Cu&#39;, &#39;composition.Dy&#39;, &#39;composition.Er&#39;, &#39;composition.Eu&#39;, &#39;composition.F&#39;, &#39;composition.Fe&#39;, &#39;composition.Ga&#39;, &#39;composition.Gd&#39;, &#39;composition.Ge&#39;, &#39;composition.H&#39;, &#39;composition.He&#39;, &#39;composition.Hf&#39;, &#39;composition.Hg&#39;, &#39;composition.Ho&#39;, &#39;composition.I&#39;, &#39;composition.In&#39;, &#39;composition.Ir&#39;, &#39;composition.K&#39;, &#39;composition.Kr&#39;, &#39;composition.La&#39;, &#39;composition.Li&#39;, &#39;composition.Lu&#39;, &#39;composition.Mg&#39;, &#39;composition.Mn&#39;, &#39;composition.Mo&#39;, &#39;composition.N&#39;, &#39;composition.Na&#39;, &#39;composition.Nb&#39;, &#39;composition.Nd&#39;, &#39;composition.Ne&#39;, &#39;composition.Ni&#39;, &#39;composition.Np&#39;, &#39;composition.O&#39;, &#39;composition.Os&#39;, &#39;composition.P&#39;, &#39;composition.Pa&#39;, &#39;composition.Pb&#39;, &#39;composition.Pd&#39;, &#39;composition.Pm&#39;, &#39;composition.Pr&#39;, &#39;composition.Pt&#39;, &#39;composition.Pu&#39;, &#39;composition.Rb&#39;, &#39;composition.Re&#39;, &#39;composition.Rh&#39;, &#39;composition.Ru&#39;, &#39;composition.S&#39;, &#39;composition.Sb&#39;, &#39;composition.Sc&#39;, &#39;composition.Se&#39;, &#39;composition.Si&#39;, &#39;composition.Sm&#39;, &#39;composition.Sn&#39;, &#39;composition.Sr&#39;, &#39;composition.Ta&#39;, &#39;composition.Tb&#39;, &#39;composition.Tc&#39;, &#39;composition.Te&#39;, &#39;composition.Th&#39;, &#39;composition.Ti&#39;, &#39;composition.Tl&#39;, &#39;composition.Tm&#39;, &#39;composition.U&#39;, &#39;composition.V&#39;, &#39;composition.W&#39;, &#39;composition.Xe&#39;, &#39;composition.Y&#39;, &#39;composition.Yb&#39;, &#39;composition.Zn&#39;, &#39;composition.Zr&#39;, &#39;correction&#39;, &#39;data.band_gap_dir&#39;, &#39;data.band_gap_ind&#39;, &#39;data.decomposition&#39;, &#39;data.dos_ef&#39;, &#39;data.e_above_hull&#39;, &#39;data.e_form&#39;, &#39;data.e_phase_separation&#39;, &#39;data.elements&#39;, &#39;data.energy_corrected&#39;, &#39;data.energy_total&#39;, &#39;data.formula&#39;, &#39;data.location&#39;, &#39;data.mat_id&#39;, &#39;data.nsites&#39;, &#39;data.prototype_id&#39;, &#39;data.spg&#39;, &#39;data.stress&#39;, &#39;data.total_mag&#39;, &#39;energy&#39;, &#39;energy_adjustments&#39;, &#39;entry_id&#39;, &#39;id&#39;, &#39;parameters.dummy_field&#39;, &#39;structure.@class&#39;, &#39;structure.@module&#39;, &#39;structure.charge&#39;, &#39;structure.lattice.a&#39;, &#39;structure.lattice.alpha&#39;, &#39;structure.lattice.b&#39;, &#39;structure.lattice.beta&#39;, &#39;structure.lattice.c&#39;, &#39;structure.lattice.gamma&#39;, &#39;structure.lattice.matrix&#39;, &#39;structure.lattice.pbc&#39;, &#39;structure.lattice.volume&#39;, &#39;structure.sites&#39;]
 Done with task: read_specific_ids
 --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
-Time to read from parquetdb: 4.36 seconds
-Time to read from json: 589.19 seconds
+Time to read from parquetdb: 4.16 seconds
+Time to read from json: 0.00 seconds
 </pre></div></div>
 </div>
 <section id="Finding-the-minimum-and-maximum-of-a-energy">
 <h3>Finding the minimum and maximum of a energy<a class="headerlink" href="#Finding-the-minimum-and-maximum-of-a-energy" title="Link to this heading">¶</a></h3>
 <div class="nbinput docutils container">
-<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[57]:
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[15]:
 </pre></div>
 </div>
 <div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="k">def</span> <span class="nf">read_energy_min_max</span><span class="p">(</span><span class="n">db</span><span class="p">):</span>
@@ -1641,15 +1157,15 @@ Starting task: read_energy_min_max
 Min: -1496.5922219, Max: -0.003981
 Done with task: read_energy_min_max
 --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
-Time to read from parquetdb: 0.11 seconds
-Time to read from json: 589.19 seconds
+Time to read from parquetdb: 0.35 seconds
+Time to read from json: 0.00 seconds
 </pre></div></div>
 </div>
 </section>
 <section id="Reading-records-filtered-by-energy-above--1.0">
 <h3>Reading records filtered by energy above -1.0<a class="headerlink" href="#Reading-records-filtered-by-energy-above--1.0" title="Link to this heading">¶</a></h3>
 <div class="nbinput docutils container">
-<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[58]:
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[16]:
 </pre></div>
 </div>
 <div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="k">def</span> <span class="nf">read_filtered_energy_above_minus_one</span><span class="p">(</span><span class="n">db</span><span class="p">):</span>
@@ -1702,14 +1218,14 @@ Starting task: read_filtered_energy_above_minus_one
 Done with task: read_filtered_energy_above_minus_one
 --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 Time to read from parquetdb: 0.04 seconds
-Time to read from json: 589.19 seconds
+Time to read from json: 0.00 seconds
 </pre></div></div>
 </div>
 </section>
 <section id="Reading-records-filtered-by-spg-204">
 <h3>Reading records filtered by spg 204<a class="headerlink" href="#Reading-records-filtered-by-spg-204" title="Link to this heading">¶</a></h3>
 <div class="nbinput docutils container">
-<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[59]:
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[17]:
 </pre></div>
 </div>
 <div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="k">def</span> <span class="nf">read_filtered_spg_204</span><span class="p">(</span><span class="n">db</span><span class="p">):</span>
@@ -1759,14 +1275,14 @@ Starting task: read_filtered_spg_204
 Done with task: read_filtered_spg_204
 --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 Time to read from parquetdb: 0.05 seconds
-Time to read from json: 589.19 seconds
+Time to read from json: 0.00 seconds
 </pre></div></div>
 </div>
 </section>
 <section id="Reading-records-filtered-by-spg-batches">
 <h3>Reading records filtered by spg batches<a class="headerlink" href="#Reading-records-filtered-by-spg-batches" title="Link to this heading">¶</a></h3>
 <div class="nbinput docutils container">
-<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[60]:
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[18]:
 </pre></div>
 </div>
 <div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="k">def</span> <span class="nf">read_filtered_spg_batches</span><span class="p">(</span><span class="n">db</span><span class="p">):</span>
@@ -1819,15 +1335,15 @@ Starting task: read_filtered_spg_batches
 Total number of rows: 7240, Batches: 4390
 Done with task: read_filtered_spg_batches
 --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
-Time to read from parquetdb: 0.87 seconds
-Time to read from json: 589.19 seconds
+Time to read from parquetdb: 0.76 seconds
+Time to read from json: 0.00 seconds
 </pre></div></div>
 </div>
 </section>
 <section id="Reading-lattice-matrix-for-space-group-204">
 <h3>Reading lattice matrix for space group 204<a class="headerlink" href="#Reading-lattice-matrix-for-space-group-204" title="Link to this heading">¶</a></h3>
 <div class="nbinput docutils container">
-<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[61]:
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[19]:
 </pre></div>
 </div>
 <div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="k">def</span> <span class="nf">read_lattice_matrix_spg_204</span><span class="p">(</span><span class="n">db</span><span class="p">):</span>
@@ -1866,15 +1382,15 @@ Starting task: read_lattice_matrix_spg_204
 (7240, 3, 3)
 Done with task: read_lattice_matrix_spg_204
 --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
-Time to read from parquetdb: 0.22 seconds
-Time to read from json: 589.19 seconds
+Time to read from parquetdb: 0.63 seconds
+Time to read from json: 0.00 seconds
 </pre></div></div>
 </div>
 </section>
 <section id="Reading-nested-column-selection">
 <h3>Reading nested column selection<a class="headerlink" href="#Reading-nested-column-selection" title="Link to this heading">¶</a></h3>
 <div class="nbinput docutils container">
-<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[62]:
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[20]:
 </pre></div>
 </div>
 <div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="k">def</span> <span class="nf">read_nested_column_selection</span><span class="p">(</span><span class="n">db</span><span class="p">):</span>
@@ -1914,15 +1430,15 @@ list&lt;element: struct&lt;abc: list&lt;element: double&gt;, label: string, prop
 list&lt;element: struct&lt;abc: list&lt;element: double&gt;, label: string, properties: struct&lt;charge: double, forces: list&lt;element: double&gt;, magmom: double&gt;, species: list&lt;element: struct&lt;element: string, occu: int64&gt;&gt;, xyz: list&lt;element: double&gt;&gt;&gt;
 Done with task: read_nested_column_selection
 --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
-Time to read from parquetdb: 4.58 seconds
-Time to read from json: 589.19 seconds
+Time to read from parquetdb: 3.53 seconds
+Time to read from json: 0.00 seconds
 </pre></div></div>
 </div>
 </section>
 <section id="Nested-structure-into-class">
 <h3>Nested structure into class<a class="headerlink" href="#Nested-structure-into-class" title="Link to this heading">¶</a></h3>
 <div class="nbinput docutils container">
-<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[63]:
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[21]:
 </pre></div>
 </div>
 <div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="k">def</span> <span class="nf">read_nested_structure_into_class</span><span class="p">(</span><span class="n">db</span><span class="p">):</span>
@@ -2022,13 +1538,13 @@ Sites (20)
  19  Ho    0         0.5       0            8.703  [-0.0, -0.0, -0.0]                              0
 Done with task: read_nested_structure_into_class
 --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
-Time to read from parquetdb: 52.64 seconds
-Time to read from json: 589.19 seconds
+Time to read from parquetdb: 26.94 seconds
+Time to read from json: 0.00 seconds
 </pre></div></div>
 </div>
 <p>In the previous cell it takes ~ 60 seconds to perform the operation, this is due to reconstructing the nested structure. Further queries will be faster as the nested structure is already built.</p>
 <div class="nbinput docutils container">
-<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[64]:
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[22]:
 </pre></div>
 </div>
 <div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">start_time</span> <span class="o">=</span> <span class="n">time</span><span class="o">.</span><span class="n">time</span><span class="p">()</span>
@@ -2083,15 +1599,15 @@ Sites (20)
  19  Ho    0         0.5       0            8.703  [-0.0, -0.0, -0.0]                              0
 Done with task: read_nested_structure_into_class
 --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
-Time to read from parquetdb: 3.75 seconds
-Time to read from json: 589.19 seconds
+Time to read from parquetdb: 2.67 seconds
+Time to read from json: 0.00 seconds
 </pre></div></div>
 </div>
 </section>
 <section id="Plotting-times">
 <h3>Plotting times<a class="headerlink" href="#Plotting-times" title="Link to this heading">¶</a></h3>
 <div class="nbinput nblast docutils container">
-<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[65]:
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[23]:
 </pre></div>
 </div>
 <div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="kn">import</span> <span class="nn">matplotlib.pyplot</span> <span class="k">as</span> <span class="nn">plt</span>
@@ -2100,11 +1616,11 @@ Time to read from json: 589.19 seconds
 <span class="kn">from</span> <span class="nn">mpl_toolkits.axes_grid1.inset_locator</span> <span class="kn">import</span> <span class="n">inset_axes</span>
 
 <span class="o">%</span><span class="k">matplotlib</span> inline
-<br/></pre></div>
+</pre></div>
 </div>
 </div>
 <div class="nbinput docutils container">
-<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[ ]:
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[24]:
 </pre></div>
 </div>
 <div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="n">xlabel_size</span> <span class="o">=</span> <span class="mi">16</span>
@@ -2152,7 +1668,7 @@ Time to read from json: 589.19 seconds
     <span class="n">width</span><span class="o">=</span><span class="s2">&quot;30%&quot;</span><span class="p">,</span>
     <span class="n">height</span><span class="o">=</span><span class="s2">&quot;30%&quot;</span><span class="p">,</span>
     <span class="n">loc</span><span class="o">=</span><span class="s2">&quot;center right&quot;</span><span class="p">,</span>
-    <span class="n">bbox_to_anchor</span><span class="o">=</span><span class="p">(</span><span class="o">-</span><span class="mf">0.05</span><span class="p">,</span> <span class="o">-</span><span class="mf">0.1</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="mi">1</span><span class="p">),</span>
+    <span class="n">bbox_to_anchor</span><span class="o">=</span><span class="p">(</span><span class="o">-</span><span class="mf">0.05</span><span class="p">,</span> <span class="o">-</span><span class="mf">0.05</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="mi">1</span><span class="p">),</span>
     <span class="n">bbox_transform</span><span class="o">=</span><span class="n">ax</span><span class="o">.</span><span class="n">transAxes</span><span class="p">,</span>
 <span class="p">)</span>
 <span class="n">ax_inset</span><span class="o">.</span><span class="n">barh</span><span class="p">(</span><span class="nb">range</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="nb">len</span><span class="p">(</span><span class="n">labels</span><span class="p">)</span> <span class="o">+</span> <span class="mi">1</span><span class="p">),</span> <span class="n">times</span><span class="p">,</span> <span class="n">color</span><span class="o">=</span><span class="s2">&quot;#e52207&quot;</span><span class="p">)</span>
@@ -2174,7 +1690,7 @@ Time to read from json: 589.19 seconds
 </div>
 <div class="output_area stderr docutils container">
 <div class="highlight"><pre>
-C:\Users\lllang\AppData\Local\Temp\ipykernel_35236\2220293953.py:54: UserWarning: This figure includes Axes that are not compatible with tight_layout, so results might be incorrect.
+C:\Users\lllang\AppData\Local\Temp\ipykernel_67684\1793184629.py:57: UserWarning: This figure includes Axes that are not compatible with tight_layout, so results might be incorrect.
   plt.tight_layout()
 </pre></div></div>
 </div>
@@ -2182,7 +1698,7 @@ C:\Users\lllang\AppData\Local\Temp\ipykernel_35236\2220293953.py:54: UserWarning
 <div class="prompt empty docutils container">
 </div>
 <div class="output_area docutils container">
-<img alt="../../_images/examples_notebooks_Example_1_-_3D_Alexandria_Database_48_1.png" src="../../_images/examples_notebooks_Example_1_-_3D_Alexandria_Database_48_1.png" />
+<img alt="../../_images/examples_notebooks_Example_1_-_3D_Alexandria_Database_49_1.png" src="../../_images/examples_notebooks_Example_1_-_3D_Alexandria_Database_49_1.png" />
 </div>
 </div>
 </section>
@@ -2281,7 +1797,7 @@ C:\Users\lllang\AppData\Local\Temp\ipykernel_35236\2220293953.py:54: UserWarning
       
     </aside>
   </div>
-</div><script src="../../_static/documentation_options.js?v=0d70ca51"></script>
+</div><script src="../../_static/documentation_options.js?v=7ca58008"></script>
     <script src="../../_static/doctools.js?v=9a2dae69"></script>
     <script src="../../_static/sphinx_highlight.js?v=dc90522c"></script>
     <script src="../../_static/scripts/furo.js?v=5fa4622c"></script>

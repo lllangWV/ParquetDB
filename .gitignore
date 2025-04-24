@@ -138,7 +138,7 @@ ENV/
 update_package.md
 .env
 /data/
-
+/data
 /logs/
 /notes/
 
@@ -150,3 +150,8 @@ update_package.md
 /sphinx/manim/
 /sphinx/README.md
 sphinx/source/examples/
+github_repos/
+
+env_dev.yml
+env_material.yml
+env.yml
