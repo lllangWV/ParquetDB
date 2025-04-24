@@ -52,6 +52,12 @@ dev = [
     "pymatgen"
 ]
 
+tests = [
+    "pytest",
+    "pytest-cov",
+    "pymatgen"
+]
+
 docs= [
     "ipython",
     "pymongo",

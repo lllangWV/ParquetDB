@@ -36,7 +36,7 @@ jobs:
         python -m pip install --upgrade pip
         pip install pytest pytest-cov
         # Install the package itself if it has a setup.py
-        if [ -f setup.py ]; then pip install -e .; fi
+        if [ -f setup.py ]; then pip install -e .[docs]; fi
         # Install requirements if present
         if [ -f requirements.txt ]; then pip install -r requirements.txt; fi
         # Install test requirements if present
