@@ -1,0 +1,310 @@
+name: Deploy to Dev on Feature Merge
+
+on:
+  pull_request:
+    types: [closed]
+    branches: [ main ]
+
+
+env:
+    RELEASE_BRANCH_NAME: next-release
+
+
+permissions:
+  contents: write         # you almost certainly already have this
+  pull-requests: write    # <-- allow read/write on PRs via GraphQL test2
+  
+
+jobs:
+
+  deploy-to-dev:
+    if: ${{ github.event.pull_request.merged == true }}
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out code
+        uses: actions/checkout@v3
+        with:
+          fetch-depth: 0
+
+      - name: Deploy to development environment
+        run: |
+          echo "Deploying to dev environment..."
+          # Add your deployment commands here
+
+  # Check PR status and expose values to downstream jobs
+  check-pr-status:
+    needs: deploy-to-dev
+    if: ${{ github.event.pull_request.merged == true }}
+    runs-on: ubuntu-latest
+    outputs:
+      is_release_pr: ${{ steps.check-rel.outputs.is_release }}
+      exists_release: ${{ steps.detect.outputs.exists }}
+      release_pr_number: ${{ steps.detect.outputs.pr_number }}
+      branch_name: ${{ steps.detect.outputs.branch_name }}
+    
+    steps:
+      - name: Check out code
+        uses: actions/checkout@v3
+        with:
+          fetch-depth: 0
+          
+      - name: Check whether this was a Release PR
+        id: check-rel
+        run: |
+          if [[ "${{ github.event.pull_request.title }}" == Release* ]]; then
+            echo "is_release=true" >> $GITHUB_OUTPUT
+          else
+            echo "is_release=false" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Authenticate GitHub CLI
+        run: echo "${{ secrets.GITHUB_TOKEN }}" | gh auth login --with-token
+
+      - name: Detect or compute release branch name
+        id: detect
+        run: |
+          PR=$(gh pr list \
+            --state open \
+            --json number,headRefName \
+            --jq 'map(select(.headRefName=="${{ env.RELEASE_BRANCH_NAME }}"))[0].number // ""')
+
+          if [ -n "$PR" ]; then
+            # Found an existing Release PR targeting that branch
+            echo "exists=true" >> $GITHUB_OUTPUT
+            echo "pr_number=$PR" >> $GITHUB_OUTPUT
+            echo "branch_name=${{ env.RELEASE_BRANCH_NAME }}" >> $GITHUB_OUTPUT
+          else
+            # No PR found → check if the branch exists remotely
+            if git ls-remote --exit-code origin refs/heads/${{ env.RELEASE_BRANCH_NAME }}; then
+              echo "Remote branch exists but no PR, deleting it…" 
+              git push origin --delete ${{ env.RELEASE_BRANCH_NAME }}
+            fi
+
+            # Delete any local leftover
+            git branch --list ${{ env.RELEASE_BRANCH_NAME }} && git branch -D ${{ env.RELEASE_BRANCH_NAME }} || true
+
+            echo "exists=false" >> $GITHUB_OUTPUT
+            echo "pr_number=" >> $GITHUB_OUTPUT
+            echo "branch_name=${{ env.RELEASE_BRANCH_NAME }}" >> $GITHUB_OUTPUT
+          fi
+
+  update-release-pr:
+    needs: check-pr-status
+    if: >
+      needs.check-pr-status.outputs.is_release_pr == 'false'
+      &&
+      needs.check-pr-status.outputs.exists_release == 'true'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out release branch
+        uses: actions/checkout@v3
+        with:
+          fetch-depth: 0
+          ref: ${{ needs.check-pr-status.outputs.branch_name }}
+          
+      - name: Configure git for committing
+        run: |
+          git config --global user.name "GitHub Action"
+          git config --global user.email "action@github.com"
+            
+      - name: Merge in the just-closed PR
+        run: |
+          PR_NUM=${{ github.event.pull_request.number }}
+          git fetch origin +refs/pull/$PR_NUM/head:pr-head
+          git merge --no-ff pr-head -m "Merge PR #$PR_NUM into ${{ needs.check-pr-status.outputs.branch_name }}"
+          git push origin ${{ needs.check-pr-status.outputs.branch_name }}
+      
+      # New steps to summarize commits
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.10'
+          
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install openai python-dotenv PyGithub
+          
+      - name: Create script for commit summarization
+        run: |
+          cat > summarize_pr_commits.py << 'EOF'
+          # Python script contents here - copy the entire script from above
+          EOF
+          
+      - name: Run commit summarization script
+        env:
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+          REPO_NAME: ${{ github.repository }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          RELEASE_PR_NUMBER: ${{ needs.check-pr-status.outputs.release_pr_number }}
+          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+        run: python .github/scripts/summarize_pr_commits.py
+
+  # Create a new Release PR if one doesn't exist
+  create-release-pr:
+    needs: check-pr-status
+    if: >
+      needs.check-pr-status.outputs.is_release_pr == 'false'
+      &&
+      needs.check-pr-status.outputs.exists_release == 'false'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out main branch
+        uses: actions/checkout@v3
+        with:
+          fetch-depth: 0
+
+      - name: Configure git for committing
+        run: |
+          git config --global user.name "GitHub Action"
+          git config --global user.email "action@github.com"
+
+      - name: Authenticate GitHub CLI
+        run: echo "${{ secrets.GITHUB_TOKEN }}" | gh auth login --with-token
+
+      - name: Determine last release tag
+        run: |
+          PREV_TAG=$(gh release list --limit 1 --json tagName --jq '.[0].tagName')
+          echo "PREV_TAG=$PREV_TAG" >> $GITHUB_ENV
+
+      - name: Create new release branch from last tag
+        run: |
+          git fetch --tags origin
+          git checkout -b ${{ env.RELEASE_BRANCH_NAME }} "$PREV_TAG"
+
+      - name: Merge in the just-closed PR
+        run: |
+          PR_NUM=${{ github.event.pull_request.number }}
+          git fetch origin +refs/pull/$PR_NUM/head:pr-head
+          git merge --no-ff pr-head -m "Merge PR #$PR_NUM"
+
+      - name: Push & open Release PR
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          git push -u origin "${{ env.RELEASE_BRANCH_NAME }}"
+          NEW_PR=$(gh pr create \
+            --title "Release v*.*.*" \
+            --body "Automated Release PR for ${{ env.RELEASE_BRANCH_NAME }}" \
+            --base main \
+            --head "${{ env.RELEASE_BRANCH_NAME }}"\
+            )
+          # Get the PR number using a separate command
+          NEW_PR=$(gh pr list --head "${{ env.RELEASE_BRANCH_NAME }}" --state open --limit 1 | awk '{print $1}')
+          echo "RELEASE_PR_NUMBER=$NEW_PR" >> $GITHUB_ENV
+          
+      # New steps to summarize commits
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.10'
+          
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install openai python-dotenv PyGithub
+          
+      - name: Create script for commit summarization
+        run: |
+          cat > summarize_pr_commits.py << 'EOF'
+          # Python script contents here - copy the entire script from above
+          EOF
+          
+      - name: Run commit summarization script
+        env:
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+          REPO_NAME: ${{ github.repository }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          RELEASE_PR_NUMBER: ${{ env.RELEASE_PR_NUMBER }}
+          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+        run: python .github/scripts/summarize_pr_commits.py
+
+  # Create GitHub Release when a Release PR is merged
+  create-github-release:
+    needs: check-pr-status
+    if: needs.check-pr-status.outputs.is_release_pr == 'true'
+    runs-on: ubuntu-latest
+    steps:
+        - name: Check out code
+          uses: actions/checkout@v3
+          with:
+            fetch-depth: 0
+                
+        - name: Authenticate GitHub CLI
+          run: echo "${{ secrets.GITHUB_TOKEN }}" | gh auth login --with-token
+        
+        - name: Extract version from PR title
+          id: extract-version
+          run: |
+            # Get version from PR title with 'v' prefix
+            VERSION=$(echo "${{ github.event.pull_request.title }}" | sed -E 's/Release[[:space:]]+v([0-9]+\.[0-9]+\.[0-9]+).*/\1/')
+            
+            # If the version extraction failed, try fallback pattern without 'v'
+            if [ -z "$VERSION" ]; then
+            VERSION=$(echo "${{ github.event.pull_request.title }}" | sed -E 's/Release[[:space:]]+([0-9]+\.[0-9]+\.[0-9]+).*/\1/')
+            fi
+            
+            # If both patterns failed, generate a timestamp-based version
+            if [ -z "$VERSION" ]; then
+            VERSION=$(date +"%Y.%m.%d")-$(git rev-parse --short HEAD)
+            echo "No version found in PR title, using generated version: $VERSION"
+            else
+            echo "Extracted version from PR title: $VERSION"
+            fi
+            
+            echo "version=$VERSION" >> $GITHUB_OUTPUT
+            
+        - name: Set up Python
+          uses: actions/setup-python@v4
+          with:
+            python-version: '3.10'
+            
+        - name: Install dependencies
+          run: |
+            python -m pip install --upgrade pip
+            pip install .[dev]
+
+        - name: Run comment summarization script
+          env:
+            PR_NUMBER: ${{ github.event.pull_request.number }}
+            REPO_NAME: ${{ github.repository }}
+            GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+            VERSION: ${{ steps.extract-version.outputs.version }}
+            OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+          run: python .github/scripts/summarize_release-pr_comments.py
+            
+        - name: Configure git
+          run: |
+            git config --global user.name "GitHub Actions"
+            git config --global user.email "actions@github.com"
+        
+        - name: Commit updated CHANGELOG to main
+          run: |
+            # Ensure we're on main branch
+            git checkout main
+            
+            # Add CHANGELOG.md to git
+            git add CHANGELOG.md
+            
+            # Create commit
+            git commit -m "Update CHANGELOG for v${{ steps.extract-version.outputs.version }}" || echo "No changes to commit"
+            
+            # Push to main
+            git push origin main
+        
+        - name: Create and push tag
+          run: |
+            git tag -a "v${{ steps.extract-version.outputs.version }}" -m "Release v${{ steps.extract-version.outputs.version }}"
+            git push origin "v${{ steps.extract-version.outputs.version }}"
+            
+        - name: Create GitHub Release with summarized notes
+          run: |
+            # Create GitHub Release using the generated notes
+            gh release create "v${{ steps.extract-version.outputs.version }}" \
+            --title "Release v${{ steps.extract-version.outputs.version }}" \
+            --notes-file RELEASE_NOTES.md
+            
+        - name: Run post-release scripts
+          run: |
+            echo "Running post-release scripts..."
+            # Add your post-release commands here
