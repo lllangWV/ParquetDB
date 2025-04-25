@@ -22,7 +22,7 @@
 
 ## Documentation
 
-Check out the [docs](https://lllangwv.github.io/ParquetDB/)
+Check out the [docs](https://lllangwv.github.io/ParquetDB/index.html)
 
 ## Features
 
