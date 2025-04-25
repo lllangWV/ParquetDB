@@ -60,8 +60,7 @@ tests = [
 
 docs= [
     "ipython",
-    "pymongo",
-    "pymatgen",
+    "imageio-ffmpeg",
     "sphinx", 
     "sphinx_rtd_theme",
     "sphinx-copybutton",
