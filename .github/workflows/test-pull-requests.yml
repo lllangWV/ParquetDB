@@ -71,10 +71,3 @@ jobs:
           cd docs  # Assuming Sphinx docs are in this directory
           make clean && make html
           echo "build_successful=true" >> $GITHUB_OUTPUT
-
-      - name: Check build status
-        if: steps.build_docs.outputs.build_successful != 'true'
-        run: |
-          echo "Documentation build failed!"
-          exit 1
-          - name: Delete release if failed
