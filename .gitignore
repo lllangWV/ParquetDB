@@ -146,6 +146,7 @@ update_package.md
 
 /papers/
 /media/
+/docs/_build/
 /sphinx/_build/
 /sphinx/manim/
 /sphinx/README.md
