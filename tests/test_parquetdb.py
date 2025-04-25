@@ -23,12 +23,14 @@ VERBOSE = 2
 with open(os.path.join(config.tests_dir, "data", "alexandria_test.json"), "r") as f:
     alexandria_data = json.load(f)
 
+TEMP_DIR = tempfile.mkdtemp()
+
 
 class TestParquetDB(unittest.TestCase):
     def setUp(self):
         # Create a temporary directory for the database
-        self.temp_dir = tempfile.mkdtemp()
-        self.temp_dir_2 = tempfile.mkdtemp()
+        self.temp_dir = os.path.join(TEMP_DIR, "temp-1")
+        self.temp_dir_2 = os.path.join(TEMP_DIR, "temp-2")
 
         self.db = ParquetDB(
             db_path=os.path.join(self.temp_dir, "test_db"), verbose=VERBOSE
@@ -46,7 +48,11 @@ class TestParquetDB(unittest.TestCase):
     def tearDown(self):
         # Remove the temporary directory after the test
         try:
-            shutil.rmtree(self.temp_dir)
+            if os.path.exists(self.temp_dir):
+                shutil.rmtree(self.temp_dir)
+
+            if os.path.exists(self.temp_dir_2):
+                shutil.rmtree(self.temp_dir_2)
         except Exception as e:
             logger.error(f"Error during cleanup: {e}")
         # For some reason, there are race conditions when
@@ -656,10 +662,17 @@ class TestParquetDB(unittest.TestCase):
         data_2 = [{"id": 0, "density": 5}]
 
         self.db.update(data_2)
-        table = self.db.read()
+        table = self.db.read(ids=[1])
+        df = table.to_pandas()
+        logger.debug(f"Dataframe: \n {df}")
+        assert table["pbc"].combine_chunks().to_numpy_ndarray().tolist() == [
+            [0, 1, 0],
+        ]
+
+        table = self.db.read(ids=[0])
+
         assert table["pbc"].combine_chunks().to_numpy_ndarray().tolist() == [
             [1, 0, 0],
-            [0, 1, 0],
         ]
 
     def test_update_maintains_existing_extension_arrays_batches(self):
@@ -705,6 +718,8 @@ class TestParquetDB(unittest.TestCase):
 
         self.db.update(data_2, update_keys="material_id")
         table = self.db.read()
+        df = table.to_pandas()
+        logger.debug(f"Dataframe: \n {df}")
         assert table["material_id"].combine_chunks().to_pylist() == [1, 2]
         assert table["material_name"].combine_chunks().to_pylist() == [
             "material_1_updated",
@@ -775,6 +790,7 @@ class TestParquetDB(unittest.TestCase):
         table = self.db.read()
         df = table.to_pandas()
         logger.debug(f"Dataframe: \n {df}")
+
         assert table["field_1"].combine_chunks().to_pylist() == [
             "here",
             None,
@@ -822,6 +838,7 @@ class TestParquetDB(unittest.TestCase):
 
         incoming_table = ParquetDB.construct_table(incoming_data)
 
+        logger.info(f"Starting test on a left outer join")
         join_type = "left outer"
         left_outer_table_pyarrow = incoming_table.join(
             current_table,
@@ -849,13 +866,20 @@ class TestParquetDB(unittest.TestCase):
         column_names = left_outer_table.column_names
         names_sorted = sorted(column_names)
         left_outer_table_sorted = left_outer_table.select(names_sorted)
-
+        left_outer_table_pyarrow_sorted = left_outer_table_pyarrow_sorted.sort_by(
+            [("id_1", "ascending"), ("id_2", "ascending")]
+        )
+        left_outer_table_sorted = left_outer_table_sorted.sort_by(
+            [("id_1", "ascending"), ("id_2", "ascending")]
+        )
         for name in left_outer_table_sorted.column_names:
-            assert (
-                left_outer_table_pyarrow_sorted[name].to_pylist()
-                == left_outer_table_sorted[name].to_pylist()
-            )
+            custom_sort = left_outer_table_pyarrow_sorted[name].to_pylist()
+            pyarrow_sort = left_outer_table_sorted[name].to_pylist()
+            logger.debug(f"custom_sort: \n {custom_sort}")
+            logger.debug(f"pyarrow_sort: \n {pyarrow_sort}")
+            assert custom_sort == pyarrow_sort
 
+        logger.info(f"Starting test on a right outer join")
         join_type = "right outer"
         right_outer_table_pyarrow = incoming_table.join(
             current_table,
@@ -885,13 +909,20 @@ class TestParquetDB(unittest.TestCase):
         column_names = right_outer_table.column_names
         names_sorted = sorted(column_names)
         right_outer_table_sorted = right_outer_table.select(names_sorted)
-
+        right_outer_table_pyarrow_sorted = right_outer_table_pyarrow_sorted.sort_by(
+            [("id_1", "ascending"), ("id_2", "ascending")]
+        )
+        right_outer_table_sorted = right_outer_table_sorted.sort_by(
+            [("id_1", "ascending"), ("id_2", "ascending")]
+        )
         for name in right_outer_table_sorted.column_names:
-            assert (
-                right_outer_table_pyarrow_sorted[name].to_pylist()
-                == right_outer_table_sorted[name].to_pylist()
-            )
+            custom_sort = right_outer_table_pyarrow_sorted[name].to_pylist()
+            pyarrow_sort = right_outer_table_sorted[name].to_pylist()
+            logger.debug(f"custom_sort: \n {custom_sort}")
+            logger.debug(f"pyarrow_sort: \n {pyarrow_sort}")
+            assert custom_sort == pyarrow_sort
 
+        logger.info(f"Starting test on a inner join")
         join_type = "inner"
         inner_table_pyarrow = incoming_table.join(
             current_table,
@@ -919,13 +950,20 @@ class TestParquetDB(unittest.TestCase):
         column_names = inner_table.column_names
         names_sorted = sorted(column_names)
         inner_table_sorted = inner_table.select(names_sorted)
-
+        inner_table_pyarrow_sorted = inner_table_pyarrow_sorted.sort_by(
+            [("id_1", "ascending"), ("id_2", "ascending")]
+        )
+        inner_table_sorted = inner_table_sorted.sort_by(
+            [("id_1", "ascending"), ("id_2", "ascending")]
+        )
         for name in inner_table_sorted.column_names:
-            assert (
-                inner_table_pyarrow_sorted[name].to_pylist()
-                == inner_table_sorted[name].to_pylist()
-            )
+            custom_sort = inner_table_pyarrow_sorted[name].to_pylist()
+            pyarrow_sort = inner_table_sorted[name].to_pylist()
+            logger.debug(f"custom_sort: \n {custom_sort}")
+            logger.debug(f"pyarrow_sort: \n {pyarrow_sort}")
+            assert custom_sort == pyarrow_sort
 
+        logger.info(f"Starting test on a right anti join")
         join_type = "right anti"
         right_anti_table_pyarrow = incoming_table.join(
             current_table,
@@ -953,13 +991,20 @@ class TestParquetDB(unittest.TestCase):
         column_names = right_anti_table.column_names
         names_sorted = sorted(column_names)
         right_anti_table_sorted = right_anti_table.select(names_sorted)
-
+        right_anti_table_pyarrow_sorted = right_anti_table_pyarrow_sorted.sort_by(
+            [("id_1", "ascending"), ("id_2", "ascending")]
+        )
+        right_anti_table_sorted = right_anti_table_sorted.sort_by(
+            [("id_1", "ascending"), ("id_2", "ascending")]
+        )
         for name in right_anti_table_sorted.column_names:
-            assert (
-                right_anti_table_pyarrow_sorted[name].to_pylist()
-                == right_anti_table_sorted[name].to_pylist()
-            )
+            custom_sort = right_anti_table_pyarrow_sorted[name].to_pylist()
+            pyarrow_sort = right_anti_table_sorted[name].to_pylist()
+            logger.debug(f"custom_sort: \n {custom_sort}")
+            logger.debug(f"pyarrow_sort: \n {pyarrow_sort}")
+            assert custom_sort == pyarrow_sort
 
+        logger.info(f"Starting test on a left anti join")
         join_type = "left anti"
         left_anti_table_pyarrow = incoming_table.join(
             current_table,
@@ -987,13 +1032,20 @@ class TestParquetDB(unittest.TestCase):
         column_names = left_anti_table.column_names
         names_sorted = sorted(column_names)
         left_anti_table_sorted = left_anti_table.select(names_sorted)
-
+        left_anti_table_pyarrow_sorted = left_anti_table_pyarrow_sorted.sort_by(
+            [("id_1", "ascending"), ("id_2", "ascending")]
+        )
+        left_anti_table_sorted = left_anti_table_sorted.sort_by(
+            [("id_1", "ascending"), ("id_2", "ascending")]
+        )
         for name in left_anti_table_sorted.column_names:
-            assert (
-                left_anti_table_pyarrow_sorted[name].to_pylist()
-                == left_anti_table_sorted[name].to_pylist()
-            )
+            custom_sort = left_anti_table_pyarrow_sorted[name].to_pylist()
+            pyarrow_sort = left_anti_table_sorted[name].to_pylist()
+            logger.debug(f"custom_sort: \n {custom_sort}")
+            logger.debug(f"pyarrow_sort: \n {pyarrow_sort}")
+            assert custom_sort == pyarrow_sort
 
+        logger.info(f"Starting test on a left semi join")
         join_type = "left semi"
         left_semi_table_pyarrow = incoming_table.join(
             current_table,
@@ -1021,13 +1073,20 @@ class TestParquetDB(unittest.TestCase):
         column_names = left_semi_table.column_names
         names_sorted = sorted(column_names)
         left_semi_table_sorted = left_semi_table.select(names_sorted)
-
+        left_semi_table_pyarrow_sorted = left_semi_table_pyarrow_sorted.sort_by(
+            [("id_1", "ascending"), ("id_2", "ascending")]
+        )
+        left_semi_table_sorted = left_semi_table_sorted.sort_by(
+            [("id_1", "ascending"), ("id_2", "ascending")]
+        )
         for name in left_semi_table_sorted.column_names:
-            assert (
-                left_semi_table_pyarrow_sorted[name].to_pylist()
-                == left_semi_table_sorted[name].to_pylist()
-            )
+            custom_sort = left_semi_table_pyarrow_sorted[name].to_pylist()
+            pyarrow_sort = left_semi_table_sorted[name].to_pylist()
+            logger.debug(f"custom_sort: \n {custom_sort}")
+            logger.debug(f"pyarrow_sort: \n {pyarrow_sort}")
+            assert custom_sort == pyarrow_sort
 
+        logger.info(f"Starting test on a right semi join")
         join_type = "right semi"
         right_semi_table_pyarrow = incoming_table.join(
             current_table,
@@ -1055,13 +1114,20 @@ class TestParquetDB(unittest.TestCase):
         column_names = right_semi_table.column_names
         names_sorted = sorted(column_names)
         right_semi_table_sorted = right_semi_table.select(names_sorted)
-
+        right_semi_table_pyarrow_sorted = right_semi_table_pyarrow_sorted.sort_by(
+            [("id_1", "ascending"), ("id_2", "ascending")]
+        )
+        right_semi_table_sorted = right_semi_table_sorted.sort_by(
+            [("id_1", "ascending"), ("id_2", "ascending")]
+        )
         for name in right_semi_table_sorted.column_names:
-            assert (
-                right_semi_table_pyarrow_sorted[name].to_pylist()
-                == right_semi_table_sorted[name].to_pylist()
-            )
+            custom_sort = right_semi_table_pyarrow_sorted[name].to_pylist()
+            pyarrow_sort = right_semi_table_sorted[name].to_pylist()
+            logger.debug(f"custom_sort: \n {custom_sort}")
+            logger.debug(f"pyarrow_sort: \n {pyarrow_sort}")
+            assert custom_sort == pyarrow_sort
 
+        logger.info(f"Starting test on a full outer join")
         join_type = "full outer"
         full_outer_table_pyarrow = incoming_table.join(
             current_table,
@@ -1089,12 +1155,18 @@ class TestParquetDB(unittest.TestCase):
         column_names = full_outer_table.column_names
         names_sorted = sorted(column_names)
         full_outer_table_sorted = full_outer_table.select(names_sorted)
-
+        full_outer_table_pyarrow_sorted = full_outer_table_pyarrow_sorted.sort_by(
+            [("id_1", "ascending"), ("id_2", "ascending")]
+        )
+        full_outer_table_sorted = full_outer_table_sorted.sort_by(
+            [("id_1", "ascending"), ("id_2", "ascending")]
+        )
         for name in full_outer_table_sorted.column_names:
-            assert (
-                full_outer_table_pyarrow_sorted[name].to_pylist()
-                == full_outer_table_sorted[name].to_pylist()
-            )
+            custom_sort = full_outer_table_pyarrow_sorted[name].to_pylist()
+            pyarrow_sort = full_outer_table_sorted[name].to_pylist()
+            logger.debug(f"custom_sort: \n {custom_sort}")
+            logger.debug(f"pyarrow_sort: \n {pyarrow_sort}")
+            assert custom_sort == pyarrow_sort
 
     def test_python_objects(self):
         self.db._serialize_python_objects = True
@@ -1158,7 +1230,10 @@ class TestParquetDB(unittest.TestCase):
             new_db_path=self.temp_dir_2,
         )
 
+        logger.debug(f"Directory files: \n {os.listdir(self.temp_dir_2)}")
         db = ParquetDB(self.temp_dir_2)
+
+        logger.debug(f"Directory files: \n {os.listdir(self.temp_dir_2)}")
         table = db.read()
 
         assert table.column_names == ["id"]
