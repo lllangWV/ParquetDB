@@ -46,12 +46,6 @@ dependencies = [
 
 [project.optional-dependencies]
 
-
-dev = [
-    "pymongo",
-    "pymatgen"
-]
-
 tests = [
     "pytest",
     "pytest-cov",
@@ -59,6 +53,27 @@ tests = [
 ]
 
 docs= [
+    "ipython",
+    "imageio-ffmpeg",
+    "sphinx", 
+    "sphinx_rtd_theme",
+    "sphinx-copybutton",
+    "nbsphinx",
+    "sphinx_design",
+    "sphinx-new-tab-link",
+    "sphinxcontrib-youtube",
+    "sphinxcontrib-video",
+    "pandoc",
+    "furo",
+    "numpydoc"
+]
+
+
+dev = [
+    "pymongo",
+    "pytest",
+    "pytest-cov",
+    "pymatgen",
     "ipython",
     "imageio-ffmpeg",
     "sphinx", 
