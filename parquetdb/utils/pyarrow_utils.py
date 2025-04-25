@@ -1041,6 +1041,9 @@ def update_flattend_table(
     merged_schema = unify_schemas(
         [current_schema, incoming_schema], promote_options="default"
     )
+    logger.debug(f"Incoming columns: \n {incoming_schema.names}")
+    logger.debug(f"Current columns: \n {current_schema.names}")
+    logger.debug(f"Merged columns: \n {merged_schema.names}")
 
     current_field_names = current_schema.names
     incoming_field_names = incoming_schema.names
@@ -1056,11 +1059,13 @@ def update_flattend_table(
         index_mask = pc.index_in(
             aligned_current_table[update_keys], aligned_incoming_table[update_keys]
         )
+        update_table = pc.take(aligned_incoming_table, index_mask)
     elif isinstance(update_keys, list) and len(update_keys) == 1:
         index_mask = pc.index_in(
             aligned_current_table[update_keys[0]],
             aligned_incoming_table[update_keys[0]],
         )
+        update_table = pc.take(aligned_incoming_table, index_mask)
     elif isinstance(update_keys, list) and len(update_keys) > 1:
 
         tmp_current_table = aligned_current_table.select(update_keys)
@@ -1078,14 +1083,19 @@ def update_flattend_table(
             right_keys=update_keys,
             join_type="right outer",
         )
+
         index_mask = right_outer_table["incoming_index"].take(
             right_outer_table["current_index"]
         )
 
-    # Create an update table by selecting rows from the incoming table using the index mask.
-    update_table = pc.take(aligned_incoming_table, index_mask)
+        logger.debug(f"Index mask: \n {index_mask}")
 
+        update_table = pc.take(aligned_incoming_table, index_mask)
+
+        update_table = update_table.sort_by([("id", "ascending")])
+        aligned_current_table = aligned_current_table.sort_by([("id", "ascending")])
     logger.debug(f"update_table shape: {update_table.shape}")
+
     # Default the updated table to the current table
     updated_table = aligned_current_table
 
@@ -1264,6 +1274,7 @@ def update_schema(current_schema, schema=None, field_dict=None, update_metadata=
     updated_schema = pa.schema(field_names, metadata=updated_metadata)
     return updated_schema
 
+
 def unify_schemas(schema_list, promote_options="permissive"):
     """
     Unify two PyArrow schemas while preserving and merging their metadata.
@@ -1416,6 +1427,7 @@ def add_new_null_fields_in_struct(column_array, new_struct_type):
             new_arrays.append(null_array)
     return pa.StructArray.from_arrays(new_arrays, fields=new_struct_type)
 
+
 def table_schema_cast(current_table, new_schema):
     """Cast a PyArrow table to match a new schema.
 
@@ -1424,7 +1436,7 @@ def table_schema_cast(current_table, new_schema):
     - New fields (added as null columns)
     - Special handling for fixed shape tensors
     - Reordering columns alphabetically
-    
+
     Parameters
     ----------
     current_table : pyarrow.Table
@@ -1511,6 +1523,7 @@ def table_schema_cast(current_table, new_schema):
     current_table = current_table.replace_schema_metadata(new_schema.metadata)
     return current_table
 
+
 def schema_equal(schema1, schema2):
     """
     Compare two PyArrow schemas for equality, including metadata.
@@ -1586,6 +1599,7 @@ def join_tables(
     left_suffix: str = None,
     right_suffix: str = None,
     coalesce_keys: bool = True,
+    sort_after_join: bool = True,
 ):
     """
     Join two PyArrow tables based on specified key columns.
@@ -1711,10 +1725,26 @@ def join_tables(
         logger.debug(e)
         pass
 
-    if "right_index" in joined_table.column_names:
+    if (
+        "right_index" in joined_table.column_names
+        and "left_index" in joined_table.column_names
+        and sort_after_join
+    ):
+        joined_table = joined_table.sort_by(
+            [("left_index", "ascending"), ("right_index", "ascending")]
+        )
+        joined_table = joined_table.drop(["right_index", "left_index"])
+    elif "right_index" in joined_table.column_names and sort_after_join:
+        joined_table = joined_table.sort_by([("right_index", "ascending")])
         joined_table = joined_table.drop(["right_index"])
-    if "left_index" in joined_table.column_names:
+    elif "left_index" in joined_table.column_names and sort_after_join:
+        joined_table = joined_table.sort_by([("left_index", "ascending")])
         joined_table = joined_table.drop(["left_index"])
+
+    if "left_index" in joined_table.column_names and not sort_after_join:
+        joined_table = joined_table.drop(["left_index"])
+    if "right_index" in joined_table.column_names and not sort_after_join:
+        joined_table = joined_table.drop(["right_index"])
 
     joined_table = joined_table.replace_schema_metadata(metadata)
     return joined_table
@@ -1891,8 +1921,8 @@ def delete_ids(table, ids):
     value: string
     ----
     id         value
-    1          a    
-    4          d    
+    1          a
+    4          d
     """
     return table.filter(~pc.field("id").isin(ids))
 
@@ -1925,7 +1955,7 @@ def delete_field_values(table, values, field_name):
     category: string
     ----
     id         category
-    2          B       
+    2          B
     """
     return table.filter(~pc.field(field_name).isin(values))
 

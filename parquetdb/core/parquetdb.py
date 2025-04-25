@@ -976,7 +976,7 @@ class ParquetDB:
         """
 
         if new_db_path:
-            print(f"Writing transformation to new dir: {new_db_path}")
+            logger.info(f"Writing transformation to new dir: {new_db_path}")
 
         self._normalize(
             transform_callable=transform_callable,
@@ -1092,11 +1092,11 @@ class ParquetDB:
         if new_db_path:
             dataset_dir = new_db_path
             dataset_name = os.path.basename(new_db_path)
-            basename_template = f"tmp_{dataset_name}_{{i}}.parquet"
+            basename_template = f"tmp-{dataset_name}_{{i}}.parquet"
         else:
             dataset_dir = self.db_path
             dataset_name = self.dataset_name
-            basename_template = f"tmp_{self.dataset_name}_{{i}}.parquet"
+            basename_template = f"tmp-{self.dataset_name}_{{i}}.parquet"
 
         try:
             retrieved_data = self._load_data(
@@ -1121,6 +1121,9 @@ class ParquetDB:
             logger.info(
                 "This normalization is an update. Applying update function, then normalizing."
             )
+
+            logger.debug(f"Retrieved data: \n {retrieved_data}")
+            logger.debug(f"Incoming table: \n {incoming_table}")
             retrieved_data = data_transform(
                 retrieved_data,
                 pyarrow_utils.update_flattend_table,
@@ -1220,7 +1223,8 @@ class ParquetDB:
                 a = 1 / 0
 
             # Remove main files to replace with tmp files
-            tmp_files = glob(os.path.join(dataset_dir, f"tmp_{dataset_name}_*.parquet"))
+            logger.debug(f"Files before renaming: {os.listdir(dataset_dir)}")
+            tmp_files = glob(os.path.join(dataset_dir, f"tmp-{dataset_name}_*.parquet"))
             if len(tmp_files) != 0:
                 main_files = glob(
                     os.path.join(dataset_dir, f"{dataset_name}_*.parquet")
@@ -1229,18 +1233,28 @@ class ParquetDB:
                     if os.path.isfile(file_path):
                         os.remove(file_path)
 
-            tmp_files = glob(os.path.join(dataset_dir, f"tmp_{dataset_name}_*.parquet"))
+            logger.debug(f"Files after removing main files: {os.listdir(dataset_dir)}")
+
+            tmp_files = glob(os.path.join(dataset_dir, f"tmp-{dataset_name}_*.parquet"))
             for file_path in tmp_files:
-                file_name = os.path.basename(file_path).replace("tmp_", "")
+                file_name = os.path.basename(file_path).replace("tmp-", "")
                 new_file_path = os.path.join(dataset_dir, file_name)
                 os.rename(file_path, new_file_path)
+
+            logger.debug(f"Files after renaming: {os.listdir(dataset_dir)}")
+
+            schema = self._load_data(
+                load_format="dataset", dataset_dir=dataset_dir
+            ).schema
+            logger.debug(f"Columns : \n {schema.names}")
+
         except Exception as e:
             logger.exception(f"exception writing final table to {dataset_dir}: {e}")
 
-            tmp_files = glob(os.path.join(dataset_dir, f"tmp_{dataset_name}_*.parquet"))
+            tmp_files = glob(os.path.join(dataset_dir, f"tmp-{dataset_name}_*.parquet"))
             for file_path in tmp_files:
 
-                file_name = os.path.basename(file_path).replace("tmp_", "")
+                file_name = os.path.basename(file_path).replace("tmp-", "")
                 new_file_path = os.path.join(dataset_dir, file_name)
                 os.rename(file_path, new_file_path)
 
