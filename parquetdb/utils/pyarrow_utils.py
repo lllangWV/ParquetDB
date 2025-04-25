@@ -1095,7 +1095,6 @@ def update_flattend_table(
         update_table = update_table.sort_by([("id", "ascending")])
         aligned_current_table = aligned_current_table.sort_by([("id", "ascending")])
     logger.debug(f"update_table shape: {update_table.shape}")
-    logger.debug(f"update_table shape: {update_table}")
 
     # Default the updated table to the current table
     updated_table = aligned_current_table
