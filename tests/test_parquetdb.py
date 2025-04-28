@@ -1289,6 +1289,88 @@ class TestParquetDB(unittest.TestCase):
 
         assert deduplicated_table.shape == (3, 3)
 
+    def test_get_number_of_rows_per_file(self):
+        self.db.create(data=self.test_data)
+        logger.debug(self.db.get_number_of_rows_per_file())
+        assert self.db.get_number_of_rows_per_file() == [3]
+
+    def test_get_number_of_row_groups_per_file(self):
+        self.db.create(data=self.test_data)
+        logger.debug(self.db.get_number_of_row_groups_per_file())
+        assert self.db.get_number_of_row_groups_per_file() == [1]
+
+    def test_get_row_group_sizes_per_file(self):
+        self.db.create(data=self.test_data)
+        logger.debug(self.db.get_row_group_sizes_per_file())
+        row_group_sizes = {"test_db_0.parquet": {0: 0.0002918243408203125}}
+        assert np.isclose(
+            self.db.get_row_group_sizes_per_file()["test_db_0.parquet"][0],
+            row_group_sizes["test_db_0.parquet"][0],
+        )
+
+    def test_get_file_sizes(self):
+        self.db.create(data=self.test_data)
+        logger.debug(self.db.get_file_sizes())
+        file_sizes = {"test_db_0.parquet": 0.0012388229370117188}
+        assert np.isclose(
+            self.db.get_file_sizes()["test_db_0.parquet"],
+            file_sizes["test_db_0.parquet"],
+        )
+
+    def test_get_parquet_column_metadata_per_file(self):
+        self.db.create(data=self.test_data)
+        logger.debug(
+            f"parquet_column_metadata_per_file: {self.db.get_parquet_column_metadata_per_file(as_dict=True)}"
+        )
+        column_metadata = self.db.get_parquet_column_metadata_per_file(as_dict=True)
+
+        column_metadata_keys = [
+            "file_offset",
+            "file_path",
+            "physical_type",
+            "num_values",
+            "statistics",
+            "has_dictionary_page",
+            "total_uncompressed_size",
+            "total_compressed_size",
+        ]
+
+        for key in column_metadata_keys:
+            assert key in column_metadata["test_db_0.parquet"][0][0]
+
+    def test_properties(self):
+        self.db.create(data=self.test_data)
+        logger.debug(f"n_rows: {self.db.n_rows}")
+        assert self.db.n_rows == 3
+
+        logger.debug(f"n_files: {self.db.n_files}")
+        assert self.db.n_files == 1
+
+        logger.debug(f"n_row_groups_per_file: {self.db.n_row_groups_per_file}")
+        assert self.db.n_row_groups_per_file == [1]
+
+        logger.debug(
+            f"n_rows_per_row_group_per_file: {self.db.n_rows_per_row_group_per_file}"
+        )
+        assert self.db.n_rows_per_row_group_per_file["test_db_0.parquet"][0] == 3
+
+        logger.debug(
+            f"serialized_metadata_size_per_file: {self.db.serialized_metadata_size_per_file}"
+        )
+        assert self.db.serialized_metadata_size_per_file[0] == 717
+
+    def test_summary(self):
+        self.db.create(data=self.test_data)
+        tmp_str = self.db.summary(show_row_group_metadata=True, show_column_names=True)
+        assert "- age\n" in tmp_str
+        assert "- name\n" in tmp_str
+        assert "- id\n" in tmp_str
+
+    def test_copy_dataset(self):
+        self.db.create(data=self.test_data)
+        self.db.copy_dataset(os.path.join(self.db.db_path, "test_copy"))
+        assert os.path.exists(os.path.join(self.db.db_path, "test_copy"))
+
 
 if __name__ == "__main__":
     unittest.main()
