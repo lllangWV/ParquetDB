@@ -40,8 +40,8 @@ dependencies = [
     "dill",
     "pathos",
     "dask",
-    "distributed "
-
+    "distributed",
+    "platformdirs"
 ]
 
 [project.optional-dependencies]
