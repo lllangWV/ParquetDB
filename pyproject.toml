@@ -31,7 +31,7 @@ dynamic = ["version"]
 
 dependencies = [
     "python-dotenv",
-    "pyarrow",
+    "pyarrow==17.0.0",
     "pandas",
     "variconfig",
     "matplotlib",
@@ -40,22 +40,21 @@ dependencies = [
     "dill",
     "pathos",
     "dask",
-    "distributed "
-
+    "distributed",
+    "platformdirs"
 ]
 
 [project.optional-dependencies]
 
-
-dev = [
-    "pymongo",
+tests = [
+    "pytest",
+    "pytest-cov",
     "pymatgen"
 ]
 
 docs= [
     "ipython",
-    "pymongo",
-    "pymatgen",
+    "imageio-ffmpeg",
     "sphinx", 
     "sphinx_rtd_theme",
     "sphinx-copybutton",
@@ -66,7 +65,31 @@ docs= [
     "sphinxcontrib-video",
     "pandoc",
     "furo",
-    "numpydoc",
+    "numpydoc"
+]
+
+
+dev = [
+    "pymongo",
+    "pytest",
+    "openai",
+    "python-dotenv",
+    "PyGithub",
+    "pytest-cov",
+    "pymatgen",
+    "ipython",
+    "imageio-ffmpeg",
+    "sphinx", 
+    "sphinx_rtd_theme",
+    "sphinx-copybutton",
+    "nbsphinx",
+    "sphinx_design",
+    "sphinx-new-tab-link",
+    "sphinxcontrib-youtube",
+    "sphinxcontrib-video",
+    "pandoc",
+    "furo",
+    "numpydoc"
 ]
 
 
