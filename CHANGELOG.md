@@ -1,3 +1,38 @@
+This release enhances automation across CI/CD and documentation workflows, introduces new testing utilities and PyArrow joins, and fixes temporary file naming and notebook metadata issues. It also refines configuration management, cleans up dead code, and expands test coverage for greater reliability.
+
+##### Bugs
+- Renamed temporary Parquet files from `tmp_{dataset_name}` to `tmp-{dataset_name}` to prevent race conditions in tmp-prefixed directories  
+- Reset notebook execution counts and refreshed outputs for accurate metadata  
+- Updated CI to install test dependencies via the `[tests]` extras and pinned Python to 3.12 for compatibility  
+
+##### New features
+- Added a GitHub Actions workflow for fully automated Python package releases and branch updates  
+- Implemented scripts to generate release notes from PR commits and comments  
+- Introduced a continuous pytest runner with timestamped failure logs, graceful shutdown, and iteration feedback  
+- Added `join_tables` in PyArrow to perform inner, outer, and other joins with suffix handling (includes `left_outer_join` example)  
+- Auto-creates a user-specific configuration file when none is found  
+
+##### Documentation updates
+- Removed the initial project note from the README and updated its link to point to `docs/index.html`  
+- Created `CONTRIBUTING.md` with cloning, testing, and communication guidelines  
+- Relocated Sphinx sources into `docs`, removed built docs, Makefiles, and obsolete files, and updated `.readthedocs.yaml`  
+- Configured Read the Docs and added a Sphinx build workflow (Python setup, dependency install, build validation) that fails on errors  
+- Enhanced notebook formatting with custom CSS and added installation instructions for `parquetdb` and `pymongo` in examples  
+- Revised `paper.md` and benchmarks for clarity, updated performance comparisons and references, standardized notebook names, and corrected execution counts  
+
+##### Maintenance
+- Removed dead code: `TransactionManager` class and methods  
+- Refactored `config.py` for flexible loading, added `platformdirs`, and fixed stray dependency formatting  
+- Cleaned up imports, applied code formatting, and upgraded model references to `o4-mini`  
+- Added `pytest` and `pytest-cov` to project dependencies and updated CI workflows accordingly  
+- Clarified test data comments, re-enabled `test_update_multi_keys`, and improved temp-directory management with existence checks and debug logs  
+- Replaced ad-hoc `print` statements with structured logger calls and added schema‐merge logging while removing redundant logs  
+- Renamed CI jobs (`run-tests`), standardized Python to 3.10, simplified workflows by removing unnecessary steps, and added a `test-build-package` job for build/publish automation  
+- Refined `_version.py` with proper formatting, comments, public API (`__all__`), and clarified type-hint imports  
+- Expanded ParquetDB test suite to cover row counts, row groups, file sizes, column metadata, and dataset copying
+
+---
+
 
 ___
 
