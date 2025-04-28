@@ -72,6 +72,9 @@ docs= [
 dev = [
     "pymongo",
     "pytest",
+    "openai",
+    "python-dotenv",
+    "PyGithub",
     "pytest-cov",
     "pymatgen",
     "ipython",
