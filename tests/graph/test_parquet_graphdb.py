@@ -1,17 +1,15 @@
 import os
 import shutil
-
+import logging
 import pandas as pd
 import pyarrow as pa
 import pytest
 
-from parquetdb.graph import EdgeStore, GraphDB, NodeStore
-from parquetdb.utils import element, element_element_neighborsByGroupPeriod
-from parquetdb.utils.config import PKG_DIR, config
+from parquetdb.graph import EdgeStore, ParquetGraphDB, NodeStore
 
-config.logging_config.loggers.matgraphdb.level = "DEBUG"
+from utils import element, element_element_neighborsByGroupPeriod
 
-config.apply()
+logger = logging.getLogger(__name__)
 
 
 @pytest.fixture
@@ -26,14 +24,14 @@ def tmp_dir(tmp_path):
 @pytest.fixture
 def graphdb(tmp_dir):
     """Fixture to create a GraphDB instance."""
-    return GraphDB(storage_path=tmp_dir)
+    return ParquetGraphDB(storage_path=tmp_dir)
 
 
 @pytest.fixture
 def element_store(tmp_dir):
     """Fixture to create an ElementNodes instance."""
     element_store = NodeStore(storage_path=os.path.join(tmp_dir, "elements"))
-    element_store.create_nodes(elements())
+    element_store.create_nodes(element())
     return element_store
 
 
@@ -169,7 +167,7 @@ def test_add_node_store(tmp_dir):
     temp_store.create_nodes(test_data)
 
     # Create a graph database
-    graph = GraphDB(storage_path=os.path.join(tmp_dir, "graph"))
+    graph = ParquetGraphDB(storage_path=os.path.join(tmp_dir, "graph"))
 
     # Add the node store to the graph
     graph.add_node_store(temp_store)
@@ -211,7 +209,7 @@ def test_add_node_store_with_remove_original(tmp_dir):
     temp_store.normalize()  # Add this line to ensure data is written
 
     # Create a graph database
-    graphdb = GraphDB(storage_path=os.path.join(tmp_dir, "graph"))
+    graphdb = ParquetGraphDB(storage_path=os.path.join(tmp_dir, "graph"))
 
     # Add the node store with remove_original=True
     graphdb.add_node_store(temp_store, remove_original=True)
@@ -233,7 +231,7 @@ def test_add_node_store_with_remove_original(tmp_dir):
 def test_nodes_persist_after_reload(tmp_dir):
     """Test that nodes persist and can be loaded after recreating the GraphDB instance."""
     # Create initial graph instance and add nodes
-    graph = GraphDB(storage_path=tmp_dir, load_custom_stores=False)
+    graph = ParquetGraphDB(storage_path=tmp_dir, load_custom_stores=False)
     node_type = "test_node"
     test_data = [{"name": "Node1", "value": 10}, {"name": "Node2", "value": 20}]
     graph.add_nodes(node_type, test_data)
@@ -247,7 +245,7 @@ def test_nodes_persist_after_reload(tmp_dir):
     ], "Incorrect node names."
 
     # Create new graph instance (simulating program restart)
-    new_graph = GraphDB(storage_path=tmp_dir, load_custom_stores=False)
+    new_graph = ParquetGraphDB(storage_path=tmp_dir, load_custom_stores=False)
 
     # Verify data persisted
     loaded_nodes = new_graph.get_nodes(node_type)
@@ -385,7 +383,7 @@ def test_remove_edge_store(graphdb, test_data):
 def test_edges_persist_after_reload(tmp_dir, test_data):
     """Test that edges persist and can be loaded after recreating the GraphDB instance."""
     # Create initial graph instance and add edges
-    graph = GraphDB(storage_path=tmp_dir)
+    graph = ParquetGraphDB(storage_path=tmp_dir)
     nodes_1_data, node_1_type, nodes_2_data, node_2_type, edge_data, edge_type = (
         test_data
     )
@@ -394,7 +392,7 @@ def test_edges_persist_after_reload(tmp_dir, test_data):
     graph.add_edges(edge_type, edge_data)
 
     # Create new graph instance (simulating program restart)
-    new_graph = GraphDB(storage_path=tmp_dir)
+    new_graph = ParquetGraphDB(storage_path=tmp_dir)
 
     # Verify edges persisted
     assert edge_type in new_graph.edge_stores, "Edge type not loaded."
@@ -474,7 +472,7 @@ def test_edge_generator_persistence(tmp_dir, element_store):
     generator_name = element_element_neighborsByGroupPeriod.__name__
 
     # Create initial graph instance and add generator
-    graph = GraphDB(storage_path=tmp_dir)
+    graph = ParquetGraphDB(storage_path=tmp_dir)
     graph.add_node_store(element_store)
     graph.add_edge_generator(
         element_element_neighborsByGroupPeriod,
@@ -482,7 +480,7 @@ def test_edge_generator_persistence(tmp_dir, element_store):
     )
 
     # Create new graph instance (simulating program restart)
-    new_graph = GraphDB(storage_path=tmp_dir)
+    new_graph = ParquetGraphDB(storage_path=tmp_dir)
 
     # Verify generator was loaded
     assert new_graph.edge_generator_store.is_in(generator_name)
@@ -573,14 +571,14 @@ def test_node_generator_persistence(tmp_dir, wyckoff_generator):
     """Test that node generators persist when reloading the GraphDB."""
     generator_name = wyckoff_generator.__name__
     # Create initial graph instance and add generator
-    graph = GraphDB(storage_path=tmp_dir)
+    graph = ParquetGraphDB(storage_path=tmp_dir)
     graph.add_node_generator(
         wyckoff_generator,
         run_immediately=False,
     )
 
     # Create new graph instance (simulating program restart)
-    new_graph = GraphDB(storage_path=tmp_dir)
+    new_graph = ParquetGraphDB(storage_path=tmp_dir)
 
     # Verify generator was loaded
     assert new_graph.node_generator_store.is_in(generator_name)
