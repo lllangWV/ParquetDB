@@ -429,210 +429,211 @@ def test_edges_persist_after_reload(tmp_dir, test_data):
     assert edge_dict["weight"] == [0.5, 0.7, 0.5, 0.7], "Incorrect edge weights."
 
 
-# def test_add_edge_generator(graphdb, element_store):
-#     """Test adding an edge generator to the GraphDB."""
-#     # Get the generator name from the function
+def test_add_edge_generator(graphdb, element_store):
+    """Test adding an edge generator to the GraphDB."""
+    # Get the generator name from the function
 
-#     generator_name = element_element_neighborsByGroupPeriod.__name__
+    generator_name = element_element_neighborsByGroupPeriod.__name__
 
-#     graphdb.add_node_store(element_store)
-#     # Add the generator
-#     graphdb.add_edge_generator(
-#         element_element_neighborsByGroupPeriod,
-#         generator_args={"element_store": element_store},
-#     )
+    graphdb.add_node_store(element_store)
+    # Add the generator
+    graphdb.add_edge_generator(
+        element_element_neighborsByGroupPeriod,
+        generator_args={"element_store": element_store},
+    )
 
-#     # Verify the generator was added
-#     assert graphdb.edge_generator_store.is_in(generator_name)
-
-
-# def test_run_edge_generator(graphdb, element_store):
-#     """Test running an edge generator and verify its output."""
-
-#     graphdb.add_node_store(element_store)
-
-#     generator_name = element_element_neighborsByGroupPeriod.__name__
-
-#     # Add and run the generator
-#     graphdb.add_edge_generator(
-#         element_element_neighborsByGroupPeriod,
-#         generator_args={"element_store": element_store},
-#     )
-
-#     table = graphdb.run_edge_generator(generator_name)
-
-#     # Verify the output table has the expected structure
-#     assert isinstance(table, pa.Table)
-#     expected_columns = {
-#         "source_id",
-#         "target_id",
-#         "source_type",
-#         "target_type",
-#         "weight",
-#         "source_name",
-#         "target_name",
-#         "name",
-#         "source_extended_group",
-#         "source_period",
-#         "target_extended_group",
-#         "target_period",
-#     }
-#     assert set(table.column_names) == expected_columns
-
-#     # Convert to pandas for easier verification
-#     df = table.to_pandas()
-
-#     # Basic validation checks
-#     assert not df.empty, "Generator produced no edges"
-#     assert all(df["source_type"] == "elements"), "Incorrect source_type"
-#     assert all(df["target_type"] == "elements"), "Incorrect target_type"
-#     assert all(df["weight"] == 1.0), "Incorrect weight values"
-
-#     # Verify edge names are properly formatted
-#     assert all(
-#         df["name"].str.contains("_neighborsByGroupPeriod_")
-#     ), "Edge names not properly formatted"
+    # Verify the generator was added
+    assert graphdb.edge_generator_store.is_in(generator_name)
 
 
-# def test_edge_generator_persistence(tmp_dir, element_store):
-#     """Test that edge generators persist when reloading the GraphDB."""
-#     generator_name = element_element_neighborsByGroupPeriod.__name__
+def test_run_edge_generator(graphdb, element_store):
+    """Test running an edge generator and verify its output."""
 
-#     # Create initial graph instance and add generator
-#     graph = ParquetGraphDB(storage_path=tmp_dir, verbose=VERBOSE)
-#     graph.add_node_store(element_store)
-#     graph.add_edge_generator(
-#         element_element_neighborsByGroupPeriod,
-#         generator_args={"element_store": element_store},
-#     )
+    graphdb.add_node_store(element_store)
 
-#     # Create new graph instance (simulating program restart)
-#     new_graph = ParquetGraphDB(storage_path=tmp_dir, verbose=VERBOSE)
+    generator_name = element_element_neighborsByGroupPeriod.__name__
 
-#     # Verify generator was loaded
-#     assert new_graph.edge_generator_store.is_in(generator_name)
+    # Add and run the generator
+    graphdb.add_edge_generator(
+        element_element_neighborsByGroupPeriod,
+        generator_args={"element_store": element_store},
+    )
 
-#     # Verify generator still works
-#     table = new_graph.run_edge_generator(generator_name)
-#     assert isinstance(table, pa.Table), "Generator output is not a pyarrow Table"
-#     assert len(table) > 0, "Generator produced no edges"
+    table = graphdb.run_edge_generator(generator_name)
 
-#     assert table.shape == (
-#         391,
-#         12,
-#     ), "Generator for element_element_neighborsByGroupPeriod edge output shape is incorrect"
+    # Verify the output table has the expected structure
+    assert isinstance(table, pa.Table)
+    expected_columns = {
+        "source_id",
+        "target_id",
+        "source_type",
+        "target_type",
+        "edge_type",
+        "weight",
+        "source_name",
+        "target_name",
+        "name",
+        "source_extended_group",
+        "source_period",
+        "target_extended_group",
+        "target_period",
+    }
+    assert set(table.column_names) == expected_columns
 
+    # Convert to pandas for easier verification
+    df = table.to_pandas()
 
-# def test_invalid_generator_args(graphdb, element_store):
-#     """Test that invalid generator arguments raise appropriate errors."""
+    # Basic validation checks
+    assert not df.empty, "Generator produced no edges"
+    assert all(df["source_type"] == "elements"), "Incorrect source_type"
+    assert all(df["target_type"] == "elements"), "Incorrect target_type"
+    assert all(df["weight"] == 1.0), "Incorrect weight values"
 
-#     # element_store = ElementNodes(storage_path=os.path.join(tmp_dir, 'elements'))
-#     generator_name = element_element_neighborsByGroupPeriod.__name__
-#     graphdb.add_node_store(element_store)
-
-#     # Test missing required argument
-#     with pytest.raises(Exception):
-#         graphdb.add_edge_generator(
-#             element_element_neighborsByGroupPeriod,
-#             generator_args={},  # Missing element_store
-#             run_immediately=False,
-#         )
-#         graphdb.run_edge_generator(generator_name)
-
-#     # Test invalid element_store argument
-#     with pytest.raises(Exception):
-#         graphdb.add_edge_generator(
-#             element_element_neighborsByGroupPeriod,
-#             generator_args={"element_store": "invalid_store"},
-#         )
+    # Verify edge names are properly formatted
+    assert all(
+        df["name"].str.contains("_neighborsByGroupPeriod_")
+    ), "Edge names not properly formatted"
 
 
-# def test_add_node_generator(graphdb, wyckoff_generator):
-#     """Test adding a node generator to the GraphDB."""
+def test_edge_generator_persistence(tmp_dir, element_store):
+    """Test that edge generators persist when reloading the GraphDB."""
+    generator_name = element_element_neighborsByGroupPeriod.__name__
 
-#     generator_name = wyckoff_generator.__name__
-#     # Add the generator
-#     graphdb.add_node_generator(wyckoff_generator)
+    # Create initial graph instance and add generator
+    graph = ParquetGraphDB(storage_path=tmp_dir, verbose=VERBOSE)
+    graph.add_node_store(element_store)
+    graph.add_edge_generator(
+        element_element_neighborsByGroupPeriod,
+        generator_args={"element_store": element_store},
+    )
 
-#     # Verify the generator was added
-#     assert graphdb.node_generator_store.is_in(generator_name)
+    # Create new graph instance (simulating program restart)
+    new_graph = ParquetGraphDB(storage_path=tmp_dir, verbose=VERBOSE)
 
-#     wyckoff_node_store = graphdb.get_node_store(generator_name)
+    # Verify generator was loaded
+    assert new_graph.edge_generator_store.is_in(generator_name)
 
-#     nodes = wyckoff_node_store.read_nodes()
-#     nodes_df = nodes.to_pandas()
+    # Verify generator still works
+    table = new_graph.run_edge_generator(generator_name)
+    assert isinstance(table, pa.Table), "Generator output is not a pyarrow Table"
+    assert len(table) > 0, "Generator produced no edges"
 
-#     assert nodes_df.shape == (2, 5)
-
-
-# def test_run_node_generator(graphdb, wyckoff_generator):
-#     """Test running a node generator and verify its output."""
-#     generator_name = wyckoff_generator.__name__
-
-#     # Add and run the generator
-#     graphdb.add_node_generator(
-#         wyckoff_generator,
-#         generator_args=None,
-#         generator_kwargs=None,
-#         run_immediately=False,
-#     )
-
-#     graphdb.run_node_generator(generator_name)
-
-#     wyckoff_node_store = graphdb.get_node_store(generator_name)
-
-#     nodes = wyckoff_node_store.read_nodes()
-#     nodes_df = nodes.to_pandas()
-
-#     # Verify the output table has the expected structure
-#     assert isinstance(nodes_df, pd.DataFrame)
-#     expected_columns = {"symbol", "multiplicity", "letter", "site_symmetry", "id"}
-#     assert set(nodes_df.columns) == expected_columns
-
-#     # Basic validation checks
-#     assert not nodes_df.empty, "Generator produced no nodes"
-#     assert nodes_df.shape == (2, 5), "Generator has the wrong shape"
+    assert table.shape == (
+        391,
+        13,
+    ), f"Generator for element_element_neighborsByGroupPeriod edge output shape ({table.shape}) is incorrect"
 
 
-# def test_node_generator_persistence(tmp_dir, wyckoff_generator):
-#     """Test that node generators persist when reloading the GraphDB."""
-#     generator_name = wyckoff_generator.__name__
-#     # Create initial graph instance and add generator
-#     graph = ParquetGraphDB(storage_path=tmp_dir, verbose=VERBOSE)
-#     graph.add_node_generator(
-#         wyckoff_generator,
-#         run_immediately=False,
-#     )
+def test_invalid_generator_args(graphdb, element_store):
+    """Test that invalid generator arguments raise appropriate errors."""
 
-#     # Create new graph instance (simulating program restart)
-#     new_graph = ParquetGraphDB(storage_path=tmp_dir, verbose=VERBOSE)
+    # element_store = ElementNodes(storage_path=os.path.join(tmp_dir, 'elements'))
+    generator_name = element_element_neighborsByGroupPeriod.__name__
+    graphdb.add_node_store(element_store)
 
-#     # Verify generator was loaded
-#     assert new_graph.node_generator_store.is_in(generator_name)
+    # Test missing required argument
+    with pytest.raises(Exception):
+        graphdb.add_edge_generator(
+            element_element_neighborsByGroupPeriod,
+            generator_args={},  # Missing element_store
+            run_immediately=False,
+        )
+        graphdb.run_edge_generator(generator_name)
 
-#     # Verify generator still works
-#     new_graph.run_node_generator(generator_name)
-
-#     wyckoff_node_store = new_graph.get_node_store(generator_name)
-
-#     nodes = wyckoff_node_store.read_nodes()
-#     nodes_df = nodes.to_pandas()
-
-#     assert isinstance(
-#         nodes_df, pd.DataFrame
-#     ), "Generator output is not a pandas DataFrame"
-#     assert len(nodes_df) > 0, "Generator produced no nodes"
-#     assert nodes_df.shape == (2, 5), "Generator output shape is incorrect"
+    # Test invalid element_store argument
+    with pytest.raises(Exception):
+        graphdb.add_edge_generator(
+            element_element_neighborsByGroupPeriod,
+            generator_args={"element_store": "invalid_store"},
+        )
 
 
-# def test_invalid_node_generator_args(graphdb):
-#     """Test that invalid node generator arguments raise appropriate errors."""
+def test_add_node_generator(graphdb, wyckoff_generator):
+    """Test adding a node generator to the GraphDB."""
 
-#     def bad_generator(nonexistent_arg):
-#         return pa.Table.from_pylist([{"test": 1}])
+    generator_name = wyckoff_generator.__name__
+    # Add the generator
+    graphdb.add_node_generator(wyckoff_generator)
 
-#     with pytest.raises(Exception):
-#         graphdb.add_node_generator(
-#             bad_generator,
-#         )
-#         graphdb.run_node_generator("bad_generator")
+    # Verify the generator was added
+    assert graphdb.node_generator_store.is_in(generator_name)
+
+    wyckoff_node_store = graphdb.get_node_store(generator_name)
+
+    nodes = wyckoff_node_store.read_nodes()
+    nodes_df = nodes.to_pandas()
+
+    assert nodes_df.shape == (2, 5)
+
+
+def test_run_node_generator(graphdb, wyckoff_generator):
+    """Test running a node generator and verify its output."""
+    generator_name = wyckoff_generator.__name__
+
+    # Add and run the generator
+    graphdb.add_node_generator(
+        wyckoff_generator,
+        generator_args=None,
+        generator_kwargs=None,
+        run_immediately=False,
+    )
+
+    graphdb.run_node_generator(generator_name)
+
+    wyckoff_node_store = graphdb.get_node_store(generator_name)
+
+    nodes = wyckoff_node_store.read_nodes()
+    nodes_df = nodes.to_pandas()
+
+    # Verify the output table has the expected structure
+    assert isinstance(nodes_df, pd.DataFrame)
+    expected_columns = {"symbol", "multiplicity", "letter", "site_symmetry", "id"}
+    assert set(nodes_df.columns) == expected_columns
+
+    # Basic validation checks
+    assert not nodes_df.empty, "Generator produced no nodes"
+    assert nodes_df.shape == (2, 5), "Generator has the wrong shape"
+
+
+def test_node_generator_persistence(tmp_dir, wyckoff_generator):
+    """Test that node generators persist when reloading the GraphDB."""
+    generator_name = wyckoff_generator.__name__
+    # Create initial graph instance and add generator
+    graph = ParquetGraphDB(storage_path=tmp_dir, verbose=VERBOSE)
+    graph.add_node_generator(
+        wyckoff_generator,
+        run_immediately=False,
+    )
+
+    # Create new graph instance (simulating program restart)
+    new_graph = ParquetGraphDB(storage_path=tmp_dir, verbose=VERBOSE)
+
+    # Verify generator was loaded
+    assert new_graph.node_generator_store.is_in(generator_name)
+
+    # Verify generator still works
+    new_graph.run_node_generator(generator_name)
+
+    wyckoff_node_store = new_graph.get_node_store(generator_name)
+
+    nodes = wyckoff_node_store.read_nodes()
+    nodes_df = nodes.to_pandas()
+
+    assert isinstance(
+        nodes_df, pd.DataFrame
+    ), "Generator output is not a pandas DataFrame"
+    assert len(nodes_df) > 0, "Generator produced no nodes"
+    assert nodes_df.shape == (2, 5), "Generator output shape is incorrect"
+
+
+def test_invalid_node_generator_args(graphdb):
+    """Test that invalid node generator arguments raise appropriate errors."""
+
+    def bad_generator(nonexistent_arg):
+        return pa.Table.from_pylist([{"test": 1}])
+
+    with pytest.raises(Exception):
+        graphdb.add_node_generator(
+            bad_generator,
+        )
+        graphdb.run_node_generator("bad_generator")
