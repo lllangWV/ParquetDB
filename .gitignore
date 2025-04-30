@@ -144,6 +144,8 @@ update_package.md
 
 /my_tests/
 
+examples/graphdb/GraphDB
+
 /papers/
 /media/
 /docs/_build/
