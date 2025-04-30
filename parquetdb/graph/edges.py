@@ -6,9 +6,9 @@ from typing import Dict, List, Union
 import pandas as pd
 import pyarrow as pa
 import pyarrow.compute as pc
+
 from parquetdb import ParquetDB
 from parquetdb.core.parquetdb import LoadConfig, NormalizeConfig
-
 from parquetdb.graph.utils import get_dataframe_column_names
 
 logger = logging.getLogger(__name__)
@@ -52,7 +52,7 @@ class EdgeStore(ParquetDB):
     required_fields = REQUIRED_EDGE_COLUMNS_FIELDS
     edge_metadata_keys = ["class", "class_module"]
 
-    def __init__(self, storage_path: str, setup_kwargs: dict = None):
+    def __init__(self, storage_path: str, setup_kwargs: dict = None, verbose: int = 1):
         """
         Parameters
         ----------
@@ -69,6 +69,7 @@ class EdgeStore(ParquetDB):
                 pa.field("target_type", pa.string()),
                 pa.field("edge_type", pa.string()),
             ],
+            verbose=verbose,
         )
 
         self._initialize_metadata()

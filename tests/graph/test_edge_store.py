@@ -4,10 +4,9 @@ import shutil
 import pandas as pd
 import pyarrow as pa
 import pytest
+from utils import element
 
 from parquetdb.graph import EdgeStore, NodeStore
-
-from utils import element
 
 
 @pytest.fixture
@@ -64,7 +63,7 @@ def test_edge_store_initialization(temp_storage):
 
     metadata = store.get_metadata()
     assert metadata["class"] == "EdgeStore"
-    assert metadata["class_module"] == "matgraphdb.core.edges"
+    assert metadata["class_module"] == "parquetdb.graph.edges"
 
 
 def test_create_edges_from_dict(edge_store, sample_edge_data):

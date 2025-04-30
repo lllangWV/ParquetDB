@@ -5,18 +5,20 @@ import os
 import shutil
 import time
 from glob import glob
+from pathlib import Path
 from typing import Callable, Dict, List, Union
 
 import pandas as pd
 import pyarrow as pa
 import pyarrow.compute as pc
-from parquetdb import ParquetDB
-from parquetdb.utils import pyarrow_utils
 from pyarrow import parquet as pq
 
+from parquetdb import ParquetDB
 from parquetdb.graph.edges import EdgeStore
 from parquetdb.graph.generator_store import GeneratorStore
 from parquetdb.graph.nodes import NodeStore
+from parquetdb.utils import pyarrow_utils
+from parquetdb.utils.log_utils import set_verbose_level
 
 logger = logging.getLogger(__name__)
 
@@ -28,7 +30,9 @@ class ParquetGraphDB:
     (wrapped by NodeStore or EdgeStore).
     """
 
-    def __init__(self, storage_path: str, load_custom_stores: bool = True):
+    def __init__(
+        self, storage_path: str, load_custom_stores: bool = True, verbose: int = 1
+    ):
         """
         Parameters
         ----------
@@ -36,6 +40,9 @@ class ParquetGraphDB:
             The root path for this graph, e.g. '/path/to/my_graph'.
             Subdirectories 'nodes/' and 'edges/' will be used.
         """
+        self.verbose = verbose
+        set_verbose_level(verbose)
+
         logger.info(f"Initializing GraphDB at root path: {storage_path}")
         self.storage_path = os.path.abspath(storage_path)
 
@@ -65,10 +72,10 @@ class ParquetGraphDB:
         self.edge_stores = self._load_existing_edge_stores(load_custom_stores)
 
         self.edge_generator_store = GeneratorStore(
-            storage_path=self.edge_generators_path
+            storage_path=self.edge_generators_path, verbose=self.verbose
         )
         self.node_generator_store = GeneratorStore(
-            storage_path=self.node_generators_path
+            storage_path=self.node_generators_path, verbose=self.verbose
         )
 
         # This is here to make sure the node and edges paths
@@ -206,7 +213,9 @@ class ParquetGraphDB:
 
             store_path = os.path.join(stores_path, store_type)
             if os.path.isdir(store_path):
-                store_dict[store_type] = load_store(store_path, default_store_class)
+                store_dict[store_type] = load_store(
+                    store_path, default_store_class, verbose=self.verbose
+                )
             else:
                 raise ValueError(
                     f"Store path {store_path} is not a directory. Likely does not exist."
@@ -357,7 +366,9 @@ class ParquetGraphDB:
 
         logger.info(f"Creating new NodeStore for type: {node_type}")
         storage_path = os.path.join(self.nodes_path, node_type)
-        self.node_stores[node_type] = NodeStore(storage_path=storage_path)
+        self.node_stores[node_type] = NodeStore(
+            storage_path=storage_path, verbose=self.verbose
+        )
         return self.node_stores[node_type]
 
     def add_node_store(
@@ -558,7 +569,9 @@ class ParquetGraphDB:
 
         logger.info(f"Creating new EdgeStore for type: {edge_type}")
         storage_path = os.path.join(self.edges_path, edge_type)
-        self.edge_stores[edge_type] = EdgeStore(storage_path=storage_path)
+        self.edge_stores[edge_type] = EdgeStore(
+            storage_path=storage_path, verbose=self.verbose
+        )
         return self.edge_stores[edge_type]
 
     def add_edges(self, edge_type: str, data, **kwargs):
@@ -924,8 +937,8 @@ class ParquetGraphDB:
                 )
 
 
-def load_store(store_path: str, default_store_class=None):
-    store_metadata = ParquetDB(store_path).get_metadata()
+def load_store(store_path: str, default_store_class=None, verbose: int = 1):
+    store_metadata = ParquetDB(store_path, verbose=verbose).get_metadata()
     class_module = store_metadata.get("class_module", None)
     class_name = store_metadata.get("class", None)
 

@@ -6,9 +6,9 @@ from typing import List, Union
 import pandas as pd
 import pyarrow as pa
 import pyarrow.compute as pc
+
 from parquetdb import ParquetDB
 from parquetdb.core.parquetdb import LoadConfig, NormalizeConfig
-
 from parquetdb.graph.generator_store import validate_generator_inputs
 from parquetdb.graph.utils import get_dataframe_column_names
 
@@ -51,7 +51,9 @@ class NodeStore(ParquetDB):
 
     node_metadata_keys = ["class", "class_module", "node_type", "name_column"]
 
-    def __init__(self, storage_path: str, initialize_kwargs: dict = None):
+    def __init__(
+        self, storage_path: str, initialize_kwargs: dict = None, verbose: int = 1
+    ):
         """
         Parameters
         ----------
@@ -64,7 +66,7 @@ class NodeStore(ParquetDB):
         if initialize_kwargs is None:
             initialize_kwargs = {}
 
-        super().__init__(db_path=storage_path)
+        super().__init__(db_path=storage_path, verbose=verbose)
 
         metadata = self.get_metadata()
 
