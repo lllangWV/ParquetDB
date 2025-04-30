@@ -14,6 +14,10 @@ logger = logging.getLogger(__name__)
 
 VERBOSE = 2
 
+pytestmark = pytest.mark.filterwarnings(
+    "ignore:__array__ implementation doesn't accept a copy keyword.*:DeprecationWarning"
+)
+
 
 @pytest.fixture
 def tmp_dir(tmp_path):
