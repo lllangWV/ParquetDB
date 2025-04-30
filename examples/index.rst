@@ -36,7 +36,7 @@ directory`_ of the package and showcase how to effectively use ParquetDB's featu
     :name: rst-graphdb-gallery
 
     graphdb/01 - Creating a GraphDB
-    graphdb/02 - Managing Graphs in MatGraphDB
+
 
 
 Contents
@@ -67,4 +67,3 @@ Contents
    :caption: GraphDB Gallery
 
    graphdb/01 - Creating a GraphDB
-   graphdb/02 - Managing Graphs in MatGraphDB
