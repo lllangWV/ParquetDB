@@ -163,7 +163,9 @@ This release includes various improvements and changes.
 """
     else:
         # Summarize the PR comments
-        summary = summarize_comments(comments, VERSION)
+        summary = (
+            f"# Release v{VERSION} ({date})\n\n{summarize_comments(comments, VERSION)}"
+        )
 
     # Update the CHANGELOG.md file
     update_changelog(summary)
