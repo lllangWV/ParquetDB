@@ -44,7 +44,7 @@ class ParquetGraphDB:
         set_verbose_level(verbose)
 
         logger.info(f"Initializing GraphDB at root path: {storage_path}")
-        self.storage_path = os.path.abspath(storage_path)
+        self.storage_path = storage_path
 
         self.nodes_path = os.path.join(self.storage_path, "nodes")
         self.edges_path = os.path.join(self.storage_path, "edges")
