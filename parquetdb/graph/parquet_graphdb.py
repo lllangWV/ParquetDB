@@ -468,7 +468,7 @@ class ParquetGraphDB:
 
     def node_exists(self, node_type: str):
         logger.debug(f"Node type: {node_type}")
-        logger.debug(f"Node stores: {self.node_stores}")
+        # logger.debug(f"Node stores: {self.node_stores}")
 
         return node_type in self.node_stores
 
