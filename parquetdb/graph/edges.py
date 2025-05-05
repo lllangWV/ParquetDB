@@ -123,7 +123,7 @@ class EdgeStore(ParquetDB):
         tmp_str += f"Edge type: {self.edge_type}\n"
         tmp_str += f"• Number of edges: {self.n_edges}\n"
         tmp_str += f"• Number of features: {self.n_features}\n"
-        tmp_str += f"Storage path: {os.path.relpath(self.storage_path)}\n\n"
+        tmp_str += f"Storage path: {os.path.abspath(self.storage_path)}\n\n"
 
         # Metadata section
         tmp_str += f"\n{'#' * 60}\n"

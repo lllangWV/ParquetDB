@@ -139,7 +139,7 @@ class NodeStore(ParquetDB):
         tmp_str += f"Node type: {self.node_type}\n"
         tmp_str += f"• Number of nodes: {self.n_nodes}\n"
         tmp_str += f"• Number of features: {self.n_features}\n"
-        tmp_str += f"Storage path: {os.path.relpath(self.storage_path)}\n\n"
+        tmp_str += f"Storage path: {os.path.abspath(self.storage_path)}\n\n"
 
         # Metadata section
         tmp_str += f"\n{'#' * 60}\n"

@@ -240,18 +240,18 @@ class ParquetGraphDB:
         tmp_str += f"GRAPH DATABASE SUMMARY\n"
         tmp_str += f"{'=' * 60}\n"
         tmp_str += f"Name: {self.graph_name}\n"
-        tmp_str += f"Storage path: {os.path.relpath(self.storage_path)}\n"
+        tmp_str += f"Storage path: {os.path.abspath(self.storage_path)}\n"
         tmp_str += "└── Repository structure:\n"
         tmp_str += (
-            f"    ├── nodes/                 ({os.path.relpath(self.nodes_path)})\n"
+            f"    ├── nodes/                 ({os.path.abspath(self.nodes_path)})\n"
         )
         tmp_str += (
-            f"    ├── edges/                 ({os.path.relpath(self.edges_path)})\n"
+            f"    ├── edges/                 ({os.path.abspath(self.edges_path)})\n"
         )
-        tmp_str += f"    ├── edge_generators/       ({os.path.relpath(self.edge_generators_path)})\n"
-        tmp_str += f"    ├── node_generators/       ({os.path.relpath(self.node_generators_path)})\n"
+        tmp_str += f"    ├── edge_generators/       ({os.path.abspath(self.edge_generators_path)})\n"
+        tmp_str += f"    ├── node_generators/       ({os.path.abspath(self.node_generators_path)})\n"
         tmp_str += (
-            f"    └── graph/                 ({os.path.relpath(self.graph_path)})\n\n"
+            f"    └── graph/                 ({os.path.abspath(self.graph_path)})\n\n"
         )
 
         # Node section header
@@ -270,7 +270,7 @@ class ParquetGraphDB:
                 tmp_str += f"  - Columns:\n"
                 for col in node_store.columns:
                     tmp_str += f"       - {col}\n"
-            tmp_str += f"  - db_path: {os.path.relpath(node_store.storage_path)}\n"
+            tmp_str += f"  - db_path: {os.path.abspath(node_store.storage_path)}\n"
             tmp_str += f"{'-' * 60}\n"
 
         # Edge section header
@@ -289,7 +289,7 @@ class ParquetGraphDB:
                 tmp_str += f"  - Columns:\n"
                 for col in edge_store.columns:
                     tmp_str += f"       - {col}\n"
-            tmp_str += f"  - db_path: {os.path.relpath(edge_store.storage_path)}\n"
+            tmp_str += f"  - db_path: {os.path.abspath(edge_store.storage_path)}\n"
             tmp_str += f"{'-' * 60}\n"
 
         # Node generator header
@@ -307,7 +307,7 @@ class ParquetGraphDB:
             for col in df.columns:
                 col_name = col.replace("generator_args.", "")
                 if isinstance(df[col].iloc[0], (NodeStore, EdgeStore)):
-                    tmp_str += f"  - {col_name}: {os.path.relpath(df[col].iloc[0].storage_path)}\n"
+                    tmp_str += f"  - {col_name}: {os.path.abspath(df[col].iloc[0].storage_path)}\n"
                 else:
                     tmp_str += f"  - {col_name}: {df[col].tolist()}\n"
             tmp_str += f"Generator Kwargs:\n"
@@ -333,7 +333,7 @@ class ParquetGraphDB:
                 col_name = col.replace("generator_args.", "")
                 if col.startswith("generator_args."):
                     if isinstance(df[col].iloc[0], (NodeStore, EdgeStore)):
-                        tmp_str += f"  - {col_name}: {os.path.relpath(df[col].iloc[0].storage_path)}\n"
+                        tmp_str += f"  - {col_name}: {os.path.abspath(df[col].iloc[0].storage_path)}\n"
                     else:
                         tmp_str += f"  - {col_name}: {df[col].tolist()}\n"
             tmp_str += f"Generator Kwargs:\n"
