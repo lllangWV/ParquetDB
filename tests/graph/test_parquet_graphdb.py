@@ -31,6 +31,7 @@ def tmp_dir(tmp_path):
 @pytest.fixture
 def graphdb(tmp_dir):
     """Fixture to create a GraphDB instance."""
+    tmp_dir = os.path.join(tmp_dir, "GraphDB")
     return ParquetGraphDB(storage_path=tmp_dir, verbose=VERBOSE)
 
 
