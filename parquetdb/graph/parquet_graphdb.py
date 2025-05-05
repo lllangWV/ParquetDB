@@ -516,7 +516,7 @@ class ParquetGraphDB:
         generator_args: Dict = None,
         generator_kwargs: Dict = None,
         create_kwargs: Dict = None,
-    ) -> None:
+    ) -> pa.Table:
         """
         Execute a previously registered custom node-generation function by name.
         Parameters
