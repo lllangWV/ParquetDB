@@ -143,7 +143,7 @@ If you use ParquetDB in your work, please cite the following paper:
 
 ## Contributing
 
-Contributions are welcome! Please open an issue or submit a pull request on GitHub.
+Contributions are welcome! Please open an issue or submit a pull request on GitHub. More information can be found in the [CONTRIBUTING.md](https://github.com/lllangWV/ParquetDB/blob/main/CONTRIBUTING.md) file.
 
 ## License
 
