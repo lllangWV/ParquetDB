@@ -137,12 +137,13 @@ ENV/
 
 update_package.md
 .env
-/data/
-/data
+
 /logs/
 /notes/
-
 /my_tests/
+/data
+*data/
+examples/graphdb/GraphDB
 
 /papers/
 /media/

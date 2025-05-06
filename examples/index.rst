@@ -8,6 +8,7 @@ directory`_ of the package and showcase how to effectively use ParquetDB's featu
 
 .. _examples directory: https://github.com/lllangWV/ParquetDB/tree/main/examples/notebooks
 .. _benchmarks directory: https://github.com/lllangWV/ParquetDB/tree/main/examples/notebooks/benchmarks
+.. _graphdb directory: https://github.com/lllangWV/ParquetDB/tree/main/examples/graphdb
 
 .. nblinkgallery::
     :caption: Example Gallery
@@ -28,6 +29,15 @@ directory`_ of the package and showcase how to effectively use ParquetDB's featu
     benchmarks/Update Into Constant Rows Benchmark
     benchmarks/Full DB Updates Benchmark
     benchmarks/Small Benchmark
+
+
+.. nblinkgallery::
+    :caption: GraphDB Gallery
+    :name: rst-graphdb-gallery
+
+    graphdb/01 - Creating a GraphDB
+
+
 
 Contents
 --------
@@ -51,3 +61,9 @@ Contents
    benchmarks/Update Into Constant Rows Benchmark
    benchmarks/Full DB Updates Benchmark
    benchmarks/Small Benchmark
+
+.. toctree::
+   :maxdepth: 2
+   :caption: GraphDB Gallery
+
+   graphdb/01 - Creating a GraphDB
