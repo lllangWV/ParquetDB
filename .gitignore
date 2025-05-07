@@ -144,7 +144,7 @@ update_package.md
 /data
 *data/
 examples/graphdb/GraphDB
-
+_version.py
 /papers/
 /media/
 /docs/_build/
