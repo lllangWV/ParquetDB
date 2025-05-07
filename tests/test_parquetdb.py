@@ -810,35 +810,59 @@ class TestParquetDB(unittest.TestCase):
         df = table.to_pandas()
         logger.debug(f"Dataframe: \n {df}")
 
-        assert df[df["id_1"] == 100 & df["id_2"] == 10]["field_1"].to_list() == ["here"]
-        assert df[df["id_1"] == 100 & df["id_2"] == 10]["field_2"].to_list() == [
+        assert df[(df["id_1"] == 100) & (df["id_2"] == 10)]["field_1"].to_list() == [
+            "here"
+        ]
+        assert df[(df["id_1"] == 100) & (df["id_2"] == 10)]["field_2"].to_list() == [
             "there"
         ]
-        assert df[df["id_1"] == 100 & df["id_2"] == 10]["field_3"].to_list() == [None]
+        assert df[(df["id_1"] == 100) & (df["id_2"] == 10)]["field_3"].to_list() == [
+            None
+        ]
 
-        assert df[df["id_1"] == 55 & df["id_2"] == 11]["field_1"].to_list() == [None]
-        assert df[df["id_1"] == 55 & df["id_2"] == 11]["field_2"].to_list() == [None]
-        assert df[df["id_1"] == 55 & df["id_2"] == 11]["field_3"].to_list() == [None]
+        assert df[(df["id_1"] == 55) & (df["id_2"] == 11)]["field_1"].to_list() == [
+            None
+        ]
+        assert df[(df["id_1"] == 55) & (df["id_2"] == 11)]["field_2"].to_list() == [
+            None
+        ]
+        assert df[(df["id_1"] == 55) & (df["id_2"] == 11)]["field_3"].to_list() == [
+            None
+        ]
 
-        assert df[df["id_1"] == 33 & df["id_2"] == 12]["field_1"].to_list() == [None]
-        assert df[df["id_1"] == 33 & df["id_2"] == 12]["field_2"].to_list() == [
+        assert df[(df["id_1"] == 33) & (df["id_2"] == 12)]["field_1"].to_list() == [
+            None
+        ]
+        assert df[(df["id_1"] == 33) & (df["id_2"] == 12)]["field_2"].to_list() == [
             "field_2"
         ]
-        assert df[df["id_1"] == 33 & df["id_2"] == 12]["field_3"].to_list() == [
+        assert df[(df["id_1"] == 33) & (df["id_2"] == 12)]["field_3"].to_list() == [
             "field_3"
         ]
 
-        assert df[df["id_1"] == 12 & df["id_2"] == 13]["field_1"].to_list() == [None]
-        assert df[df["id_1"] == 12 & df["id_2"] == 13]["field_2"].to_list() == [None]
-        assert df[df["id_1"] == 12 & df["id_2"] == 13]["field_3"].to_list() == [None]
+        assert df[(df["id_1"] == 12) & (df["id_2"] == 13)]["field_1"].to_list() == [
+            None
+        ]
+        assert df[(df["id_1"] == 12) & (df["id_2"] == 13)]["field_2"].to_list() == [
+            None
+        ]
+        assert df[(df["id_1"] == 12) & (df["id_2"] == 13)]["field_3"].to_list() == [
+            None
+        ]
 
-        assert df[df["id_1"] == 33 & df["id_2"] == 50]["field_1"].to_list() == [None]
-        assert df[df["id_1"] == 33 & df["id_2"] == 50]["field_2"].to_list() == [None]
-        assert df[df["id_1"] == 33 & df["id_2"] == 50]["field_3"].to_list() == [None]
+        assert df[(df["id_1"] == 33) & (df["id_2"] == 50)]["field_1"].to_list() == [
+            None
+        ]
+        assert df[(df["id_1"] == 33) & (df["id_2"] == 50)]["field_2"].to_list() == [
+            None
+        ]
+        assert df[(df["id_1"] == 33) & (df["id_2"] == 50)]["field_3"].to_list() == [
+            None
+        ]
 
-        assert df[df["id_1"] == 33 & df["id_2"] == 13]["field_1"].to_list() == []
-        assert df[df["id_1"] == 33 & df["id_2"] == 13]["field_2"].to_list() == []
-        assert df[df["id_1"] == 33 & df["id_2"] == 13]["field_3"].to_list() == []
+        assert df[(df["id_1"] == 33) & (df["id_2"] == 13)]["field_1"].to_list() == []
+        assert df[(df["id_1"] == 33) & (df["id_2"] == 13)]["field_2"].to_list() == []
+        assert df[(df["id_1"] == 33) & (df["id_2"] == 13)]["field_3"].to_list() == []
 
     def test_table_join(self):
         # Create first table with employee data
