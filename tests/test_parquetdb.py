@@ -653,78 +653,97 @@ class TestParquetDB(unittest.TestCase):
         data_1 = [{"pbc": [1, 0, 0]}, {"pbc": [0, 1, 0]}]
         self.db.create(data_1)
 
-        table = self.db.read()
+        table = self.db.read(ids=[0])
+        assert table["pbc"].combine_chunks().to_numpy_ndarray().tolist() == [[1, 0, 0]]
+        table = self.db.read(ids=[1])
+        assert table["pbc"].combine_chunks().to_numpy_ndarray().tolist() == [[0, 1, 0]]
 
-        assert table["pbc"].combine_chunks().to_numpy_ndarray().tolist() == [
-            [1, 0, 0],
-            [0, 1, 0],
-        ]
         data_2 = [{"id": 0, "density": 5}]
 
         self.db.update(data_2)
         table = self.db.read(ids=[1])
         df = table.to_pandas()
+
         logger.debug(f"Dataframe: \n {df}")
-        assert table["pbc"].combine_chunks().to_numpy_ndarray().tolist() == [
-            [0, 1, 0],
-        ]
+        assert table["pbc"].combine_chunks().to_numpy_ndarray().tolist() == [[0, 1, 0]]
 
         table = self.db.read(ids=[0])
-
-        assert table["pbc"].combine_chunks().to_numpy_ndarray().tolist() == [
-            [1, 0, 0],
-        ]
+        assert table["pbc"].combine_chunks().to_numpy_ndarray().tolist() == [[1, 0, 0]]
 
     def test_update_maintains_existing_extension_arrays_batches(self):
         data_1 = [{"pbc": [1, 0, 0]}, {"pbc": [0, 1, 0]}]
         self.db.create(data_1)
 
-        table = self.db.read()
+        table = self.db.read(ids=[0])
+        pbc_array = table["pbc"].combine_chunks().to_numpy_ndarray()
+        assert pbc_array.tolist() == [[1, 0, 0]]
+        assert pbc_array.shape == (1, 3)
 
-        assert table["pbc"].combine_chunks().to_numpy_ndarray().tolist() == [
-            [1, 0, 0],
-            [0, 1, 0],
-        ]
+        table = self.db.read(ids=[1])
+        pbc_array = table["pbc"].combine_chunks().to_numpy_ndarray()
+        assert pbc_array.tolist() == [[0, 1, 0]]
+        assert pbc_array.shape == (1, 3)
+
+        table = self.db.read()
+        pbc_array = table["pbc"].combine_chunks().to_numpy_ndarray()
+
+        assert pbc_array.shape == (2, 3)
+
         data_2 = [{"id": 0, "density": 5}]
 
         self.db.update(
             data_2,
             normalize_config=NormalizeConfig(load_format="batches", batch_size=1),
         )
+
+        table = self.db.read(ids=[0])
+        pbc_array = table["pbc"].combine_chunks().to_numpy_ndarray()
+        assert pbc_array.tolist() == [[1, 0, 0]]
+        assert table["density"].combine_chunks().to_pylist() == [5]
+        assert pbc_array.shape == (1, 3)
+
+        table = self.db.read(ids=[1])
+        pbc_array = table["pbc"].combine_chunks().to_numpy_ndarray()
+
+        assert pbc_array.tolist() == [[0, 1, 0]]
+        assert table["density"].combine_chunks().to_pylist() == [None]
+        assert pbc_array.shape == (1, 3)
+
         table = self.db.read()
-        df = table.to_pandas()
-        logger.debug(f"Dataframe: \n {df}")
-
-        array = table["pbc"].combine_chunks().to_numpy_ndarray().tolist()
-
-        logger.debug(f"array: \n {array}")
-
-        assert table["pbc"].combine_chunks().to_numpy_ndarray().tolist() == [
-            [1, 0, 0],
-            [0, 1, 0],
-        ]
+        pbc_array = table["pbc"].combine_chunks().to_numpy_ndarray()
+        assert pbc_array.shape == (2, 3)
 
     def test_update_on_key(self):
         data_1 = [
             {"material_id": 1, "material_name": "material_1"},
             {"material_id": 2, "material_name": "material_2"},
         ]
+
         self.db.create(data_1)
 
         table = self.db.read()
+        df = table.to_pandas()
 
-        assert table["material_id"].combine_chunks().to_pylist() == [1, 2]
+        assert df[df["material_id"] == 1]["material_name"].to_list() == ["material_1"]
+        assert df[df["material_id"] == 1]["material_id"].to_list() == [1]
+        assert df[df["material_id"] == 2]["material_name"].to_list() == ["material_2"]
+        assert df[df["material_id"] == 2]["material_id"].to_list() == [2]
+
         data_2 = [{"material_id": 1, "material_name": "material_1_updated"}]
 
         self.db.update(data_2, update_keys="material_id")
+
         table = self.db.read()
         df = table.to_pandas()
+
         logger.debug(f"Dataframe: \n {df}")
-        assert table["material_id"].combine_chunks().to_pylist() == [1, 2]
-        assert table["material_name"].combine_chunks().to_pylist() == [
-            "material_1_updated",
-            "material_2",
+
+        assert df[df["material_id"] == 1]["material_name"].to_list() == [
+            "material_1_updated"
         ]
+        assert df[df["material_id"] == 1]["material_id"].to_list() == [1]
+        assert df[df["material_id"] == 2]["material_name"].to_list() == ["material_2"]
+        assert df[df["material_id"] == 2]["material_id"].to_list() == [2]
 
     def test_initialize_empty_table(self):
         assert self.db.is_empty()
@@ -791,27 +810,59 @@ class TestParquetDB(unittest.TestCase):
         df = table.to_pandas()
         logger.debug(f"Dataframe: \n {df}")
 
-        assert table["field_1"].combine_chunks().to_pylist() == [
-            "here",
-            None,
-            None,
-            None,
-            None,
+        assert df[(df["id_1"] == 100) & (df["id_2"] == 10)]["field_1"].to_list() == [
+            "here"
         ]
-        assert table["field_2"].combine_chunks().to_pylist() == [
-            "there",
-            None,
-            "field_2",
-            None,
-            None,
+        assert df[(df["id_1"] == 100) & (df["id_2"] == 10)]["field_2"].to_list() == [
+            "there"
         ]
-        assert table["field_3"].combine_chunks().to_pylist() == [
-            None,
-            None,
-            "field_3",
-            None,
-            None,
+        assert df[(df["id_1"] == 100) & (df["id_2"] == 10)]["field_3"].to_list() == [
+            None
         ]
+
+        assert df[(df["id_1"] == 55) & (df["id_2"] == 11)]["field_1"].to_list() == [
+            None
+        ]
+        assert df[(df["id_1"] == 55) & (df["id_2"] == 11)]["field_2"].to_list() == [
+            None
+        ]
+        assert df[(df["id_1"] == 55) & (df["id_2"] == 11)]["field_3"].to_list() == [
+            None
+        ]
+
+        assert df[(df["id_1"] == 33) & (df["id_2"] == 12)]["field_1"].to_list() == [
+            None
+        ]
+        assert df[(df["id_1"] == 33) & (df["id_2"] == 12)]["field_2"].to_list() == [
+            "field_2"
+        ]
+        assert df[(df["id_1"] == 33) & (df["id_2"] == 12)]["field_3"].to_list() == [
+            "field_3"
+        ]
+
+        assert df[(df["id_1"] == 12) & (df["id_2"] == 13)]["field_1"].to_list() == [
+            None
+        ]
+        assert df[(df["id_1"] == 12) & (df["id_2"] == 13)]["field_2"].to_list() == [
+            None
+        ]
+        assert df[(df["id_1"] == 12) & (df["id_2"] == 13)]["field_3"].to_list() == [
+            None
+        ]
+
+        assert df[(df["id_1"] == 33) & (df["id_2"] == 50)]["field_1"].to_list() == [
+            None
+        ]
+        assert df[(df["id_1"] == 33) & (df["id_2"] == 50)]["field_2"].to_list() == [
+            None
+        ]
+        assert df[(df["id_1"] == 33) & (df["id_2"] == 50)]["field_3"].to_list() == [
+            None
+        ]
+
+        assert df[(df["id_1"] == 33) & (df["id_2"] == 13)]["field_1"].to_list() == []
+        assert df[(df["id_1"] == 33) & (df["id_2"] == 13)]["field_2"].to_list() == []
+        assert df[(df["id_1"] == 33) & (df["id_2"] == 13)]["field_3"].to_list() == []
 
     def test_table_join(self):
         # Create first table with employee data
