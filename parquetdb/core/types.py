@@ -1,3 +1,4 @@
+import logging
 from typing import Union
 
 import numpy as np
@@ -9,6 +10,8 @@ from pandas.core.dtypes.base import ExtensionDtype
 from pandas.core.dtypes.dtypes import PandasExtensionDtype
 
 from parquetdb.utils import data_utils, mp_utils
+
+logger = logging.getLogger(__name__)
 
 
 class PythonObjectArrowType(pa.ExtensionType):
@@ -114,11 +117,12 @@ class PythonObjectPandasArray(ExtensionArray):
         value_array[:] = data
         self._data = value_array
 
-    def __arrow_array__(self, type=PythonObjectArrowType()):
+    def __arrow_array__(self, type=None):
         # convert the underlying array values to a pyarrow Array
         results = mp_utils.parallel_apply(data_utils.dump_python_object, self._data)
 
-        return pa.array(results, type=PythonObjectArrowType())
+        storage_array = pa.array(results, type=pa.binary())
+        return pa.ExtensionArray.from_storage(PythonObjectArrowType(), storage_array)
 
     def __array__(self, dtype=None):
         """
