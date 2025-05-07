@@ -11,7 +11,7 @@ jobs:
       fail-fast: false  # This allows all test environments to complete even if one fails
       matrix:
         os: [ubuntu-latest, macos-latest, windows-latest]
-        python-version: ['3.8', '3.12']
+        python-version: ['3.8', '3.13']
 
     steps:
     - uses: actions/checkout@v3

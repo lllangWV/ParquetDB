@@ -93,7 +93,8 @@ class TestPythonObjectTypes(unittest.TestCase):
         # Test conversion from PythonObjectPandasArray to Arrow Array
         for key in self.test_data:
             arr = PythonObjectPandasArray(self.test_data[key])
-            arrow_arr = pa.array(arr, type=PythonObjectArrowType())
+
+            arrow_arr = pa.array(arr)
 
             self.assertEqual(arrow_arr.type, PythonObjectArrowType())
 
