@@ -35,7 +35,8 @@ directory`_ of the package and showcase how to effectively use ParquetDB's featu
     :caption: GraphDB Gallery
     :name: rst-graphdb-gallery
 
-    graphdb/01 - Creating a GraphDB
+    graphdb/01 - Managing Graphs in ParquetGraphDB
+    graphdb/02 - Graph Generators in ParquetGraphDB
 
 
 
@@ -66,4 +67,5 @@ Contents
    :maxdepth: 2
    :caption: GraphDB Gallery
 
-   graphdb/01 - Creating a GraphDB
+    graphdb/01 - Managing Graphs in ParquetGraphDB
+    graphdb/02 - Graph Generators in ParquetGraphDB
