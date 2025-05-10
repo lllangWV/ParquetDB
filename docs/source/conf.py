@@ -14,6 +14,7 @@ import os
 import shutil
 import sys
 from distutils.sysconfig import get_python_lib
+from pathlib import Path
 
 from parquetdb._version import version
 
@@ -25,17 +26,24 @@ author = "Logan Lang"
 
 sys.path.insert(0, os.path.abspath("."))
 
-repo_root = os.path.abspath(os.path.join(os.path.dirname(__file__), "../.."))
-src_examples_path = os.path.abspath(os.path.join(os.path.dirname(__file__), "examples"))
-if os.path.exists(src_examples_path):
-    shutil.rmtree(src_examples_path)
+SRC_DIR = Path(__file__).parent
+REPO_ROOT = SRC_DIR.parent.parent
+SRC_EXAMPLES_PATH = SRC_DIR / "examples"
+REPO_EXAMPLES_PATH = REPO_ROOT / "examples"
+CONTRIBUTING_PATH = REPO_ROOT / "CONTRIBUTING.md"
 
-shutil.copytree(os.path.join(repo_root, "examples"), src_examples_path)
-print(repo_root)
-print(src_examples_path)
 
-# examples_path = os.path.join(repo_root, "examples")
-# sys.path.insert(0, examples_path)
+print(f"REPO_ROOT: {REPO_ROOT}")
+print(f"SRC_DIR: {SRC_DIR}")
+print(f"SRC_EXAMPLES_PATH: {SRC_EXAMPLES_PATH}")
+
+
+# Copy Repo Examples to docs source directory
+if SRC_EXAMPLES_PATH.exists():
+    shutil.rmtree(SRC_EXAMPLES_PATH)
+shutil.copytree(REPO_EXAMPLES_PATH, SRC_EXAMPLES_PATH)
+
+shutil.copy(CONTRIBUTING_PATH, SRC_DIR / "CONTRIBUTING.md")
 
 
 if os.environ.get("READTHEDOCS") == "True":
@@ -88,6 +96,7 @@ extensions = [
     "numpydoc",
     "sphinx.ext.autodoc",
     "sphinx.ext.autosummary",
+    "myst_parser",
     # "sphinx-nbexamples",
     # "sphinx_gallery.gen_gallery",
     # 'sphinx.youtube',

@@ -91,8 +91,8 @@ Index
     :glob:
 
 
-    01_tutorials/index
+    examples/01_tutorials/index
     02_internal/index
-    examples/index.rst
+    examples/index
     03_api/index
     CONTRIBUTING
