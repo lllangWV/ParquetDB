@@ -55,7 +55,8 @@ tests = [
 docs= [
     "ipython",
     "imageio-ffmpeg",
-    "sphinx", 
+    "sphinx",
+    "myst_parser",
     "sphinx_rtd_theme",
     "sphinx-copybutton",
     "nbsphinx",
@@ -68,28 +69,8 @@ docs= [
     "numpydoc"
 ]
 
-
 dev = [
-    "pymongo",
-    "pytest",
-    "openai",
-    "python-dotenv",
-    "PyGithub",
-    "pytest-cov",
-    "pymatgen",
-    "ipython",
-    "imageio-ffmpeg",
-    "sphinx", 
-    "sphinx_rtd_theme",
-    "sphinx-copybutton",
-    "nbsphinx",
-    "sphinx_design",
-    "sphinx-new-tab-link",
-    "sphinxcontrib-youtube",
-    "sphinxcontrib-video",
-    "pandoc",
-    "furo",
-    "numpydoc"
+    "parquetdb[docs,tests]"
 ]
 
 

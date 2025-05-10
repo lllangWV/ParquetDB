@@ -1,3 +1,35 @@
+# Release v0.27.0 (07-05-2025)
+
+This release introduces a new Parquet-based graph database API complete with data validation and adjustable logging, while streamlining version management via setuptools_scm. It also upgrades testing, CI, and documentation—expanding Python support to 3.8–3.13, refining example notebooks, and improving test robustness.
+
+##### Bugs
+- Enforce the required `edge_type` input in ParquetGraphDB tests to fix edge-case failures  
+- Suppress `DeprecationWarning` in ParquetGraphDB tests for cleaner output
+
+##### New features
+- Introduce core graph database components (`NodeStore`, `EdgeStore`, `ParquetGraphDB`) with DataFrame validation  
+- Add a `verbose` parameter to stores and `ParquetGraphDB` for adjustable logging  
+- Enhance release PR comments to include version and date for clearer CHANGELOG entries
+
+##### Documentation updates
+- Add and update ParquetGraphDB example notebooks and gallery demos  
+- Remove obsolete example notebook and revise `index.rst` accordingly  
+- Configure nbsphinx to skip execution in the graph generator notebook  
+- Add a link in the README to CONTRIBUTING.md to guide new contributors
+
+##### Maintenance
+- Remove the obsolete `_version.py` and adopt setuptools_scm for automatic version tracking  
+- Expand Python compatibility to 3.8–3.13, bump `pyarrow` to ≥17.0.0, and update GitHub Actions CI workflows  
+- Limit compatibility to Python ≤3.12 in `pyproject.toml`, then broaden range and align CI accordingly  
+- Refactor `PythonObjectPandasArray.__arrow_array__` for binary storage and add module logging  
+- Streamline path handling in stores and remove verbose debug logs  
+- Refactor and expand unit tests:  
+  - Use isolated fixtures with temp directories and assert array shapes, content, and ordering  
+  - Validate return types and update assertions with correct syntax  
+- Update `.gitignore` to exclude example GraphDB files and data directory patterns
+
+---
+
 This release enhances automation across CI/CD and documentation workflows, introduces new testing utilities and PyArrow joins, and fixes temporary file naming and notebook metadata issues. It also refines configuration management, cleans up dead code, and expands test coverage for greater reliability.
 
 ##### Bugs
