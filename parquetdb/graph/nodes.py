@@ -70,8 +70,7 @@ class NodeStore(ParquetDB):
 
         self.node_type = storage_path.name
 
-        if initialize_kwargs is None:
-            initialize_kwargs = {}
+        initialize_kwargs = {} if initialize_kwargs is None else initialize_kwargs
 
         super().__init__(db_path=storage_path, verbose=verbose)
 

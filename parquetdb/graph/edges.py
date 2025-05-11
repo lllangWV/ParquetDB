@@ -86,8 +86,7 @@ class EdgeStore(ParquetDB):
 
         logger.debug(f"Initialized EdgeStore at {storage_path}")
         if self.is_empty():
-            if setup_kwargs is None:
-                setup_kwargs = {}
+            setup_kwargs = {} if setup_kwargs is None else setup_kwargs
             self._setup(**setup_kwargs)
 
     def __repr__(self):
