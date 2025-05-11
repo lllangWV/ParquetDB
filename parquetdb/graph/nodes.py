@@ -1,6 +1,7 @@
 import logging
 import os
 from functools import wraps
+from pathlib import Path
 from typing import List, Union
 
 import pandas as pd
@@ -49,10 +50,13 @@ class NodeStore(ParquetDB):
     of a given node type.
     """
 
-    node_metadata_keys = ["class", "class_module", "node_type", "name_column"]
+    node_metadata_keys = ["node_type", "name_column"]
 
     def __init__(
-        self, storage_path: str, initialize_kwargs: dict = None, verbose: int = 1
+        self,
+        storage_path: Union[str, Path],
+        initialize_kwargs: dict = None,
+        verbose: int = 1,
     ):
         """
         Parameters
@@ -60,8 +64,11 @@ class NodeStore(ParquetDB):
         storage_path : str
             The path where ParquetDB files for this node type are stored.
         """
+        storage_path = (
+            Path(storage_path) if isinstance(storage_path, str) else storage_path
+        )
 
-        self.node_type = os.path.basename(storage_path)
+        self.node_type = storage_path.name
 
         if initialize_kwargs is None:
             initialize_kwargs = {}
@@ -77,8 +84,6 @@ class NodeStore(ParquetDB):
         if update_metadata:
             self.set_metadata(
                 {
-                    "class": f"{self.__class__.__name__}",
-                    "class_module": f"{self.__class__.__module__}",
                     "node_type": self.node_type,
                     "name_column": "id",
                 }
@@ -99,7 +104,7 @@ class NodeStore(ParquetDB):
     @storage_path.setter
     def storage_path(self, value):
         self._db_path = value
-        self.node_type = os.path.basename(value)
+        self.node_type = value.name if isinstance(value, Path) else value
 
     def _initialize(self, **kwargs):
         data = self.initialize(**kwargs)

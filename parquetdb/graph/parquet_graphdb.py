@@ -1,23 +1,17 @@
-import importlib
 import json
 import logging
 import os
 import shutil
-import time
-from glob import glob
 from pathlib import Path
-from typing import Callable, Dict, List, Union
+from typing import Callable, Dict, List, Type, Union
 
-import pandas as pd
 import pyarrow as pa
 import pyarrow.compute as pc
-from pyarrow import parquet as pq
 
 from parquetdb import ParquetDB
 from parquetdb.graph.edges import EdgeStore
 from parquetdb.graph.generator_store import GeneratorStore
 from parquetdb.graph.nodes import NodeStore
-from parquetdb.utils import pyarrow_utils
 from parquetdb.utils.log_utils import set_verbose_level
 
 logger = logging.getLogger(__name__)
@@ -31,7 +25,11 @@ class ParquetGraphDB:
     """
 
     def __init__(
-        self, storage_path: str, load_custom_stores: bool = True, verbose: int = 1
+        self,
+        storage_path: Union[str, Path],
+        node_store_types: Dict[str, Type[NodeStore]] = None,
+        edge_store_types: Dict[str, Type[EdgeStore]] = None,
+        verbose: int = 1,
     ):
         """
         Parameters
@@ -44,32 +42,53 @@ class ParquetGraphDB:
         set_verbose_level(verbose)
 
         logger.info(f"Initializing GraphDB at root path: {storage_path}")
-        self.storage_path = storage_path
-
-        self.nodes_path = os.path.join(self.storage_path, "nodes")
-        self.edges_path = os.path.join(self.storage_path, "edges")
-        self.edge_generators_path = os.path.join(self.storage_path, "edge_generators")
-        self.node_generators_path = os.path.join(self.storage_path, "node_generators")
-        self.graph_path = os.path.join(self.storage_path, "graph")
-        self.generator_dependency_json = os.path.join(
-            self.storage_path, "generator_dependency.json"
+        self.storage_path = (
+            Path(storage_path) if isinstance(storage_path, str) else storage_path
         )
 
-        self.graph_name = os.path.basename(self.storage_path)
+        self.nodes_path = self.storage_path / "nodes"
+        self.edges_path = self.storage_path / "edges"
+        self.edge_generators_path = self.storage_path / "edge_generators"
+        self.node_generators_path = self.storage_path / "node_generators"
+        self.graph_path = self.storage_path / "graph"
+        self.generator_dependency_json = self.storage_path / "generator_dependency.json"
+
+        self.graph_name = self.storage_path.name
 
         # Create directories if they don't exist
-        os.makedirs(self.nodes_path, exist_ok=True)
-        os.makedirs(self.edges_path, exist_ok=True)
-        os.makedirs(self.edge_generators_path, exist_ok=True)
-        os.makedirs(self.graph_path, exist_ok=True)
+        self.nodes_path.mkdir(parents=True, exist_ok=True)
+        self.edges_path.mkdir(parents=True, exist_ok=True)
+        self.edge_generators_path.mkdir(parents=True, exist_ok=True)
+        self.graph_path.mkdir(parents=True, exist_ok=True)
 
         logger.debug(f"Node directory: {self.nodes_path}")
         logger.debug(f"Edge directory: {self.edges_path}")
         logger.debug(f"Graph directory: {self.graph_path}")
 
         #  Initialize empty dictionaries for stores, load existing stores
-        self.node_stores = self._load_existing_node_stores(load_custom_stores)
-        self.edge_stores = self._load_existing_edge_stores(load_custom_stores)
+        self.node_stores = {}
+        self.edge_stores = {}
+
+        node_store_types = {} if node_store_types is None else node_store_types
+        edge_store_types = {} if edge_store_types is None else edge_store_types
+
+        for store_type in list(self.nodes_path.iterdir()):
+            if store_type.is_dir():
+                if store_type in node_store_types:
+                    self.node_stores[store_type.name] = node_store_types[
+                        store_type.name
+                    ](store_type)
+                else:
+                    self.node_stores[store_type.name] = NodeStore(store_type)
+
+        for store_type in list(self.edges_path.iterdir()):
+            if store_type.is_dir():
+                if store_type in edge_store_types:
+                    self.edge_stores[store_type.name] = edge_store_types[
+                        store_type.name
+                    ](store_type)
+                else:
+                    self.edge_stores[store_type.name] = EdgeStore(store_type)
 
         self.edge_generator_store = GeneratorStore(
             storage_path=self.edge_generators_path, verbose=self.verbose
@@ -176,52 +195,6 @@ class ParquetGraphDB:
                                 df.at[i, col_name] = current_path
 
         generator_store.update(data=df)
-
-    def _load_existing_node_stores(self, load_custom_stores: bool = True):
-        logger.info(f"Loading existing node stores")
-        return self._load_existing_stores(
-            self.nodes_path,
-            default_store_class=NodeStore,
-            load_custom_stores=load_custom_stores,
-        )
-
-    def _load_existing_edge_stores(self, load_custom_stores: bool = True):
-        logger.info(f"Loading existing edge stores")
-        return self._load_existing_stores(
-            self.edges_path,
-            default_store_class=EdgeStore,
-            load_custom_stores=load_custom_stores,
-        )
-
-    def _load_existing_stores(
-        self,
-        stores_path,
-        default_store_class: Union[NodeStore, EdgeStore] = None,
-        load_custom_stores: bool = True,
-    ):
-
-        if load_custom_stores:
-            default_store_class = None
-
-        logger.debug(f"Load custom stores: {load_custom_stores}")
-
-        store_dict = {}
-        store_types = os.listdir(stores_path)
-        logger.info(f"Found {len(store_types)} store types")
-        for store_type in store_types:
-            logger.debug(f"Attempting to load store: {store_type}")
-
-            store_path = os.path.join(stores_path, store_type)
-            if os.path.isdir(store_path):
-                store_dict[store_type] = load_store(
-                    store_path, default_store_class, verbose=self.verbose
-                )
-            else:
-                raise ValueError(
-                    f"Store path {store_path} is not a directory. Likely does not exist."
-                )
-
-        return store_dict
 
     def _load_generator_dependency_graph(self):
         if os.path.exists(self.generator_dependency_json):
@@ -365,7 +338,7 @@ class ParquetGraphDB:
             return self.node_stores[node_type]
 
         logger.info(f"Creating new NodeStore for type: {node_type}")
-        storage_path = os.path.join(self.nodes_path, node_type)
+        storage_path = self.nodes_path / node_type
         self.node_stores[node_type] = NodeStore(
             storage_path=storage_path, verbose=self.verbose
         )
@@ -392,7 +365,7 @@ class ParquetGraphDB:
                 )
 
         # Move node store to the nodes directory
-        new_path = os.path.join(self.nodes_path, node_store.node_type)
+        new_path = self.nodes_path / node_store.node_type
         if node_store.storage_path != new_path:
             logger.debug(
                 f"Moving node store from {node_store.storage_path} to {new_path}"
@@ -468,7 +441,6 @@ class ParquetGraphDB:
 
     def node_exists(self, node_type: str):
         logger.debug(f"Node type: {node_type}")
-        # logger.debug(f"Node stores: {self.node_stores}")
 
         return node_type in self.node_stores
 
@@ -568,7 +540,7 @@ class ParquetGraphDB:
             return self.edge_stores[edge_type]
 
         logger.info(f"Creating new EdgeStore for type: {edge_type}")
-        storage_path = os.path.join(self.edges_path, edge_type)
+        storage_path = self.edges_path / edge_type
         self.edge_stores[edge_type] = EdgeStore(
             storage_path=storage_path, verbose=self.verbose
         )
@@ -587,15 +559,16 @@ class ParquetGraphDB:
         logger.info(f"Adding edge store of type {edge_store.edge_type}")
 
         # Move edge store to the edges directory
-        new_path = os.path.join(self.edges_path, edge_store.edge_type)
+        new_path = self.edges_path / edge_store.edge_type
         if edge_store.storage_path != new_path:
             logger.debug(
                 f"Moving edge store from {edge_store.storage_path} to {new_path}"
             )
-            os.makedirs(new_path, exist_ok=True)
-            for file in glob(os.path.join(edge_store.storage_path, "*")):
-                new_file = os.path.join(new_path, os.path.basename(file))
-                os.rename(file, new_file)
+
+            new_path.mkdir(parents=True, exist_ok=True)
+            for file in edge_store.storage_path.glob("*"):
+                new_file = new_path / file.name
+                shutil.move(file, new_file)
             edge_store.storage_path = new_path
         self.edge_stores[edge_store.edge_type] = edge_store
 
@@ -935,23 +908,3 @@ class ParquetGraphDB:
                 logger.error(
                     f"Failed to run dependent generator {generator_name}: {str(e)}"
                 )
-
-
-def load_store(store_path: str, default_store_class=None, verbose: int = 1):
-    store_metadata = ParquetDB(store_path, verbose=verbose).get_metadata()
-    class_module = store_metadata.get("class_module", None)
-    class_name = store_metadata.get("class", None)
-
-    logger.debug(f"Class module: {class_module}")
-    logger.debug(f"Class: {class_name}")
-
-    if class_module and class_name and default_store_class is None:
-        logger.debug(f"Importing class from module: {class_module}")
-        module = importlib.import_module(class_module)
-        class_obj = getattr(module, class_name)
-        store = class_obj(storage_path=store_path)
-    else:
-        logger.debug(f"Using default store class: {default_store_class.__name__}")
-        store = default_store_class(storage_path=store_path)
-
-    return store

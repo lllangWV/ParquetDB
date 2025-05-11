@@ -10,8 +10,6 @@ import pyarrow.compute as pc
 
 from parquetdb import ParquetDB
 from parquetdb.core import types
-from parquetdb.core.parquetdb import NormalizeConfig
-from parquetdb.utils import data_utils
 from parquetdb.utils.log_utils import set_verbose_level
 
 logger = logging.getLogger(__name__)
@@ -38,7 +36,6 @@ class GeneratorStore(ParquetDB):
     """
 
     required_fields = ["generator_name", "generator_func"]
-    metadata_keys = ["class", "class_module"]
 
     def __init__(
         self,
@@ -79,21 +76,22 @@ class GeneratorStore(ParquetDB):
         return self.summary(show_column_names=True)
 
     def _initialize_metadata(self):
-        """Initialize store metadata if not present."""
-        metadata = self.get_metadata()
-        update_metadata = False
-        for key in self.metadata_keys:
-            if key not in metadata:
-                update_metadata = True
-                break
+        pass
 
-        if update_metadata:
-            self.set_metadata(
-                {
-                    "class": f"{self.__class__.__name__}",
-                    "class_module": f"{self.__class__.__module__}",
-                }
-            )
+    #     """Initialize store metadata if not present."""
+    #     metadata = self.get_metadata()
+    #     update_metadata = False
+    #     for key in self.metadata_keys:
+    #         if key not in metadata:
+    #             update_metadata = True
+    #             break
+
+    #     if update_metadata:
+    #         self.set_metadata(
+    #             {
+    #                 "
+    #             }
+    #         )
 
     @property
     def storage_path(self):
