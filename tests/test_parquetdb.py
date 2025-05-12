@@ -695,6 +695,10 @@ class TestParquetDB(unittest.TestCase):
             data_2,
             normalize_config=NormalizeConfig(load_format="batches", batch_size=1),
         )
+        table = self.db.read()
+        df = table.to_pandas()
+
+        logger.debug(f"Dataframe: \n {df}")
 
         table = self.db.read(ids=[0])
         pbc_array = table["pbc"].combine_chunks().to_numpy_ndarray()
