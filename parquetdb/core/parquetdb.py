@@ -1,13 +1,13 @@
-import copy
 import itertools
 import logging
 import os
 import shutil
-import time
 import types
+from collections.abc import Iterable
 from dataclasses import dataclass
 from glob import glob
-from typing import Callable, Dict, List, Optional, Union
+from pathlib import Path
+from typing import Any, Callable, Dict, Iterable, List, Optional, Tuple, Union
 
 import dill
 import pandas as pd
@@ -160,7 +160,7 @@ class LoadConfig:
 class ParquetDB:
     def __init__(
         self,
-        db_path,
+        db_path: Union[str, Path],
         initial_fields: List[pa.Field] = None,
         serialize_python_objects: bool = False,
         use_multiprocessing: bool = False,
@@ -197,6 +197,7 @@ class ParquetDB:
         >>> fields = [pa.field('name', pa.string()), pa.field('age', pa.int32())]
         >>> db = ParquetDB(db_path='/path/to/db', initial_fields=fields)
         """
+
         logger.info(f"Initializing ParquetDB with db_path: {db_path}")
 
         logger.info(f"verbose: {verbose}")
@@ -205,8 +206,8 @@ class ParquetDB:
         self.normalize_config = normalize_config
         self.load_config = load_config
 
-        self._db_path = db_path
-        os.makedirs(self._db_path, exist_ok=True)
+        self._db_path = Path(db_path)
+        self._db_path.mkdir(parents=True, exist_ok=True)
         self._serialize_python_objects = serialize_python_objects
 
         if initial_fields is None:
@@ -233,19 +234,19 @@ class ParquetDB:
         return self.summary(show_column_names=False)
 
     @property
-    def db_path(self):
+    def db_path(self) -> Path:
         """
         Get the database path.
 
         Returns
         -------
-        str
+        Path
             The path to the database directory.
         """
         return self._db_path
 
     @property
-    def dataset_name(self):
+    def dataset_name(self) -> str:
         """
         Get the dataset name.
 
@@ -254,10 +255,10 @@ class ParquetDB:
         str
             The name of the dataset, derived from the database path.
         """
-        return os.path.basename(self._db_path)
+        return self._db_path.name
 
     @property
-    def basename_template(self):
+    def basename_template(self) -> str:
         """
         Get the template for parquet file basenames.
 
@@ -269,7 +270,7 @@ class ParquetDB:
         return f"{self.dataset_name}_{{i}}.parquet"
 
     @property
-    def n_columns(self):
+    def n_columns(self) -> int:
         """
         Get the number of columns in the database.
 
@@ -281,19 +282,19 @@ class ParquetDB:
         return len(self.columns)
 
     @property
-    def columns(self):
+    def columns(self) -> List[str]:
         """
         Get the column names in the database.
 
         Returns
         -------
-        list
+        List[str]
             List of column names.
         """
         return self.get_field_names()
 
     @property
-    def n_rows(self):
+    def n_rows(self) -> int:
         """
         Get the total number of rows in the database.
 
@@ -306,7 +307,7 @@ class ParquetDB:
         return ds.count_rows()
 
     @property
-    def n_files(self):
+    def n_files(self) -> int:
         """
         Get the number of parquet files in the database.
 
@@ -318,50 +319,54 @@ class ParquetDB:
         return len(self.get_current_files())
 
     @property
-    def n_rows_per_file(self):
+    def n_rows_per_file(self) -> Dict[str, int]:
         """
         Get the number of rows in each parquet file.
 
         Returns
         -------
-        dict
-            Dictionary mapping filenames to their row counts.
+        Dict[str, int]
+            Returns a dictionary detailing the number of rows in each processed Parquet file.
+            Structure: {filename: n_rows}
         """
         return self.get_number_of_rows_per_file()
 
     @property
-    def n_row_groups_per_file(self):
+    def n_row_groups_per_file(self) -> Dict[str, int]:
         """
         Get the number of row groups in each parquet file.
 
         Returns
         -------
-        dict
-            Dictionary mapping filenames to their row group counts.
+        Dict[str, int]
+            Returns a dictionary detailing the number of row groups in each processed Parquet file.
+            Structure: {filename: n_row_groups}
         """
         return self.get_number_of_row_groups_per_file()
 
     @property
-    def n_rows_per_row_group_per_file(self):
+    def n_rows_per_row_group_per_file(self) -> Dict[str, Dict[int, int]]:
         """
         Get the number of rows in each row group for each file.
 
         Returns
         -------
-        dict
-            Nested dictionary mapping filenames to row group indices to row counts.
+        Dict[str, Dict[int, int]]
+            Returns a dictionary detailing the number of rows in each row group for each processed Parquet file.
+            Structure: {filename: {row_group_id: n_rows}}
         """
         return self.get_n_rows_per_row_group_per_file(as_dict=True)
 
     @property
-    def serialized_metadata_size_per_file(self):
+    def serialized_metadata_size_per_file(self) -> Dict[str, int]:
         """
         Get the size of serialized metadata for each file.
 
         Returns
         -------
-        dict
-            Dictionary mapping filenames to their metadata sizes in bytes.
+        Dict[str, int]
+            Returns a dictionary detailing the size of serialized metadata for each processed Parquet file.
+            Structure: {filename: metadata_size_in_bytes}
         """
         return self.get_serialized_metadata_size_per_file()
 
@@ -457,13 +462,13 @@ class ParquetDB:
         self,
         data: Union[List[dict], dict, pd.DataFrame],
         schema: pa.Schema = None,
-        metadata: dict = None,
-        fields_metadata: dict = None,
+        metadata: Dict[str, str] = None,
+        fields_metadata: Dict[str, Dict[str, str]] = None,
         treat_fields_as_ragged: List[str] = None,
         convert_to_fixed_shape: bool = True,
         normalize_dataset: bool = False,
         normalize_config: NormalizeConfig = None,
-    ):
+    ) -> None:
         """
         Adds new data to the database.
 
@@ -478,10 +483,10 @@ class ParquetDB:
         schema : pa.Schema, optional
             PyArrow schema defining the structure and types of the data.
             If not provided, schema will be inferred from the data.
-        metadata : dict, optional
+        metadata : Dict[str, str], optional
             Dictionary of key-value pairs to attach as metadata to the table.
             This metadata applies to the entire table.
-        fields_metadata : dict, optional
+        fields_metadata : Dict[str, Dict[str, str]], optional
             Dictionary mapping field names to their metadata dictionaries.
             Allows attaching metadata to specific fields/columns.
         treat_fields_as_ragged : List[str], optional
@@ -502,6 +507,10 @@ class ParquetDB:
             - File organization
             - Thread/memory usage
             Default uses standard NormalizeConfig settings.
+
+        Returns
+        -------
+        None
 
         Examples
         --------
@@ -526,7 +535,7 @@ class ParquetDB:
             normalize_config = self.normalize_config
 
         logger.info("Creating data")
-        os.makedirs(self.db_path, exist_ok=True)
+        self._db_path.mkdir(parents=True, exist_ok=True)
 
         # Construct incoming table from the data
         incoming_table = ParquetDB.construct_table(
@@ -582,14 +591,11 @@ class ParquetDB:
 
             # If the dataset is initially empty, remove the initial file and rename the incoming file to the initial file
             if initially_empty:
-                initial_file_path = os.path.join(
-                    self.db_path, f"{self.dataset_name}_0.parquet"
-                )
-                incoming_file_path = os.path.join(
-                    self.db_path, f"{self.dataset_name}_1.parquet"
-                )
-                os.remove(initial_file_path)
-                os.rename(incoming_file_path, initial_file_path)
+                initial_file_path = self._db_path / f"{self.dataset_name}_0.parquet"
+                incoming_file_path = self.db_path / f"{self.dataset_name}_1.parquet"
+
+                initial_file_path.unlink()
+                incoming_file_path.rename(initial_file_path)
                 self._normalize(
                     schema=modified_incoming_table.schema,
                     normalize_config=normalize_config,
@@ -620,7 +626,7 @@ class ParquetDB:
         rebuild_nested_from_scratch: bool = False,
         load_config: LoadConfig = None,
         normalize_config: NormalizeConfig = None,
-    ):
+    ) -> Union[pa.Table, Iterable[pa.RecordBatch], ds.Dataset]:
         """
         Reads data from the database with flexible filtering and formatting options.
 
@@ -658,7 +664,7 @@ class ParquetDB:
 
         Returns
         -------
-        Union[pa.Table, Generator[pa.RecordBatch, None, None], ds.Dataset]
+        Union[pa.Table, Iterable[pa.RecordBatch], ds.Dataset]
             Data in the requested format:
             - PyArrow Table if load_format='table'
             - Generator of record batches if load_format='batches'
@@ -709,9 +715,9 @@ class ParquetDB:
         filter_expression = self._build_filter_expression(ids, filters)
         dataset_dir = None
         if rebuild_nested_struct:
-            nested_dataset_dir = os.path.join(self.db_path, "nested")
+            nested_dataset_dir = self.db_path / "nested"
             dataset_dir = nested_dataset_dir
-            if not os.path.exists(nested_dataset_dir) or rebuild_nested_from_scratch:
+            if not nested_dataset_dir.exists() or rebuild_nested_from_scratch:
                 self.to_nested(
                     normalize_config=normalize_config,
                     nested_dataset_dir=nested_dataset_dir,
@@ -731,13 +737,13 @@ class ParquetDB:
         self,
         data: Union[List[dict], dict, pd.DataFrame],
         schema: pa.Schema = None,
-        metadata: dict = None,
-        fields_metadata: dict = None,
+        metadata: Dict[str, str] = None,
+        fields_metadata: Dict[str, Dict[str, str]] = None,
         update_keys: Union[List[str], str] = ["id"],
-        treat_fields_as_ragged=None,
+        treat_fields_as_ragged: List[str] = None,
         convert_to_fixed_shape: bool = True,
         normalize_config: NormalizeConfig = None,
-    ):
+    ) -> None:
         """
         Updates existing records in the database by matching on specified key fields.
 
@@ -752,10 +758,10 @@ class ParquetDB:
         schema : pa.Schema, optional
             PyArrow schema defining the structure and types of the update data.
             If not provided, schema will be inferred from the data.
-        metadata : dict, optional
+        metadata : Dict[str, str], optional
             Dictionary of key-value pairs to attach as metadata to the updated table.
             This metadata applies to the entire table.
-        fields_metadata : dict, optional
+        fields_metadata : Dict[str, Dict[str, str]], optional
             Dictionary mapping field names to their metadata dictionaries.
             Allows attaching metadata to specific fields/columns.
         update_keys : Union[List[str], str], optional
@@ -836,6 +842,7 @@ class ParquetDB:
         )
 
         logger.info(f"Updated {self.dataset_name} table.")
+        return None
 
     def delete(
         self,
@@ -843,7 +850,7 @@ class ParquetDB:
         filters: List[pc.Expression] = None,
         columns: List[str] = None,
         normalize_config: NormalizeConfig = None,
-    ):
+    ) -> None:
         """
         Deletes records or columns from the database.
 
@@ -938,13 +945,14 @@ class ParquetDB:
         self._normalize(ids=ids, columns=columns, normalize_config=normalize_config)
 
         logger.info(f"Deleted data from {self.dataset_name} dataset.")
+        return None
 
     def transform(
         self,
         transform_callable: Callable[[pa.Table], pa.Table],
         new_db_path: Optional[str] = None,
         normalize_config: NormalizeConfig = None,
-    ) -> Optional["ParquetDB"]:
+    ) -> "ParquetDB":
         """
         Transform the entire dataset using a user-provided callable.
 
@@ -967,9 +975,9 @@ class ParquetDB:
 
         Returns
         -------
-        ParquetDB or None
+        ParquetDB
             If new_db_path is provided, returns a new ParquetDB instance at that location.
-            If new_db_path is None, returns None after transforming in-place.
+            If new_db_path is None, returns the current ParquetDB instance after transforming in-place.
 
         Examples
         --------
@@ -995,6 +1003,10 @@ class ParquetDB:
             normalize_config=normalize_config,
             new_db_path=new_db_path,
         )
+
+        if new_db_path:
+            return ParquetDB(new_db_path)
+        return self
 
     def normalize(self, normalize_config: NormalizeConfig = None):
         """
@@ -1051,16 +1063,16 @@ class ParquetDB:
 
     def _normalize(
         self,
-        nested_dataset_dir=None,
-        incoming_table=None,
-        schema=None,
-        ids=None,
-        columns=None,
-        transform_callable=None,
-        new_db_path=None,
+        nested_dataset_dir: Union[str, Path] = None,
+        incoming_table: pa.Table = None,
+        schema: pa.Schema = None,
+        ids: List[int] = None,
+        columns: List[str] = None,
+        transform_callable: Callable = None,
+        new_db_path: Union[str, Path] = None,
         update_keys: Union[List[str], str] = ["id"],
         normalize_config: NormalizeConfig = None,
-    ):
+    ) -> None:
         """
         Internal method to normalize the dataset by restructuring files.
 
@@ -1072,7 +1084,7 @@ class ParquetDB:
 
         Parameters
         ----------
-        nested_dataset_dir : str, optional
+        nested_dataset_dir : str | Path, optional
             Path to store nested data structure. Used for optimizing queries on nested data.
         incoming_table : pa.Table, optional
             New data to merge during update operations.
@@ -1084,7 +1096,7 @@ class ParquetDB:
             Column names to remove during normalization.
         transform_callable : Callable, optional
             Custom transformation function to apply during normalization.
-        new_db_path : str, optional
+        new_db_path : str | Path, optional
             Alternative path to write normalized data. If None, overwrites existing files.
         update_keys : Union[List[str], str], optional
             Field(s) to match on when merging incoming_table. Default is ["id"].
@@ -1108,8 +1120,8 @@ class ParquetDB:
             normalize_config = self.normalize_config
 
         if new_db_path:
-            dataset_dir = new_db_path
-            dataset_name = os.path.basename(new_db_path)
+            dataset_dir = Path(new_db_path)
+            dataset_name = dataset_dir.name
             basename_template = f"tmp-{dataset_name}_{{i}}.parquet"
         else:
             dataset_dir = self.db_path
@@ -1191,18 +1203,16 @@ class ParquetDB:
                 load_format=normalize_config.load_format,
             )
 
-        retrieved_data, schema = extract_generator_schema(retrieved_data)
-
         if isinstance(retrieved_data, pa.lib.Table):
             schema = None
+        elif isinstance(retrieved_data, Iterable):
+            retrieved_data, schema = extract_generator_schema(retrieved_data)
 
         # Handles case when table is empty
         if self.is_empty():
             # Handles case when table is empty
-            pq.write_table(
-                retrieved_data,
-                os.path.join(dataset_dir, f"{dataset_name}_0.parquet"),
-            )
+            initial_file_path = dataset_dir / f"{dataset_name}_0.parquet"
+            pq.write_table(retrieved_data, initial_file_path)
             return None
 
         # Handles case when table is not empty
@@ -1242,22 +1252,22 @@ class ParquetDB:
 
             # Remove main files to replace with tmp files
             logger.debug(f"Files before renaming: {os.listdir(dataset_dir)}")
-            tmp_files = glob(os.path.join(dataset_dir, f"tmp-{dataset_name}_*.parquet"))
+            tmp_files = [
+                file for file in dataset_dir.glob(f"tmp-{dataset_name}_*.parquet")
+            ]
             if len(tmp_files) != 0:
-                main_files = glob(
-                    os.path.join(dataset_dir, f"{dataset_name}_*.parquet")
-                )
+                main_files = dataset_dir.glob(f"{dataset_name}_*.parquet")
                 for file_path in main_files:
-                    if os.path.isfile(file_path):
-                        os.remove(file_path)
+                    if file_path.is_file():
+                        file_path.unlink()
 
             logger.debug(f"Files after removing main files: {os.listdir(dataset_dir)}")
 
-            tmp_files = glob(os.path.join(dataset_dir, f"tmp-{dataset_name}_*.parquet"))
+            tmp_files = dataset_dir.glob(f"tmp-{dataset_name}_*.parquet")
             for file_path in tmp_files:
-                file_name = os.path.basename(file_path).replace("tmp-", "")
-                new_file_path = os.path.join(dataset_dir, file_name)
-                os.rename(file_path, new_file_path)
+                file_name = file_path.name.replace("tmp-", "")
+                new_file_path = dataset_dir / file_name
+                file_path.rename(new_file_path)
 
             logger.debug(f"Files after renaming: {os.listdir(dataset_dir)}")
 
@@ -1269,25 +1279,24 @@ class ParquetDB:
         except Exception as e:
             logger.exception(f"exception writing final table to {dataset_dir}: {e}")
 
-            tmp_files = glob(os.path.join(dataset_dir, f"tmp-{dataset_name}_*.parquet"))
+            tmp_files = dataset_dir.glob(f"tmp-{dataset_name}_*.parquet")
             for file_path in tmp_files:
-
-                file_name = os.path.basename(file_path).replace("tmp-", "")
-                new_file_path = os.path.join(dataset_dir, file_name)
-                os.rename(file_path, new_file_path)
+                file_name = file_path.name.replace("tmp-", "")
+                new_file_path = dataset_dir / file_name
+                file_path.rename(new_file_path)
 
             if new_db_path:
-                os.rmdir(dataset_dir)
+                dataset_dir.rmdir()
 
             raise Exception(f"Exception normalizing table. Error Message: {e}")
 
     def update_schema(
         self,
-        field_dict: dict = None,
+        field_dict: Dict[str, pa.DataType] = None,
         schema: pa.Schema = None,
         update_metadata: bool = True,
         normalize_config: NormalizeConfig = None,
-    ):
+    ) -> pa.Schema:
         """
         Updates the schema of the table in the dataset.
 
@@ -1297,25 +1306,30 @@ class ParquetDB:
 
         Parameters
         ----------
-        field_dict : dict, optional
+        field_dict : dict
             Dictionary mapping field names to their new PyArrow data types.
             Example: {'age': pa.int32(), 'name': pa.string()}
             If None, uses the provided schema parameter instead.
-        schema : pa.Schema, optional
+        schema : pa.Schema
             Complete PyArrow schema to apply to the dataset.
             Takes precedence over field_dict if both are provided.
             Must include all existing fields with their desired types.
-        update_metadata : bool, optional
+        update_metadata : bool
             Whether to preserve and update the schema metadata during the update.
             If True, merges existing metadata with any new metadata.
             If False, uses only the new schema's metadata.
             Default is True.
-        normalize_config : NormalizeConfig, optional
+        normalize_config : NormalizeConfig
             Configuration for optimizing the dataset after schema update:
             - Controls row distribution across files
             - Sets row group sizes and organization
             - Manages threading and memory usage
             Default uses standard NormalizeConfig settings.
+
+        Returns
+        -------
+        pa.Schema
+            The updated schema.
 
         Examples
         --------
@@ -1367,8 +1381,9 @@ class ParquetDB:
         self._normalize(schema=updated_schema, normalize_config=normalize_config)
 
         logger.info(f"Updated Fields in {self.dataset_name} table.")
+        return updated_schema
 
-    def is_empty(self):
+    def is_empty(self) -> bool:
         """
         Check if the dataset is empty.
 
@@ -1387,14 +1402,14 @@ class ParquetDB:
         if self.dataset_exists():
             ds = self._load_data(load_format="dataset")
             parquet_file = pq.ParquetFile(
-                os.path.join(self.db_path, f"{self.dataset_name}_0.parquet")
+                self.db_path / f"{self.dataset_name}_0.parquet"
             )
             num_rows = parquet_file.metadata.num_rows
             return num_rows == 0
         else:
             return True
 
-    def get_schema(self):
+    def get_schema(self) -> pa.Schema:
         """
         Get the PyArrow schema of the dataset.
 
@@ -1415,7 +1430,9 @@ class ParquetDB:
         schema = self._load_data(load_format="dataset").schema
         return schema
 
-    def get_field_names(self, columns=None, include_cols=True):
+    def get_field_names(
+        self, columns: Optional[List[str]] = None, include_cols: bool = True
+    ) -> List[str]:
         """
         Get the names of fields/columns in the dataset schema.
 
@@ -1454,7 +1471,7 @@ class ParquetDB:
         else:
             return list(existing_columns)
 
-    def get_metadata(self, return_bytes: bool = False):
+    def get_metadata(self, return_bytes: bool = False) -> Dict[str, Union[str, bytes]]:
         """
         Retrieves the metadata of the dataset table.
 
@@ -1466,9 +1483,9 @@ class ParquetDB:
 
         Returns
         -------
-        dict
-            Dictionary containing the table metadata. Keys and values will be strings
-            if return_bytes=False, or bytes if return_bytes=True.
+        Dict[str, Union[str, bytes]]
+            Dictionary containing the table metadata. The values are either str or bytes
+            depending on the return_bytes parameter.
 
         Examples
         --------
@@ -1499,13 +1516,17 @@ class ParquetDB:
         logger.debug(f"Metadata: {metadata}")
         return metadata
 
-    def set_metadata(self, metadata: dict, update: bool = True):
+    def set_metadata(
+        self,
+        metadata: Dict[str, str],
+        update: bool = True,
+    ) -> pa.Schema:
         """
         Sets or updates the metadata of the dataset table.
 
         Parameters
         ----------
-        metadata : dict
+        metadata : Dict[str, str]
             Dictionary of metadata key-value pairs to set for the table.
         update : bool, optional
             If True, updates existing metadata. If False, replaces it entirely.
@@ -1540,7 +1561,11 @@ class ParquetDB:
             update_metadata=update,
         )
 
-    def set_field_metadata(self, fields_metadata: Dict[str, dict], update: bool = True):
+    def set_field_metadata(
+        self,
+        fields_metadata: Dict[str, dict],
+        update: bool = True,
+    ) -> pa.Schema:
         """
         Sets or updates metadata for specific fields/columns in the dataset.
 
@@ -1602,7 +1627,7 @@ class ParquetDB:
 
     def get_field_metadata(
         self, field_names: Union[str, List[str]] = None, return_bytes: bool = False
-    ):
+    ) -> Dict[str, Dict[str, Any]]:
         """
         Retrieves metadata for specified fields/columns in the dataset.
 
@@ -1617,9 +1642,10 @@ class ParquetDB:
 
         Returns
         -------
-        dict
-            Dictionary mapping field names to their metadata dictionaries.
-            Inner dictionaries contain metadata key-value pairs for each field.
+        Dict[str, Dict[str, Any]]
+            A nested dictionary structure:
+            {field_name: {metadata_key: metadata_value}}
+            where metadata is either a dictionary or metadata object based on return_bytes.
 
         Examples
         --------
@@ -1662,13 +1688,13 @@ class ParquetDB:
 
         return fields_metadata
 
-    def get_number_of_rows_per_file(self):
+    def get_number_of_rows_per_file(self) -> List[int]:
         """
         Get the number of rows in each Parquet file in the dataset.
 
         Returns
         -------
-        list
+        List[int]
             A list containing the number of rows for each file, in order of the files
             returned by get_current_files().
 
@@ -1681,13 +1707,13 @@ class ParquetDB:
             pq.ParquetFile(file).metadata.num_rows for file in self.get_current_files()
         ]
 
-    def get_number_of_row_groups_per_file(self):
+    def get_number_of_row_groups_per_file(self) -> List[int]:
         """
         Get the number of row groups in each Parquet file in the dataset.
 
         Returns
         -------
-        list
+        List[int]
             A list containing the number of row groups for each file, in order of the files
             returned by get_current_files().
 
@@ -1701,7 +1727,9 @@ class ParquetDB:
             for file in self.get_current_files()
         ]
 
-    def get_parquet_file_metadata_per_file(self, as_dict: bool = False):
+    def get_parquet_file_metadata_per_file(
+        self, as_dict: bool = False
+    ) -> Union[Dict[str, Dict[str, Dict[str, Any]]], List[List[Dict[str, Any]]]]:
         """
         Get the metadata for each Parquet file in the dataset.
 
@@ -1713,9 +1741,10 @@ class ParquetDB:
 
         Returns
         -------
-        list
-            A list containing either metadata objects or dictionaries for each file,
-            in order of the files returned by get_current_files().
+        Dict[str, Dict[str, Dict[str, Any]]] | List[List[Dict[str, Any]]]
+            A nested dictionary structure:
+            {filename: {metadata_key: metadata_value}}
+            where metadata is either a dictionary or metadata object based on as_dict.
 
         Examples
         --------
@@ -1731,7 +1760,9 @@ class ParquetDB:
         else:
             return [pq.ParquetFile(file).metadata for file in self.get_current_files()]
 
-    def get_parquet_file_row_group_metadata_per_file(self, as_dict: bool = False):
+    def get_parquet_file_row_group_metadata_per_file(
+        self, as_dict: bool = False
+    ) -> Union[Dict[str, Dict[str, Dict[str, Any]]], List[List[Dict[str, Any]]]]:
         """
         Get detailed metadata for each row group in each Parquet file.
 
@@ -1743,7 +1774,7 @@ class ParquetDB:
 
         Returns
         -------
-        dict
+        Dict[str, Dict[str, Dict[str, Any]]] | List[List[Dict[str, Any]]]
             A nested dictionary structure:
             {filename: {row_group_idx: metadata}}
             where metadata is either a dictionary or metadata object based on as_dict.
@@ -1773,7 +1804,9 @@ class ParquetDB:
 
         return row_group_metadata
 
-    def get_parquet_column_metadata_per_file(self, as_dict: bool = False):
+    def get_parquet_column_metadata_per_file(
+        self, as_dict: bool = False
+    ) -> Union[Dict[str, Dict[str, Dict[str, Any]]], List[List[Dict[str, Any]]]]:
         """
         Get detailed metadata for each column in each row group in each file.
 
@@ -1785,7 +1818,7 @@ class ParquetDB:
 
         Returns
         -------
-        dict
+        Dict[str, Dict[str, Dict[str, Any]]] | List[List[Dict[str, Any]]]]
             A nested dictionary structure:
             {filename: {row_group_idx: {column_idx: metadata}}}
             where metadata is either a dictionary or metadata object based on as_dict.
@@ -1822,7 +1855,9 @@ class ParquetDB:
                         column_metadata[filename][row_group_idx][column_idx] = column
         return column_metadata
 
-    def get_n_rows_per_row_group_per_file(self, as_dict: bool = False):
+    def get_n_rows_per_row_group_per_file(
+        self, as_dict: bool = False
+    ) -> Union[Dict[str, Dict[str, int]], List[List[int]]]:
         """
         Get the number of rows in each row group for each file.
 
@@ -1834,7 +1869,7 @@ class ParquetDB:
 
         Returns
         -------
-        Union[dict, list]
+        Union[Dict[str, Dict[str, int]], List[List[int]]]
             If as_dict=True:
                 A nested dictionary: {filename: {row_group_idx: num_rows}}
             If as_dict=False:
@@ -1880,13 +1915,28 @@ class ParquetDB:
         else:
             return {}
 
-    def get_row_group_sizes_per_file(self, verbose: bool = False):
+    def get_row_group_sizes_per_file(
+        self, verbose: bool = False
+    ) -> Dict[str, Dict[str, float]]:
         """
         Get the size of each row group for each file. in MB
 
+        Parameters
+        ----------
+        verbose : bool, optional
+            If True, print the size of each row group.
+            Default is False.
+
         Returns
         -------
-        dict
+        Dict[str, Dict[str, float]]
+            Returns a dictionary detailing the size of each row group (in Megabytes)
+            for each processed Parquet file. Structure: {filename: {row_group_id: size_MB}}
+
+        Examples
+        --------
+        >>> db.get_row_group_sizes_per_file(verbose=True)
+        {'file_0': {0: 10.5, 1: 15.2}, 'file_1': {0: 20.0}}
         """
         row_group_metadata_per_file = self.get_parquet_file_row_group_metadata_per_file(
             as_dict=True
@@ -1911,13 +1961,25 @@ class ParquetDB:
                     )
         return row_group_size_per_file
 
-    def get_file_sizes(self, verbose: bool = False):
+    def get_file_sizes(self, verbose: bool = False) -> Dict[str, float]:
         """
         Get the size of each file in the dataset in MB.
+
+        Parameters
+        ----------
+        verbose : bool, optional
+            If True, print the size of each file.
+            Default is False.
 
         Returns
         -------
         dict
+            A dictionary mapping file names to their sizes in MB.
+
+        Examples
+        --------
+        >>> db.get_file_sizes(verbose=True)
+        {'file_0': 10.5, 'file_1': 15.2}
         """
         file_sizes = {}
         for filename in os.listdir(self.db_path):
@@ -1932,7 +1994,7 @@ class ParquetDB:
                 file_sizes[filename] = file_size
         return file_sizes
 
-    def get_serialized_metadata_size_per_file(self):
+    def get_serialized_metadata_size_per_file(self) -> List[int]:
         """
         Get the serialized metadata size for each Parquet file in the dataset.
 
@@ -1953,8 +2015,10 @@ class ParquetDB:
         ]
 
     def rename_fields(
-        self, name_map: dict, normalize_config: NormalizeConfig = NormalizeConfig()
-    ):
+        self,
+        name_map: dict,
+        normalize_config: NormalizeConfig = NormalizeConfig(),
+    ) -> pa.Schema:
         """
         Rename fields/columns in the dataset using a mapping dictionary.
 
@@ -1970,7 +2034,7 @@ class ParquetDB:
         Returns
         -------
         pa.Schema
-            The original schema before renaming.
+            The schema after renaming.
 
         Examples
         --------
@@ -1988,7 +2052,9 @@ class ParquetDB:
 
         return schema
 
-    def sort_fields(self, normalize_config: NormalizeConfig = NormalizeConfig()):
+    def sort_fields(
+        self, normalize_config: NormalizeConfig = NormalizeConfig()
+    ) -> pa.Schema:
         """
         Sort the fields/columns of the dataset alphabetically by name.
 
@@ -1997,8 +2063,8 @@ class ParquetDB:
 
         Returns
         -------
-        None
-            Modifies the dataset schema in place.
+        pyarrow.Schema
+            The sorted schema.
 
         Examples
         --------
@@ -2013,14 +2079,15 @@ class ParquetDB:
 
         schema = pa.schema(new_fields, metadata=schema.metadata)
         self._normalize(schema=schema, normalize_config=normalize_config)
+        return schema
 
-    def get_current_files(self):
+    def get_current_files(self) -> List[Union[str, Path]]:
         """
         Get a list of all Parquet files in the current dataset.
 
         Returns
         -------
-        list of str
+        List[Union[str, Path]]
             List of absolute file paths for all Parquet files in the dataset,
             sorted by file number.
 
@@ -2034,9 +2101,9 @@ class ParquetDB:
         - Files are named using pattern: {dataset_name}_{number}.parquet
         - Files are sorted numerically by their suffix number
         """
-        return glob(os.path.join(self.db_path, f"{self.dataset_name}_*.parquet"))
+        return [file for file in self.db_path.glob(f"{self.dataset_name}_*.parquet")]
 
-    def dataset_exists(self, dataset_name: str = None):
+    def dataset_exists(self, dataset_name: str = None) -> bool:
         """
         Check if a dataset exists and contains data.
 
@@ -2067,11 +2134,11 @@ class ParquetDB:
         - Empty directories return False
         """
         if dataset_name:
-            dir = os.path.dirname(self.db_path)
-            dataset_dir = os.path.join(dir, dataset_name)
-            return os.path.exists(dataset_dir) and len(os.listdir(dataset_dir)) > 0
+            dir = self.db_path.parent
+            dataset_dir = dir / dataset_name
+            return dataset_dir.exists() and len(os.listdir(dataset_dir)) > 0
         else:
-            return os.path.exists(self.db_path) and len(os.listdir(self.db_path)) > 0
+            return self.db_path.exists() and len(os.listdir(self.db_path)) > 0
 
     def drop_dataset(self):
         """
@@ -2098,9 +2165,9 @@ class ParquetDB:
         - Logs the drop operation for tracking
         """
         logger.info(f"Dropping dataset {self.dataset_name}")
-        if os.path.exists(self.db_path):
+        if self.db_path.exists():
             shutil.rmtree(self.db_path)
-            os.makedirs(self.db_path, exist_ok=True)
+            self.db_path.mkdir(parents=True, exist_ok=True)
             table = pyarrow_utils.create_empty_table(
                 schema=pa.schema([pa.field("id", pa.int64())])
             )
@@ -2109,8 +2176,9 @@ class ParquetDB:
         else:
             logger.warning(f"Table {self.dataset_name} does not exist.")
         logger.info(f"Dataset {self.dataset_name} dropped")
+        return None
 
-    def rename_dataset(self, new_name: str, remove_dest: bool = False):
+    def rename_dataset(self, new_name: str, remove_dest: bool = False) -> None:
         """
         Renames the current dataset directory and all contained files.
 
@@ -2123,10 +2191,9 @@ class ParquetDB:
             If False, raises error if new_name already exists.
             Default is False.
 
-        Raises
-        ------
-        ValueError
-            If source dataset doesn't exist or destination exists and remove_dest=False
+        Returns
+        -------
+        None
 
         Examples
         --------
@@ -2146,33 +2213,37 @@ class ParquetDB:
             raise ValueError(f"Dataset {self.dataset_name} does not exist.")
 
         old_dir = self.db_path
-        parent_dir = os.path.dirname(old_dir)
-        new_dir = os.path.join(parent_dir, new_name)
+        parent_dir = old_dir.parent
+        new_dir = parent_dir / new_name
         old_name = self.dataset_name
 
-        if os.path.exists(new_dir):
+        if new_dir.exists():
             if remove_dest:
                 shutil.rmtree(new_dir)
             else:
                 raise ValueError(f"Dataset {new_name} already exists.")
 
+        # Create the new directory
+        new_dir.mkdir(parents=True, exist_ok=True)
+
         # Rename all files in the old directory
-        old_filepaths = glob(os.path.join(old_dir, f"{old_name}_*.parquet"))
+        old_filepaths = old_dir.glob(f"{old_name}_*.parquet")
         for old_filepath in old_filepaths:
-            filename = os.path.basename(old_filepath)
-            file_index = filename.split(".")[0].replace("_", "")
+            filename = old_filepath.name
+            file_index = filename.split(".")[0].split("_")[-1]
 
-            new_filepath = os.path.join(old_dir, f"{new_name}_{file_index}.parquet")
-            os.rename(old_filepath, new_filepath)
+            new_filepath = new_dir / f"{new_name}_{file_index}.parquet"
+            old_filepath.rename(new_filepath)
 
-        # Finally, rename the directory
-        os.rename(old_dir, new_dir)
+        logger.debug(f"old_dir: {os.listdir(old_dir)}")
+        logger.debug(f"new_dir: {os.listdir(new_dir)}")
 
         self._db_path = new_dir
 
         logger.info(f"Table {old_name} has been renamed to {new_name}.")
+        return None
 
-    def copy_dataset(self, dest_name: str, overwrite: bool = False):
+    def copy_dataset(self, dest_name: str, overwrite: bool = False) -> None:
         """
         Creates a complete copy of the current dataset under a new name.
 
@@ -2205,35 +2276,36 @@ class ParquetDB:
         - Useful for backups or creating test copies
         """
         logger.info(f"Copying dataset to {dest_name}")
-        dir = os.path.dirname(self.db_path)
+        dir = self.db_path.parent
         if overwrite and self.dataset_exists(dest_name):
-            shutil.rmtree(os.path.join(dir, dest_name))
+            shutil.rmtree(dir / dest_name)
         elif self.dataset_exists(dest_name):
             raise ValueError(f"Dataset {dest_name} already exists.")
 
         source_dir = self.db_path
         source_name = self.dataset_name
-        dest_dir = os.path.join(dir, dest_name)
+        dest_dir = dir / dest_name
 
-        os.makedirs(dest_dir, exist_ok=True)
+        dest_dir.mkdir(parents=True, exist_ok=True)
 
         # Rename all files in the old directory
-        old_filepaths = glob(os.path.join(source_dir, f"{source_name}_*.parquet"))
+        old_filepaths = source_dir.glob(f"{source_name}_*.parquet")
         for old_filepath in old_filepaths:
-            filename = os.path.basename(old_filepath)
+            filename = old_filepath.name
             file_index = filename.split(".")[0].replace("_", "")
-            new_filepath = os.path.join(dest_dir, f"{dest_name}_{file_index}.parquet")
+            new_filepath = dest_dir / f"{dest_name}_{file_index}.parquet"
             shutil.copyfile(old_filepath, new_filepath)
 
         logger.info(f"Table {source_name} has been copied to {dest_name}.")
+        return None
 
-    def export_dataset(self, file_path: str, format: str = "csv"):
+    def export_dataset(self, file_path: Union[str, Path], format: str = "csv") -> None:
         """
         Exports the entire dataset to a single file in the specified format.
 
         Parameters
         ----------
-        file_path : str
+        file_path : str | Path
             Full path where the exported file will be saved, including filename and extension.
         format : str, optional
             Output file format. Currently supports:
@@ -2261,6 +2333,7 @@ class ParquetDB:
         - Loads entire dataset into memory during export
         - For large datasets, consider using export_partitioned_dataset()
         """
+        file_path = Path(file_path)
         table = self._load_data(load_format="table")
         if format == "csv":
             df = table.to_pandas()
@@ -2274,13 +2347,13 @@ class ParquetDB:
 
     def export_partitioned_dataset(
         self,
-        export_dir: str,
-        partitioning,
-        partitioning_flavor=None,
+        export_dir: Union[str, Path],
+        partitioning: Union[str, List[str], ds.Partitioning, ds.PartitioningFactory],
+        partitioning_flavor: Optional[str] = None,
         load_config: LoadConfig = LoadConfig(),
         load_format: str = "table",
         **kwargs,
-    ):
+    ) -> None:
         """
         Exports the dataset to a partitioned format in the specified directory.
 
@@ -2288,7 +2361,7 @@ class ParquetDB:
         ----------
         export_dir : str
             Directory path where the partitioned dataset will be saved.
-        partitioning : Union[str, List[str], Partitioning]
+        partitioning : Union[str, List[str], pyarrow.dataset.Partitioning, pyarrow.dataset.PartitioningFactory]
             Partitioning configuration. Can be:
             - Column name(s) to partition by
             - PyArrow Partitioning object
@@ -2313,6 +2386,10 @@ class ParquetDB:
             - existing_data_behavior: How to handle existing data
             - max_rows_per_file: Target rows per output file
             - use_threads: Enable multi-threading
+
+        Returns
+        -------
+        None
 
         Examples
         --------
@@ -2361,14 +2438,17 @@ class ParquetDB:
             **kwargs,
         )
         logger.info(f"Partitioned dataset exported to {export_dir}")
+        return None
 
-    def import_dataset(self, file_path: str, format: str = "csv", **kwargs):
+    def import_dataset(
+        self, file_path: Union[str, Path], format: str = "csv", **kwargs
+    ) -> None:
         """
         Imports data from a file into the dataset, supporting multiple file formats.
 
         Parameters
         ----------
-        file_path : str
+        file_path : str | Path
             Path to the input file to import.
             Must be readable and in a supported format.
         format : str, optional
@@ -2415,6 +2495,7 @@ class ParquetDB:
         - Creates new dataset if none exists
         - Updates schema if necessary
         """
+        file_path = Path(file_path)
         logger.info("Importing data")
         if format == "csv":
             logger.info("Importing csv")
@@ -2426,26 +2507,24 @@ class ParquetDB:
             raise ValueError(f"Unsupported import format: {format}")
         self.create(data=df)
         logger.info(f"Imported data from {file_path} into table {self.dataset_name}.")
+        return None
 
-    def merge_datasets(self, source_tables: List[str], dest_table: str):
+    def merge_datasets(self, source_tables: List[str], dest_table: str) -> None:
         raise NotImplementedError
 
-    def backup_database(self, backup_path: str):
+    def backup_database(self, backup_path: Union[str, Path]) -> None:
         """
         Creates a complete backup of the current dataset.
 
         Parameters
         ----------
-        backup_path : str
+        backup_path : str | Path
             Directory path where the backup will be stored.
             Must have write permissions and sufficient space.
 
-        Raises
-        ------
-        OSError
-            If backup_path is not writable or has insufficient space
-        shutil.Error
-            If copying files fails
+        Returns
+        -------
+        None
 
         Examples
         --------
@@ -2458,28 +2537,25 @@ class ParquetDB:
         - Overwrites existing backup at same path
         - Safe to run while database is in use
         """
+        backup_path = Path(backup_path)
         logger.info("Backing up database to : {backup_path}")
         shutil.copytree(self.db_path, backup_path)
         logger.info(f"Database backed up to {backup_path}.")
+        return None
 
-    def restore_database(self, backup_path: str):
+    def restore_database(self, backup_path: Union[str, Path]) -> None:
         """
         Restores the dataset from a previous backup.
 
         Parameters
         ----------
-        backup_path : str
+        backup_path : str | Path
             Path to the backup directory containing the dataset files.
             Must be a valid backup created by backup_database().
 
-        Raises
-        ------
-        FileNotFoundError
-            If backup_path does not exist
-        OSError
-            If restore fails due to permissions or space
-        ValueError
-            If backup appears invalid or corrupted
+        Returns
+        -------
+        None
 
         Examples
         --------
@@ -2492,18 +2568,20 @@ class ParquetDB:
         - Verifies backup integrity before restore
         - Maintains all metadata and structure
         """
+        backup_path = Path(backup_path)
         logger.info("Restoring database from : {backup_path}")
-        if os.path.exists(self.db_path):
+        if self.db_path.exists():
             shutil.rmtree(self.db_path)
         shutil.copytree(backup_path, self.db_path)
         logger.info(f"Database restored from {backup_path}.")
+        return None
 
     def to_nested(
         self,
-        nested_dataset_dir: str = None,
+        nested_dataset_dir: Union[str, Path] = None,
         normalize_config: NormalizeConfig = NormalizeConfig(),
         rebuild_nested_from_scratch: bool = False,
-    ):
+    ) -> None:
         """
         Converts the current dataset to a nested structure optimized for querying nested data.
 
@@ -2513,7 +2591,7 @@ class ParquetDB:
 
         Parameters
         ----------
-        nested_dataset_dir : str, optional
+        nested_dataset_dir : str | Path, optional
             Directory path where the nested dataset will be stored. If not provided,
             defaults to a 'nested' subdirectory in the current dataset path.
         normalize_config : NormalizeConfig, optional
@@ -2552,22 +2630,23 @@ class ParquetDB:
         - Safe to rebuild while database is in use
         """
 
-        if os.path.exists(nested_dataset_dir) and rebuild_nested_from_scratch:
+        if nested_dataset_dir.exists() and rebuild_nested_from_scratch:
             shutil.rmtree(nested_dataset_dir)
-        os.makedirs(nested_dataset_dir, exist_ok=True)
+        nested_dataset_dir.mkdir(parents=True, exist_ok=True)
 
         self._normalize(
             nested_dataset_dir=nested_dataset_dir, normalize_config=normalize_config
         )
+        return None
 
     def _load_data(
         self,
         load_format: str = "table",
         columns: List[str] = None,
         filter: List[pc.Expression] = None,
-        dataset_dir: str = None,
+        dataset_dir: Union[str, Path] = None,
         load_config: LoadConfig = LoadConfig(),
-    ):
+    ) -> Union[pa.Table, Iterable[pa.RecordBatch], ds.Dataset]:
         """
         Internal method to load data from the dataset in various formats.
 
@@ -2589,7 +2668,7 @@ class ParquetDB:
             PyArrow compute expressions for filtering the data.
             Example: [pc.field('age') > 18]
             Default is None.
-        dataset_dir : str, optional
+        dataset_dir : str | Path, optional
             Custom directory to load data from. If None, uses the default
             dataset directory. Default is None.
         load_config : LoadConfig, optional
@@ -2599,7 +2678,7 @@ class ParquetDB:
 
         Returns
         -------
-        Union[pa.Table, pa.dataset.Scanner, Iterator[pa.RecordBatch]]
+        Union[pa.Table, pa.dataset.Scanner, Iterable[pa.RecordBatch]]
             Data in the requested format:
             - PyArrow Table for 'table'
             - Batch generator for 'batches'
@@ -2620,6 +2699,7 @@ class ParquetDB:
 
         if dataset_dir is None:
             dataset_dir = self.db_path
+        dataset_dir = Path(dataset_dir)
 
         logger.info(f"Loading data from {dataset_dir}")
         logger.info(f"Loading only columns: {columns}")
@@ -2642,11 +2722,11 @@ class ParquetDB:
 
     def _load_batches(
         self,
-        dataset,
+        dataset: ds.Dataset,
         columns: List[str] = None,
         filter: List[pc.Expression] = None,
         load_config: LoadConfig = LoadConfig(),
-    ):
+    ) -> Iterable[pa.RecordBatch]:
         """
         Internal method to load data as batches from a PyArrow dataset.
 
@@ -2672,7 +2752,7 @@ class ParquetDB:
 
         Returns
         -------
-        Iterator[pa.RecordBatch]
+        Iterable[pa.RecordBatch]
             Generator yielding PyArrow RecordBatch objects, each containing
             a portion of the dataset.
 
@@ -2698,11 +2778,11 @@ class ParquetDB:
 
     def _load_table(
         self,
-        dataset,
+        dataset: ds.Dataset,
         columns: List[str] = None,
         filter: List[pc.Expression] = None,
         load_config: LoadConfig = LoadConfig(),
-    ):
+    ) -> pa.Table:
         """
         Internal method to load data as a single PyArrow Table from a dataset.
 
@@ -2721,7 +2801,7 @@ class ParquetDB:
             PyArrow compute expressions for filtering the data.
             Example: [pc.field('age') > 18]
             Default is None.
-        load_config : LoadConfig, optional
+        load_config : LoadConfig
             Configuration for optimizing loading performance.
             Controls batch sizes, readahead, threading, and memory usage.
             Default uses standard LoadConfig settings.
@@ -2752,8 +2832,10 @@ class ParquetDB:
 
     @staticmethod
     def preprocess_table(
-        table, treat_fields_as_ragged=None, convert_to_fixed_shape=True
-    ):
+        table: pa.Table,
+        treat_fields_as_ragged: List[str] = None,
+        convert_to_fixed_shape: bool = True,
+    ) -> pa.Table:
         """
         Preprocesses a PyArrow table by flattening nested structures and handling special field types.
 
@@ -2770,7 +2852,7 @@ class ParquetDB:
         treat_fields_as_ragged : List[str], optional
             List of field names to treat as ragged arrays (skip tensor conversion).
             Default is None.
-        convert_to_fixed_shape : bool, optional
+        convert_to_fixed_shape : bool
             Whether to convert list columns to fixed-shape tensors.
             Default is True.
 
@@ -2812,7 +2894,7 @@ class ParquetDB:
 
         return table
 
-    def _get_new_ids(self, incoming_table):
+    def _get_new_ids(self, incoming_table: pa.Table) -> List[int]:
         """
         Generates sequential IDs for new records starting from the next available ID.
 
@@ -2854,8 +2936,10 @@ class ParquetDB:
         return new_ids
 
     def _build_filter_expression(
-        self, ids: List[int] = None, filters: List[pc.Expression] = None
-    ):
+        self,
+        ids: Optional[List[int]] = None,
+        filters: Optional[List[pc.Expression]] = None,
+    ) -> Union[pc.Expression, None]:
         """
         Combines ID-based and custom filters into a single PyArrow compute expression.
 
@@ -2905,7 +2989,7 @@ class ParquetDB:
         logger.info("Filter expression built")
         return filter_expression
 
-    def _get_save_path(self):
+    def _get_save_path(self) -> Path:
         """
         Generates the next available file path for saving data in the dataset.
 
@@ -2916,7 +3000,7 @@ class ParquetDB:
 
         Returns
         -------
-        str
+        Path
             Complete file path for saving the next data file.
             Format: {db_path}/{dataset_name}_{number}.parquet
 
@@ -2927,23 +3011,21 @@ class ParquetDB:
         - Thread-safe for file counting
         """
         logger.info("Getting save path")
-        files = glob(os.path.join(self.db_path, f"{self.dataset_name}_*.parquet"))
+        files = [file for file in self.db_path.glob(f"{self.dataset_name}_*.parquet")]
         n_files = len(files)
         save_path = None
         if n_files == 0:
-            save_path = os.path.join(self.db_path, f"{self.dataset_name}_0.parquet")
+            save_path = self.db_path / f"{self.dataset_name}_0.parquet"
         else:
             max_index = 0
             for file in files:
-                index = int(file.split("_")[-1].split(".")[0])
+                index = int(file.stem.split("_")[-1])
                 max_index = max(max_index, index)
-            save_path = os.path.join(
-                self.db_path, f"{self.dataset_name}_{max_index+1}.parquet"
-            )
+            save_path = self.db_path / f"{self.dataset_name}_{max_index+1}.parquet"
         logger.info(f"Save path: {save_path}")
         return save_path
 
-    def _validate_id(self, id_column):
+    def _validate_id(self, id_column: pa.Array) -> bool:
         """
         Verifies that all IDs in the provided column exist in the main dataset.
 
@@ -2959,8 +3041,8 @@ class ParquetDB:
 
         Returns
         -------
-        None
-            Performs validation and logging only.
+        bool
+            True if all IDs exist, False otherwise.
 
         Notes
         -----
@@ -2977,9 +3059,9 @@ class ParquetDB:
                 f"The following ids are not in the main table",
                 extra={"ids_do_not_exist": filtered_table["id"].combine_chunks()},
             )
-        return None
+        return False
 
-    def _validate_load_format(self, load_format):
+    def _validate_load_format(self, load_format: str):
         """
         Validates that the provided load format is supported.
 
@@ -2996,18 +3078,24 @@ class ParquetDB:
 
     @staticmethod
     def construct_table(
-        data,
-        schema=None,
-        metadata=None,
-        fields_metadata=None,
-        serialize_python_objects: bool = config.seriathelize_python_objects,
-    ):
+        data: Union[
+            pa.Table,
+            pa.RecordBatch,
+            pd.DataFrame,
+            Dict[str, List[Any]],
+            List[Dict[str, Any]],
+        ],
+        schema: Optional[pa.Schema] = None,
+        metadata: Optional[Dict[str, Any]] = None,
+        fields_metadata: Optional[Dict[str, Any]] = None,
+        serialize_python_objects: bool = False,
+    ) -> pa.Table:
         """
         Constructs a PyArrow Table from various input data formats.
 
         Parameters
         ----------
-        data : Union[pa.Table, pa.RecordBatch, pd.DataFrame, dict, list]
+        data : Union[pa.Table, pa.RecordBatch, pd.DataFrame, Dict[str, List[Any]], List[Dict[str, Any]]]
             The input data to convert to a PyArrow Table.
         schema : pa.Schema, optional
             Schema to use for the table. If None, inferred from data.
@@ -3017,7 +3105,7 @@ class ParquetDB:
             Field-level metadata mapping field names to metadata dicts.
         serialize_python_objects : bool, optional
             Whether to serialize Python objects in the data.
-            Default from config.serialize_python_objects.
+            Default is False.
 
         Returns
         -------
@@ -3076,11 +3164,26 @@ class ParquetDB:
         return pa.Table.from_arrays(incoming_array, schema=schema)
 
     @staticmethod
-    def preprocess_data_without_python_objects(data, schema=None):
+    def preprocess_data_without_python_objects(
+        data: Union[dict, list, pd.DataFrame], schema: Optional[pa.Schema] = None
+    ) -> Tuple[List[pa.Array], pa.Schema]:
         """
         Preprocesses data without python objects.
 
         This method preprocesses data without python objects by converting it to a PyArrow Table.
+
+        Parameters
+        ----------
+        data : Union[dict, list, pd.DataFrame]
+            The data to preprocess.
+        schema : pa.Schema, optional
+            The schema to use for the table. If None, inferred from data.
+
+        Returns
+        -------
+        Tuple[List[pa.Array], pa.Schema]
+            Tuple containing flattened arrays and schema.
+
         """
         logger.info("Preprocessing data without python objects")
         if isinstance(data, dict):
@@ -3119,10 +3222,10 @@ class ParquetDB:
 
     @staticmethod
     def process_data_with_python_objects(
-        data,
-        schema=None,
+        data: Union[dict, list, pd.DataFrame],
+        schema: Optional[pa.Schema] = None,
         serialize_python_objects: bool = config.serialize_python_objects,
-    ):
+    ) -> Tuple[List[pa.Array], pa.Schema]:
         """
         Processes input data and handles Python object serialization.
 
@@ -3180,14 +3283,19 @@ class ParquetDB:
         return incoming_array, schema
 
 
-def generator_transform(data, callable: Callable, *args, **kwargs):
+def generator_transform(
+    data: Iterable[pa.RecordBatch],
+    callable: Callable,
+    *args,
+    **kwargs,
+) -> Iterable[pa.RecordBatch]:
     """
     Transforms data from a generator using the provided callable.
 
     Parameters
     ----------
-    data : Generator
-        Generator yielding data to transform.
+    data : Iterable[pa.RecordBatch]
+        Iterable yielding data to transform.
     callable : Callable
         Function to apply to each item from generator.
     *args, **kwargs
@@ -3202,7 +3310,34 @@ def generator_transform(data, callable: Callable, *args, **kwargs):
         yield callable(record_batch, *args, **kwargs)
 
 
-def table_transform(table, callable: Callable, *args, **kwargs):
+def generator_transform(
+    data: Iterable[pa.RecordBatch],
+    callable: Callable,
+    *args,
+    **kwargs,
+) -> Iterable[pa.RecordBatch]:
+    """
+    Transforms data from a generator using the provided callable.
+
+    Parameters
+    ----------
+    data : Iterable[pa.RecordBatch]
+        Iterable yielding data to transform.
+    callable : Callable
+        Function to apply to each item from generator.
+    *args, **kwargs
+        Additional arguments passed to callable.
+
+    Yields
+    ------
+    Any
+        Transformed data items.
+    """
+    for record_batch in data:
+        yield callable(record_batch, *args, **kwargs)
+
+
+def table_transform(table: pa.Table, callable: Callable, *args, **kwargs) -> pa.Table:
     """
     Transforms a PyArrow Table using the provided callable.
 
@@ -3223,7 +3358,7 @@ def table_transform(table, callable: Callable, *args, **kwargs):
     return callable(table, *args, **kwargs)
 
 
-def is_generator(data):
+def is_generator(data: Any) -> bool:
     """
     Checks if data is a generator by examining class name.
 
@@ -3240,39 +3375,42 @@ def is_generator(data):
     return "generator" in data.__class__.__name__
 
 
-def extract_generator_schema(data):
+def extract_generator_schema(
+    data: Iterable[pa.RecordBatch],
+) -> Tuple[Iterable[pa.RecordBatch], pa.Schema]:
     """
     Extracts schema from generator data or table.
 
     Parameters
     ----------
-    data : Union[pa.Table, Generator]
+    data : Union[pa.Table, Iterable[pa.RecordBatch]]
         Data to extract schema from.
 
     Returns
     -------
-    Tuple[Union[pa.Table, Generator], pa.Schema]
-        Original data and extracted schema.
+    pa.Schema
+        Extracted schema.
     """
-    if not isinstance(data, pa.lib.Table):
-        logger.debug("retrieved_data is a record batch")
-        data, tmp_generator = itertools.tee(data)
-        record_batch = next(tmp_generator)
-        schema = record_batch.schema
-        del tmp_generator
-        del record_batch
-        return data, schema
-    else:
-        return data, data.schema
+    data, tmp_generator = itertools.tee(data)
+    record_batch = next(tmp_generator)
+    schema = record_batch.schema
+    del tmp_generator
+    del record_batch
+    return data, schema
 
 
-def data_transform(data, callable: Callable, *args, **kwargs):
+def data_transform(
+    data: Union[pa.Table, Iterable[pa.RecordBatch]],
+    callable: Callable,
+    *args,
+    **kwargs,
+) -> Union[pa.Table, Iterable[pa.RecordBatch]]:
     """
     Transforms data using appropriate method based on type.
 
     Parameters
     ----------
-    data : Union[pa.Table, Generator]
+    data : Union[pa.Table, Iterable[pa.RecordBatch]]
         Data to transform.
     callable : Callable
         Function to apply to the data.
@@ -3281,7 +3419,7 @@ def data_transform(data, callable: Callable, *args, **kwargs):
 
     Returns
     -------
-    Any
+    Union[pa.Table, Iterable[pa.RecordBatch]]
         Transformed data.
 
     Raises

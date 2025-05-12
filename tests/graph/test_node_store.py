@@ -1,6 +1,6 @@
+import logging
 import os
 import shutil
-import logging
 import warnings
 
 import pandas as pd
@@ -10,6 +10,7 @@ import pytest
 from parquetdb.graph import NodeStore
 
 logger = logging.getLogger(__name__)
+VERBOSE = 2
 
 
 @pytest.fixture
@@ -24,12 +25,12 @@ def temp_storage(tmp_path):
 @pytest.fixture
 def node_store(temp_storage):
     """Fixture to create a NodeStore instance"""
-    return NodeStore(temp_storage)
+    return NodeStore(temp_storage, verbose=VERBOSE)
 
 
 def test_node_store_initialization(temp_storage):
     """Test that NodeStore initializes correctly and creates the storage directory"""
-    store = NodeStore(temp_storage)
+    store = NodeStore(temp_storage, verbose=VERBOSE)
     assert os.path.exists(temp_storage)
     assert store is not None
 
@@ -165,3 +166,12 @@ def test_normalize_nodes(node_store):
     result_table = node_store.read_nodes()
     result_df = result_table.to_pandas()
     assert len(result_df) == 2
+
+
+def test_set_node_type(node_store):
+    """Test the set_node_type operation"""
+    node_store.set_node_type("new_node_type")
+    assert node_store.node_type == "new_node_type"
+
+    node_store.node_type = "new_node_type_2"
+    assert node_store.node_type == "new_node_type_2"
