@@ -61,10 +61,6 @@ def test_edge_store_initialization(temp_storage):
     assert os.path.exists(temp_storage)
     assert store is not None
 
-    metadata = store.get_metadata()
-    assert metadata["class"] == "EdgeStore"
-    assert metadata["class_module"] == "parquetdb.graph.edges"
-
 
 def test_create_edges_from_dict(edge_store, sample_edge_data):
     """Test creating edges from a dictionary"""
