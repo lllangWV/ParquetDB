@@ -2230,7 +2230,7 @@ class ParquetDB:
         old_filepaths = old_dir.glob(f"{old_name}_*.parquet")
         for old_filepath in old_filepaths:
             filename = old_filepath.name
-            file_index = filename.split(".")[0].replace("_", "")
+            file_index = filename.split(".")[0].split("_")[-1]
 
             new_filepath = new_dir / f"{new_name}_{file_index}.parquet"
             old_filepath.rename(new_filepath)
