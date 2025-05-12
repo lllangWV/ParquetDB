@@ -12,7 +12,7 @@ from parquetdb.utils.log_utils import set_verbose_level
 
 logger = logging.getLogger(__name__)
 
-VERBOSE = 2
+VERBOSE = 1
 
 pytestmark = pytest.mark.filterwarnings(
     "ignore:__array__ implementation doesn't accept a copy keyword.*:DeprecationWarning"
@@ -248,9 +248,7 @@ def test_add_node_store_with_remove_original(tmp_dir):
 def test_nodes_persist_after_reload(tmp_dir):
     """Test that nodes persist and can be loaded after recreating the GraphDB instance."""
     # Create initial graph instance and add nodes
-    graph = ParquetGraphDB(
-        storage_path=tmp_dir, load_custom_stores=False, verbose=VERBOSE
-    )
+    graph = ParquetGraphDB(storage_path=tmp_dir, verbose=VERBOSE)
     node_type = "test_node"
     test_data = [{"name": "Node1", "value": 10}, {"name": "Node2", "value": 20}]
     graph.add_nodes(node_type, test_data)
@@ -264,9 +262,7 @@ def test_nodes_persist_after_reload(tmp_dir):
     ], "Incorrect node names."
 
     # Create new graph instance (simulating program restart)
-    new_graph = ParquetGraphDB(
-        storage_path=tmp_dir, load_custom_stores=False, verbose=VERBOSE
-    )
+    new_graph = ParquetGraphDB(storage_path=tmp_dir, verbose=VERBOSE)
 
     # Verify data persisted
     loaded_nodes = new_graph.get_nodes(node_type)

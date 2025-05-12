@@ -1,6 +1,7 @@
 import logging
 import os
 from functools import wraps
+from pathlib import Path
 from typing import Dict, List, Union
 
 import pandas as pd
@@ -52,13 +53,21 @@ class EdgeStore(ParquetDB):
     required_fields = REQUIRED_EDGE_COLUMNS_FIELDS
     edge_metadata_keys = ["class", "class_module"]
 
-    def __init__(self, storage_path: str, setup_kwargs: dict = None, verbose: int = 1):
+    def __init__(
+        self,
+        storage_path: Union[str, Path],
+        setup_kwargs: dict = None,
+        verbose: int = 1,
+    ):
         """
         Parameters
         ----------
         storage_path : str
             The path where ParquetDB files for this edge type are stored.
         """
+        storage_path = (
+            Path(storage_path) if isinstance(storage_path, str) else storage_path
+        )
 
         super().__init__(
             db_path=storage_path,
@@ -77,8 +86,7 @@ class EdgeStore(ParquetDB):
 
         logger.debug(f"Initialized EdgeStore at {storage_path}")
         if self.is_empty():
-            if setup_kwargs is None:
-                setup_kwargs = {}
+            setup_kwargs = {} if setup_kwargs is None else setup_kwargs
             self._setup(**setup_kwargs)
 
     def __repr__(self):
@@ -91,11 +99,15 @@ class EdgeStore(ParquetDB):
     @storage_path.setter
     def storage_path(self, value):
         self._db_path = value
-        self.edge_type = os.path.basename(value)
+        self.edge_type = value.name if isinstance(value, Path) else value
 
     @property
     def edge_type(self):
-        return os.path.basename(self.storage_path)
+        return (
+            self.storage_path.name
+            if isinstance(self.storage_path, Path)
+            else self.storage_path
+        )
 
     @edge_type.setter
     def edge_type(self, value):
@@ -158,19 +170,20 @@ class EdgeStore(ParquetDB):
         return None
 
     def _initialize_metadata(self, **kwargs):
-        metadata = self.get_metadata()
-        update_metadata = False
-        for key in self.edge_metadata_keys:
-            if key not in metadata:
-                update_metadata = update_metadata or key not in metadata
+        pass
+        # metadata = self.get_metadata()
+        # update_metadata = False
+        # for key in self.edge_metadata_keys:
+        #     if key not in metadata:
+        #         update_metadata = update_metadata or key not in metadata
 
-        if update_metadata:
-            self.set_metadata(
-                {
-                    "class": f"{self.__class__.__name__}",
-                    "class_module": f"{self.__class__.__module__}",
-                }
-            )
+        # if update_metadata:
+        #     self.set_metadata(
+        #         {
+        #             "class": f"{self.__class__.__name__}",
+        #             "class_module": f"{self.__class__.__module__}",
+        #         }
+        #     )
 
     def _initialize_field_metadata(self, **kwargs):
         pass
@@ -366,6 +379,7 @@ class EdgeStore(ParquetDB):
             schema=schema,
             metadata=metadata,
             update_keys=update_keys,
+            fields_metadata=fields_metadata,
             treat_fields_as_ragged=treat_fields_as_ragged,
             convert_to_fixed_shape=convert_to_fixed_shape,
             normalize_config=normalize_config,
