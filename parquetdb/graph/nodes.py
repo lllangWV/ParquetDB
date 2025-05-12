@@ -1,6 +1,6 @@
 import logging
 import os
-from functools import wraps
+from functools import cached_property, wraps
 from pathlib import Path
 from typing import List, Union
 
@@ -64,11 +64,8 @@ class NodeStore(ParquetDB):
         storage_path : str
             The path where ParquetDB files for this node type are stored.
         """
-        storage_path = (
-            Path(storage_path) if isinstance(storage_path, str) else storage_path
-        )
-
-        self.node_type = storage_path.name
+        storage_path = Path(storage_path)
+        self._node_type = storage_path.name
 
         initialize_kwargs = {} if initialize_kwargs is None else initialize_kwargs
 
@@ -83,7 +80,7 @@ class NodeStore(ParquetDB):
         if update_metadata:
             self.set_metadata(
                 {
-                    "node_type": self.node_type,
+                    "node_type": self._node_type,
                     "name_column": "id",
                 }
             )
@@ -103,7 +100,7 @@ class NodeStore(ParquetDB):
     @storage_path.setter
     def storage_path(self, value):
         self._db_path = value
-        self.node_type = value.name if isinstance(value, Path) else value
+        self._node_type = value.name if isinstance(value, Path) else value
 
     def _initialize(self, **kwargs):
         data = self.initialize(**kwargs)
@@ -112,6 +109,15 @@ class NodeStore(ParquetDB):
 
     def initialize(self, **kwargs):
         return None
+
+    @property
+    def node_type(self):
+        return self.get_metadata()["node_type"]
+
+    @node_type.setter
+    def node_type(self, value):
+        self._node_type = value
+        self.set_metadata({"node_type": self._node_type})
 
     @property
     def name_column(self):
@@ -431,3 +437,10 @@ class NodeStore(ParquetDB):
         except Exception as e:
             logger.error(f"Failed to normalize node store: {str(e)}")
             raise
+
+    def set_node_type(self, new_node_type: str):
+        """
+        Change the node type of the node store.
+        """
+        self.rename_dataset(new_node_type, remove_dest=True)
+        self.set_metadata(metadata={"node_type": new_node_type})
