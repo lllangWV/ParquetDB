@@ -15,5 +15,6 @@ Contents
    :maxdepth: 1
    :caption: Internal Topics
 
+   00 - parquetdb_motivation
    01 - parquetdb_internals
    02 - parquet_file_format
