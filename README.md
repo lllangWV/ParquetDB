@@ -1,5 +1,8 @@
 # ParquetDB
 
+[Documentation][docs] | [PyPI][pypi] | [GitHub][github]
+
+
 **ParquetDB** is a Python library designed to bridge the gap between traditional file storage and fully fledged databases, all while wrapping the powerful PyArrow library to streamline data input and output. By leveraging the Parquet file format, ParquetDB provides the portability and simplicity of file-based data storage alongside advanced querying features typically found in database systems.
 
 ## Table of Contents
@@ -22,7 +25,7 @@
 
 ## Documentation
 
-Check out the [docs](https://parquetdb.readthedocs.io/en/latest/)
+Check out the [docs][docs]
 
 ## Features
 
@@ -143,10 +146,17 @@ If you use ParquetDB in your work, please cite the following paper:
 
 ## Contributing
 
-Contributions are welcome! Please open an issue or submit a pull request on GitHub. More information can be found in the [CONTRIBUTING.md](https://github.com/lllangWV/ParquetDB/blob/main/CONTRIBUTING.md) file.
+Contributions are welcome! Please open an issue or submit a pull request on GitHub. More information can be found in the [CONTRIBUTING.md][contributing] file.
 
 ## License
 
-This project is licensed under the MIT License. See the [LICENSE](LICENSE) file for details.
+This project is licensed under the MIT License. See the [LICENSE][license] file for details.
 
 ---
+
+
+[docs]: https://parquetdb.readthedocs.io/en/latest/
+[pypi]: https://pypi.org/project/parquetdb/
+[github]: https://github.com/lllangWV/ParquetDB
+[contributing]: https://github.com/lllangWV/ParquetDB/blob/main/CONTRIBUTING.md
+[license]: https://github.com/lllangWV/ParquetDB/blob/main/LICENSE
