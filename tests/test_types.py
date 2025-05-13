@@ -4,11 +4,16 @@ from dataclasses import dataclass
 import numpy as np
 import pandas as pd
 import pyarrow as pa
+import pytest
 
 from parquetdb.core.types import (
     PythonObjectArrowType,
     PythonObjectPandasArray,
     PythonObjectPandasDtype,
+)
+
+pytestmark = pytest.mark.filterwarnings(
+    "ignore:__array__ implementation doesn't accept a copy keyword.*:DeprecationWarning"
 )
 
 

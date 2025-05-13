@@ -220,7 +220,7 @@ class ParquetDB:
         logger.info(f"load_formats: {self.load_formats}")
 
         if self.is_empty() and len(os.listdir(self.db_path)) == 0:
-            logger.info(
+            logger.debug(
                 f"Dataset {self.dataset_name} is empty. Creating empty dataset."
             )
             table = pyarrow_utils.create_empty_table(schema=pa.schema(initial_fields))
@@ -1148,12 +1148,9 @@ class ParquetDB:
             ) from e
 
         if incoming_table:
-            logger.info(
+            logger.debug(
                 "This normalization is an update. Applying update function, then normalizing."
             )
-
-            logger.debug(f"Retrieved data: \n {retrieved_data}")
-            logger.debug(f"Incoming table: \n {incoming_table}")
             retrieved_data = data_transform(
                 retrieved_data,
                 pyarrow_utils.update_flattend_table,
@@ -1161,7 +1158,7 @@ class ParquetDB:
                 update_keys=update_keys,
             )
         elif ids:
-            logger.info(
+            logger.debug(
                 "This normalization is an id delete. Applying delete function, then normalizing."
             )
             retrieved_data = data_transform(
@@ -1172,14 +1169,14 @@ class ParquetDB:
             )
 
         elif columns:
-            logger.info(
+            logger.debug(
                 "This normalization is a column delete. Applying delete function, then normalizing."
             )
             retrieved_data = data_transform(
                 retrieved_data, pyarrow_utils.delete_columns, columns=columns
             )
         elif schema:
-            logger.info(
+            logger.debug(
                 "This normalization is a schema update. Applying schema cast function, then normalizing."
             )
             retrieved_data = data_transform(
@@ -1187,12 +1184,12 @@ class ParquetDB:
             )
 
         elif transform_callable:
-            logger.info(
+            logger.debug(
                 "This normalization is a transform. Applying transform function, then normalizing."
             )
             retrieved_data = data_transform(retrieved_data, transform_callable)
         elif nested_dataset_dir:
-            logger.info(
+            logger.debug(
                 "This normalization is a nested rebuild. Applying rebuild function, then normalizing."
             )
             dataset_dir = nested_dataset_dir
@@ -1217,13 +1214,12 @@ class ParquetDB:
 
         # Handles case when table is not empty
         try:
-            logger.info(f"Writing dataset to {dataset_dir}")
-            logger.info(f"Basename template: {basename_template}")
-            logger.info(f"Retrieved data type : {type(retrieved_data)}")
-            logger.info(f"")
-            logger.info(f"Is Schema None : {schema is None}")
+            logger.debug(f"Writing dataset to {dataset_dir}")
+            logger.debug(f"Basename template: {basename_template}")
+            logger.debug(f"Retrieved data type : {type(retrieved_data)}")
+            logger.debug(f"Is Schema None : {schema is None}")
 
-            logger.info(f"Normalize config: {normalize_config}")
+            logger.debug(f"Normalize config: {normalize_config}")
 
             ds.write_dataset(
                 retrieved_data,
@@ -1248,7 +1244,8 @@ class ParquetDB:
 
             # If id not in  fails due to a transform do an error
             if "id" not in schema.names:
-                a = 1 / 0
+                logger.error("id is not in schema")
+                raise ValueError("id is not in schema")
 
             # Remove main files to replace with tmp files
             logger.debug(f"Files before renaming: {os.listdir(dataset_dir)}")
@@ -1623,6 +1620,7 @@ class ParquetDB:
             schema = schema.set(field_index, field)
 
         self.update_schema(schema=schema, update_metadata=update)
+        logger.debug("Field metadata updated")
         return schema
 
     def get_field_metadata(
@@ -2049,7 +2047,7 @@ class ParquetDB:
                 new_fields.append(field)
 
         self._normalize(schema=pa.schema(new_fields), normalize_config=normalize_config)
-
+        logger.debug("Fields renamed")
         return schema
 
     def sort_fields(
@@ -2079,6 +2077,7 @@ class ParquetDB:
 
         schema = pa.schema(new_fields, metadata=schema.metadata)
         self._normalize(schema=schema, normalize_config=normalize_config)
+        logger.debug("Fields sorted alphabetically")
         return schema
 
     def get_current_files(self) -> List[Union[str, Path]]:
@@ -2164,7 +2163,6 @@ class ParquetDB:
         - Safe to call even if dataset doesn't exist
         - Logs the drop operation for tracking
         """
-        logger.info(f"Dropping dataset {self.dataset_name}")
         if self.db_path.exists():
             shutil.rmtree(self.db_path)
             self.db_path.mkdir(parents=True, exist_ok=True)
@@ -2172,10 +2170,9 @@ class ParquetDB:
                 schema=pa.schema([pa.field("id", pa.int64())])
             )
             pq.write_table(table, self._get_save_path())
-            logger.info(f"Table {self.dataset_name} has been dropped.")
+            logger.info("Dataset dropped: %s", self.dataset_name)
         else:
-            logger.warning(f"Table {self.dataset_name} does not exist.")
-        logger.info(f"Dataset {self.dataset_name} dropped")
+            logger.warning("Dataset does not exist: %s", self.dataset_name)
         return None
 
     def rename_dataset(self, new_name: str, remove_dest: bool = False) -> None:
@@ -2208,8 +2205,8 @@ class ParquetDB:
         - Maintains file numbering scheme in new location
         - Operation is atomic - either completes fully or not at all
         """
-        logger.info(f"Renaming dataset to {new_name}")
         if not self.dataset_exists():
+            logger.error("Dataset does not exist: %s", self.dataset_name)
             raise ValueError(f"Dataset {self.dataset_name} does not exist.")
 
         old_dir = self.db_path
@@ -2221,6 +2218,7 @@ class ParquetDB:
             if remove_dest:
                 shutil.rmtree(new_dir)
             else:
+                logger.error("Dataset already exists: %s", new_name)
                 raise ValueError(f"Dataset {new_name} already exists.")
 
         # Create the new directory
@@ -2235,12 +2233,9 @@ class ParquetDB:
             new_filepath = new_dir / f"{new_name}_{file_index}.parquet"
             old_filepath.rename(new_filepath)
 
-        logger.debug(f"old_dir: {os.listdir(old_dir)}")
-        logger.debug(f"new_dir: {os.listdir(new_dir)}")
-
         self._db_path = new_dir
 
-        logger.info(f"Table {old_name} has been renamed to {new_name}.")
+        logger.info(f"Dataset ({old_name}) has been renamed to ({new_name}).")
         return None
 
     def copy_dataset(self, dest_name: str, overwrite: bool = False) -> None:
@@ -2275,11 +2270,11 @@ class ParquetDB:
         - Original dataset remains unchanged
         - Useful for backups or creating test copies
         """
-        logger.info(f"Copying dataset to {dest_name}")
         dir = self.db_path.parent
         if overwrite and self.dataset_exists(dest_name):
             shutil.rmtree(dir / dest_name)
         elif self.dataset_exists(dest_name):
+            logger.error("Dataset already exists: %s", dest_name)
             raise ValueError(f"Dataset {dest_name} already exists.")
 
         source_dir = self.db_path
@@ -2296,7 +2291,7 @@ class ParquetDB:
             new_filepath = dest_dir / f"{dest_name}_{file_index}.parquet"
             shutil.copyfile(old_filepath, new_filepath)
 
-        logger.info(f"Table {source_name} has been copied to {dest_name}.")
+        logger.info("Dataset copied to %s", dest_dir)
         return None
 
     def export_dataset(self, file_path: Union[str, Path], format: str = "csv") -> None:
@@ -2336,14 +2331,19 @@ class ParquetDB:
         file_path = Path(file_path)
         table = self._load_data(load_format="table")
         if format == "csv":
+            logger.debug("Exporting csv: %s", file_path)
+
             df = table.to_pandas()
             df.to_csv(file_path, index=False)
         elif format == "json":
+            logger.debug("Exporting json: %s", file_path)
+
             df = table.to_pandas()
             df.to_json(file_path, orient="records", lines=True)
         else:
+            logger.error("Unsupported export format: %s", format)
             raise ValueError(f"Unsupported export format: {format}")
-        logger.info(f"Exported table {self.dataset_name} to {file_path} as {format}.")
+        logger.info("Exported dataset to %s", file_path)
 
     def export_partitioned_dataset(
         self,
@@ -2416,8 +2416,6 @@ class ParquetDB:
         - Partitioning can significantly improve query performance
         """
         self._validate_load_format(load_format)
-
-        logger.info(f"Exporting partitioned dataset to {export_dir}")
         # Read the entire dataset either in batches or as a whole
         retrieved_data = self._load_data(
             load_format=load_format, load_config=load_config
@@ -2437,7 +2435,7 @@ class ParquetDB:
             format="parquet",
             **kwargs,
         )
-        logger.info(f"Partitioned dataset exported to {export_dir}")
+        logger.info("Partitioned dataset exported to %s", export_dir)
         return None
 
     def import_dataset(
@@ -2496,17 +2494,17 @@ class ParquetDB:
         - Updates schema if necessary
         """
         file_path = Path(file_path)
-        logger.info("Importing data")
         if format == "csv":
-            logger.info("Importing csv")
+            logger.debug("Importing csv: %s", file_path)
             df = pd.read_csv(file_path, **kwargs)
         elif format == "json":
-            logger.info("Importing json")
+            logger.debug("Importing json: %s", file_path)
             df = pd.read_json(file_path, **kwargs)
         else:
+            logger.error("Unsupported import format: %s", format)
             raise ValueError(f"Unsupported import format: {format}")
         self.create(data=df)
-        logger.info(f"Imported data from {file_path} into table {self.dataset_name}.")
+        logger.info("Imported dataset from %s", file_path)
         return None
 
     def merge_datasets(self, source_tables: List[str], dest_table: str) -> None:
@@ -2538,9 +2536,8 @@ class ParquetDB:
         - Safe to run while database is in use
         """
         backup_path = Path(backup_path)
-        logger.info("Backing up database to : {backup_path}")
         shutil.copytree(self.db_path, backup_path)
-        logger.info(f"Database backed up to {backup_path}.")
+        logger.info("Database backed up to %s", backup_path)
         return None
 
     def restore_database(self, backup_path: Union[str, Path]) -> None:
@@ -2569,11 +2566,11 @@ class ParquetDB:
         - Maintains all metadata and structure
         """
         backup_path = Path(backup_path)
-        logger.info("Restoring database from : {backup_path}")
         if self.db_path.exists():
             shutil.rmtree(self.db_path)
         shutil.copytree(backup_path, self.db_path)
-        logger.info(f"Database restored from {backup_path}.")
+
+        logger.info("Database restored from %s", backup_path)
         return None
 
     def to_nested(
@@ -2637,6 +2634,7 @@ class ParquetDB:
         self._normalize(
             nested_dataset_dir=nested_dataset_dir, normalize_config=normalize_config
         )
+        logger.info("Dataset normalized to nested structure")
         return None
 
     def _load_data(
@@ -2701,21 +2699,28 @@ class ParquetDB:
             dataset_dir = self.db_path
         dataset_dir = Path(dataset_dir)
 
-        logger.info(f"Loading data from {dataset_dir}")
-        logger.info(f"Loading only columns: {columns}")
-        logger.info(f"Using filter: {filter}")
+        logger.debug(f"Dataset directory: {dataset_dir}")
+        logger.debug(f"Columns: {columns}")
+        logger.debug(f"Filter: {filter}")
 
         dataset = ds.dataset(
             dataset_dir, format="parquet", ignore_prefixes=["tmp_", "nested"]
         )
         if load_format == "batches":
-            return self._load_batches(dataset, columns, filter, load_config=load_config)
+            generator = self._load_batches(
+                dataset, columns, filter, load_config=load_config
+            )
+            logger.debug(f"Data loaded as {generator.__class__} ")
+            return generator
         elif load_format == "table":
-            return self._load_table(dataset, columns, filter, load_config=load_config)
+            table = self._load_table(dataset, columns, filter, load_config=load_config)
+            logger.debug(f"Data loaded as {table.__class__} ")
+            return table
         elif load_format == "dataset":
-            logger.info(f"Loading data as an {dataset.__class__} object")
+            logger.debug(f"Data loaded as {dataset.__class__} ")
             return dataset
         else:
+            logger.error(f"Invalid load format: {load_format}")
             raise ValueError(
                 f"load_format must be one of the following: {self.load_formats}"
             )
@@ -2768,12 +2773,12 @@ class ParquetDB:
             generator = dataset.to_batches(
                 columns=columns, filter=filter, **load_config.__dict__
             )
-            logger.info(f"Loading as a {generator.__class__} object")
         except Exception as e:
-            print(f"Error loading table: {e}. Returning empty table")
+            logger.exception(f"Error loading table: {e}. Returning empty table")
             generator = pyarrow_utils.create_empty_batch_generator(
                 schema=dataset.schema, columns=columns
             )
+
         return generator
 
     def _load_table(
@@ -2822,12 +2827,12 @@ class ParquetDB:
             table = dataset.to_table(
                 columns=columns, filter=filter, **load_config.__dict__
             )
-            logger.info(f"Loading data as a {table.__class__} object")
         except Exception as e:
-            print(f"Error loading table: {e}. Returning empty table")
+            logger.exception(f"Error loading table: {e}. Returning empty table")
             table = pyarrow_utils.create_empty_table(
                 schema=dataset.schema, columns=columns
             )
+
         return table
 
     @staticmethod
@@ -2918,21 +2923,22 @@ class ParquetDB:
         - Handles empty datasets appropriately
         - Thread-safe when reading max ID
         """
-        logger.info("Getting new ids")
-
         if self.is_empty():
-            logger.debug("Directory is empty. Starting id from 0")
             start_id = 0
         else:
             table = self._load_data(columns=["id"], load_format="table")
             max_val = pc.max(table.column("id")).as_py()
             start_id = max_val + 1  # Start from the next available ID
 
-            logger.debug(f"Directory is not empty. Starting id from {start_id}")
-
         # Create a list of new IDs
-        new_ids = list(range(start_id, start_id + incoming_table.num_rows))
-        logger.info("New ids generated")
+        end_id = start_id + incoming_table.num_rows
+        new_ids = list(range(start_id, end_id))
+        logger.debug(
+            "len(new_ids): %s, start_id: %s, end_id: %s",
+            len(new_ids),
+            start_id,
+            end_id,
+        )
         return new_ids
 
     def _build_filter_expression(
@@ -2968,7 +2974,6 @@ class ParquetDB:
         - Returns None if no filters provided
         - Optimized for PyArrow compute engine
         """
-        logger.info("Building filter expression")
         final_filters = []
 
         # Add ID filter if provided
@@ -2986,7 +2991,8 @@ class ParquetDB:
         filter_expression = final_filters[0]
         for filter_expr in final_filters[1:]:
             filter_expression = filter_expression & filter_expr
-        logger.info("Filter expression built")
+
+        logger.debug(f"Filter Expression: %s", filter_expression)
         return filter_expression
 
     def _get_save_path(self) -> Path:
@@ -3010,7 +3016,6 @@ class ParquetDB:
         - Handles empty datasets (starts at _0)
         - Thread-safe for file counting
         """
-        logger.info("Getting save path")
         files = [file for file in self.db_path.glob(f"{self.dataset_name}_*.parquet")]
         n_files = len(files)
         save_path = None
@@ -3022,7 +3027,8 @@ class ParquetDB:
                 index = int(file.stem.split("_")[-1])
                 max_index = max(max_index, index)
             save_path = self.db_path / f"{self.dataset_name}_{max_index+1}.parquet"
-        logger.info(f"Save path: {save_path}")
+
+        logger.debug(f"Save path: {save_path}")
         return save_path
 
     def _validate_id(self, id_column: pa.Array) -> bool:
@@ -3072,6 +3078,7 @@ class ParquetDB:
 
         """
         if load_format not in self.load_formats:
+            logger.error(f"Invalid load format: {load_format}")
             raise ValueError(
                 f"load_format must be one of the following: {self.load_formats}"
             )

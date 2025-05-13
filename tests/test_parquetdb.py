@@ -11,6 +11,7 @@ import pandas as pd
 import pyarrow as pa
 import pyarrow.compute as pc
 import pyarrow.parquet as pq
+import pytest
 
 from parquetdb import ParquetDB, config
 from parquetdb.core import types
@@ -19,9 +20,14 @@ from parquetdb.utils import pyarrow_utils
 
 logger = logging.getLogger("tests")
 
-VERBOSE = 2
+VERBOSE = 1
 with open(os.path.join(config.tests_dir, "data", "alexandria_test.json"), "r") as f:
     alexandria_data = json.load(f)
+
+pytestmark = pytest.mark.filterwarnings(
+    "ignore:__array__ implementation doesn't accept a copy keyword.*:DeprecationWarning"
+)
+
 
 TEMP_DIR = tempfile.mkdtemp()
 
