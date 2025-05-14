@@ -68,7 +68,7 @@ For installation, please use pip:
 pip install parquetdb
 ```
 
-For more details, please visit the [GitHub repository](https://github.com/lllangWV/ParquetDB). The repository contains additional examples, API documentation, and guidelines for contributing to the project.
+For more details, please visit the GitHub repository: (https://github.com/lllangWV/ParquetDB). The repository contains additional examples, API documentation, and guidelines for contributing to the project.
 
 # Acknowledgements
 
