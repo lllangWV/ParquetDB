@@ -40,6 +40,7 @@ jobs:
       - name: Commiting new version of the changelog and the version file
         if: success() 
         run: |
+            git pull origin main
             git add joss/paper.pdf
             git commit -m "Update paper.pdf due to changes"
 

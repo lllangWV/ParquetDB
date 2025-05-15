@@ -49,7 +49,6 @@ dependencies = [
 tests = [
     "pytest",
     "pytest-cov",
-    "pymatgen"
 ]
 
 docs= [
