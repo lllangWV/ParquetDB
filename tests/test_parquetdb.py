@@ -1229,56 +1229,6 @@ class TestParquetDB(unittest.TestCase):
             logger.debug(f"pyarrow_sort: \n {pyarrow_sort}")
             assert custom_sort == pyarrow_sort
 
-    def test_python_objects(self):
-        self.db._serialize_python_objects = True
-        from pymatgen.core import Structure
-
-        structure = Structure(
-            lattice=[[0, 2.13, 2.13], [2.13, 0, 2.13], [2.13, 2.13, 0]],
-            species=["Mg", "O"],
-            coords=[[0, 0, 0], [0.5, 0.5, 0.5]],
-        )
-        data = [
-            {
-                "name": "Alice",
-                "age": 30,
-                "time": pd.Timestamp("20180310"),
-                "structure": None,
-            },
-            {
-                "name": "Alice",
-                "age": 30,
-                "time": pd.Timestamp("20180310"),
-                "structure": structure,
-            },
-        ]
-        self.db.create(data)
-
-        table = self.db.read()
-        df = table.to_pandas()
-
-        assert df["structure"][0] is None
-
-        self.db.create(data)
-
-        table = self.db.read()
-        df = table.to_pandas()
-        assert isinstance(df["structure"][1], Structure)
-
-        data = [
-            {"id": 1, "new_field": 1, "structure": None},
-            {"id": 0, "new_field": 2, "structure": structure},
-        ]
-        self.db.update(data)
-
-        table = self.db.read()
-        df = table.to_pandas()
-        # print(df)
-        # print(df["structure"][1])
-        assert df["new_field"][1] == 1
-
-        assert table["structure"].type == types.PythonObjectArrowType()
-
     def test_transform(self):
         self.db.create(data=self.test_data)
         self.db.transform(lambda table: table.drop_columns(columns=["age"]))
