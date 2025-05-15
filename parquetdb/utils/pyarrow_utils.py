@@ -1069,10 +1069,11 @@ def update_flattend_table(
     elif isinstance(update_keys, list) and len(update_keys) > 1:
 
         tmp_current_table = aligned_current_table.select(update_keys)
-        tmp_incoming_table = aligned_incoming_table.select(update_keys)
         tmp_current_table = tmp_current_table.append_column(
             "current_index", pa.array(np.arange(len(tmp_current_table)))
         )
+
+        tmp_incoming_table = aligned_incoming_table.select(update_keys)
         tmp_incoming_table = tmp_incoming_table.append_column(
             "incoming_index", pa.array(np.arange(len(tmp_incoming_table)))
         )
@@ -1084,23 +1085,14 @@ def update_flattend_table(
             join_type="right outer",
         )
 
-        index_mask = right_outer_table["incoming_index"].take(
-            right_outer_table["current_index"]
-        )
-
-        logger.debug(f"Index mask: \n {index_mask}")
-
+        right_outer_table_sorted = right_outer_table.sort_by("current_index")
+        index_mask = right_outer_table_sorted["incoming_index"]
         update_table = pc.take(aligned_incoming_table, index_mask)
-
-        update_table = update_table.sort_by([("id", "ascending")])
-        aligned_current_table = aligned_current_table.sort_by([("id", "ascending")])
-    logger.debug(f"update_table shape: {update_table.shape}")
 
     # Default the updated table to the current table
     updated_table = aligned_current_table
 
     for column_name in aligned_current_table.column_names:
-        logger.debug(f"Looking for updates in field: {column_name}")
         # Do not update the id column
         if isinstance(update_keys, str) and column_name == update_keys:
             continue
@@ -1133,9 +1125,6 @@ def update_flattend_table(
 
             sum_is_valid_array = pc.sum(is_valid_array)
             if sum_is_valid_array == pa.scalar(0, type=sum_is_valid_array.type):
-                logger.debug(
-                    f"No updates are present or non-null for column: {column_name}"
-                )
                 continue
 
             # Create a sequence array for indexing
