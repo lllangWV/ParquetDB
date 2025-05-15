@@ -1,3 +1,22 @@
+# Release v0.28.0 (15-05-2025)
+
+This release delivers a critical bug fix for table updates and enriches the project documentation. The update ensures reliable row ordering in multi‐key joins, while the refined paper.md and new DuckDB reference improve clarity and completeness.
+
+##### Bugs
+- Fix index handling in update_flattend_table to correctly select and sort incoming and existing tables, preserving row order after right joins in multi-key updates
+
+##### New features
+- None identified
+
+##### Documentation updates
+- Refine paper.md wording and punctuation for greater clarity
+- Add DuckDB entry to the bibliography
+
+##### Maintenance
+- None identified
+
+---
+
 # Release v0.27.1 (13-05-2025)
 
 This release focuses on streamlining documentation, enhancing type and path handling, and improving logging verbosity and metadata management. A critical bug in dataset renaming has been fixed, and dynamic node typing support has been added.
