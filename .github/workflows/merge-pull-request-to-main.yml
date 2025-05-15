@@ -286,6 +286,8 @@ jobs:
           run: |
             # Ensure we're on main branch
             git checkout main
+
+            git pull origin main
             
             # Add CHANGELOG.md to git
             git add CHANGELOG.md
