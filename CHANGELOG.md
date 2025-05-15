@@ -1,3 +1,30 @@
+# Release v0.27.1 (13-05-2025)
+
+This release focuses on streamlining documentation, enhancing type and path handling, and improving logging verbosity and metadata management. A critical bug in dataset renaming has been fixed, and dynamic node typing support has been added.
+
+##### Bugs
+- Fixed an issue in the `rename_dataset` method that previously prevented proper dataset renaming.
+
+##### New features
+- Introduced `set_node_type` for dynamic node type updates and simplified overall `node_type` management.
+
+##### Documentation updates
+- Renamed “GraphDB” to “ParquetGraphDB” across all docs and added a dedicated ParquetGraphDB guide.
+- Moved tutorials to an `examples` directory and updated index.rst paths accordingly.
+- Replaced all instances of “matgraphdb” with “parquetdb” and adjusted module references from `parquetdb.core` to `parquetdb.graph` in the API docs.
+- Added a public section detailing ParquetDB’s motivation, advantages over pyarrow/pandas, schema-evolution and nested-data strategies, plus an internal overview of its complex-data management benefits.
+- Enhanced the README with direct links to documentation, PyPI, GitHub, contributing guidelines, and license information.
+
+##### Maintenance
+- Standardized on `pathlib.Path` for file handling in ParquetDB and store constructors (now accept `str` or `Path`).
+- Removed built-in metadata storage; stores now rely on user-provided metadata types and redundant initialization code/tests have been cleaned up.
+- Defaulted `setup_kwargs` and `initialize_kwargs` to empty dictionaries only when not provided.
+- Added type hints across ParquetDB methods for clearer interfaces.
+- Tuned logging: key operations now use `debug` level to reduce noise; error logs added for unsupported or invalid load formats.
+- Updated `pyproject.toml` to consolidate docs and testing dependencies under `parquetdb[docs,tests]` and added the `myst_parser` requirement.
+
+---
+
 # Release v0.27.0 (07-05-2025)
 
 This release introduces a new Parquet-based graph database API complete with data validation and adjustable logging, while streamlining version management via setuptools_scm. It also upgrades testing, CI, and documentation—expanding Python support to 3.8–3.13, refining example notebooks, and improving test robustness.
