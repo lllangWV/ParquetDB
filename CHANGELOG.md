@@ -1,3 +1,28 @@
+# Release v1.0.0 (16-05-2025)
+
+ParquetDB 1.0.0 is the inaugural stable release of a lightweight, serverless Python “middleware” for managing complex, evolving datasets using Apache Parquet. It delivers a familiar database-like CRUD interface, robust schema evolution, and native support for nested data—while streamlining tests and CI for faster, more reliable development.
+
+##### Bugs
+- None identified
+
+##### New features
+- Simple, database-style create/read/update/delete API over Parquet files  
+- Serverless operation with no external database server required  
+- Leverages Apache Parquet for efficient columnar storage, compression, and predicate pushdown  
+- Native handling of complex nested structures, arrays, and Python objects (via pickling)  
+- Seamless schema evolution: add or modify fields without manual migrations  
+- Data normalization and batching utilities for consistent performance at scale  
+- Pandas DataFrame integration for easy data import/export
+
+##### Documentation updates
+- None identified
+
+##### Maintenance
+- Removed heavy pymatgen dependency from tests to speed up builds and testing  
+- Enhanced CI workflow to pull the latest main branch before committing paper.pdf to prevent merge conflicts
+
+---
+
 # Release v0.28.0 (15-05-2025)
 
 This release delivers a critical bug fix for table updates and enriches the project documentation. The update ensures reliable row ordering in multi‐key joins, while the refined paper.md and new DuckDB reference improve clarity and completeness.
