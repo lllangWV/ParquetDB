@@ -50,7 +50,7 @@ Database systems like SQLite [@allenDefinitiveGuideSQLite2010] or MongoDB [@guoM
 Directly using libraries like Apache Arrow (PyArrow) to work with Parquet files offers access to columnar efficiency and querying primitives like predicate pushdown. However, this still requires developers to build abstractions for database-like operations (CRUD), manage schema consistency across multiple files, handle serialization of complex Python objects, and orchestrate data updates or deletions manually. 
 
 
-While powerful dataframe manipulation libraries like Pandas [@PandasPythonData], Dask [@DaskScalePythona], and Polars [@Polars], or embedded analytical databases such as DuckDB [@InprocessSQLOLAP], are invaluable for many tasks, they may not holistically address the specific needs that motivated ParquetDB. For researchers dealing with evolving, complexly nested scientific data, ParquetDB offers a more streamlined approach to schema evolvability and native Python object persistence directly within a serverless Parquet-based ecosystem. This focus distinguishes it from tools that might require more manual setup for schema management across multiple files, or lack the same emphasis on integrated metadata handling and a 'classically serverless' model for environments like HPC clusters.
+While powerful dataframe manipulation libraries like Pandas [@PandasPythonData], Dask [@DaskScalePythona], and Polars [@Polars], or embedded analytical databases such as DuckDB [@InprocessSQLOLAP] are invaluable for many tasks, they may not holistically address the specific needs that motivated ParquetDB. For researchers dealing with evolving, complexly nested scientific data, ParquetDB offers a more streamlined approach to schema evolvability and native Python object persistence directly within a serverless Parquet-based ecosystem. This focus distinguishes it from tools that might require more manual setup for schema management across multiple files, or lack the same emphasis on integrated metadata handling and a 'classically serverless' model for environments like HPC clusters.
 
 
 ParquetDB addresses this gap, providing a "middleware" layer built upon Python and the Parquet format. It offers a familiar database-like interface (CRUD operations) while leveraging columnar storage for compression and read performance benefits. Crucially, ParquetDB adds value beyond direct Parquet file manipulation by automating schema management (including evolution), simplifying the storage/retrieval of complex Python objects, and providing a unified API to manage collections of Parquet files as a single logical datastore. It supports predicate and column pushdown for optimization within a lightweight, serverless architecture, offering a pragmatic balance for scenarios demanding more than basic files but less than a full database system, particularly where schema flexibility and ease of use are paramount. For a comprehensive feature list, visit our documentation (https://parquetdb.readthedocs.io/en/latest/).
@@ -61,7 +61,7 @@ We evaluated ParquetDB's performance against SQLite and MongoDB using synthetic 
 
 ![Benchmark Create and Read Times for Different Databases. Create time is plotted on the left y-axis, read time on the right y-axis, and the number of rows on the x-axis. A log plot is shown in the inset.](benchmark_create_read_times.png){label="fig:benchmark_create_read_times"}
 
-A "needle-in-a-haystack" benchmark assessed specific record retrieval. While lacking traditional B-tree indexes, ParquetDB uses predicate pushdown leveraging Parquet's field-level statistics for efficient filtering without full scans. It is important to note that performance advantages depend on the workload; for instance, complex analytical queries involving aggregations or returning small, highly filtered results might favor the mature query engine and indexing of systems like SQLite. ParquetDB excels when querying or returning substantial portions of wide datasets. Detailed benchmarks are in our extended paper [@langParquetDBLightweightPython2025].
+A "needle-in-a-haystack" benchmark assessed specific record retrieval. While lacking traditional B-tree indexes, ParquetDB uses predicate pushdown leveraging Parquet's field-level statistics for efficient filtering without full scans. It is important to note that performance advantages depend on the workload; for instance, complex analytical queries involving aggregations or returning small, highly filtered results might favor the mature query engine and indexing of systems like SQLite. ParquetDB excels when querying or returning substantial portions of wide datasets. Detailed benchmarks are in our extended paper: @langParquetDBLightweightPython2025.
 
 # Installation
 
@@ -70,7 +70,7 @@ For installation, please use pip:
 pip install parquetdb
 ```
 
-For more details, please visit the GitHub repository: (https://github.com/lllangWV/ParquetDB). The repository contains additional examples, API documentation, and guidelines for contributing to the project.
+For more details, please visit the GitHub repository: <https://github.com/lllangWV/ParquetDB>. The repository contains additional examples, API documentation, and guidelines for contributing to the project.
 
 # Acknowledgements
 
