@@ -1,3 +1,22 @@
+# Release v1.0.1 (16-05-2025)
+
+This release includes various improvements and changes.
+
+##### Bugs
+- None identified
+
+##### New features
+- None identified
+
+##### Documentation updates
+- None identified
+
+##### Maintenance
+- Repository maintenance updates
+
+
+---
+
 # Release v1.0.0 (16-05-2025)
 
 ParquetDB 1.0.0 is the inaugural stable release of a lightweight, serverless Python “middleware” for managing complex, evolving datasets using Apache Parquet. It delivers a familiar database-like CRUD interface, robust schema evolution, and native support for nested data—while streamlining tests and CI for faster, more reliable development.
