@@ -154,7 +154,6 @@ This project is licensed under the MIT License. See the [LICENSE][license] file 
 
 ---
 
-
 [docs]: https://parquetdb.readthedocs.io/en/latest/
 [pypi]: https://pypi.org/project/parquetdb/
 [github]: https://github.com/lllangWV/ParquetDB
