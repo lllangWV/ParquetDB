@@ -65,7 +65,7 @@ class NodeStore(ParquetDB):
             The path where ParquetDB files for this node type are stored.
         """
         storage_path = Path(storage_path)
-        self._node_type = storage_path.name
+        
 
         initialize_kwargs = {} if initialize_kwargs is None else initialize_kwargs
 
@@ -80,14 +80,15 @@ class NodeStore(ParquetDB):
         if update_metadata:
             self.set_metadata(
                 {
-                    "node_type": self._node_type,
+                    "node_type": storage_path.name,
                     "name_column": "id",
                 }
             )
 
         if self.is_empty():
             self._initialize(**initialize_kwargs)
-
+            
+        self._node_type = self.get_metadata().get("node_type", storage_path.name)
         logger.debug(f"Initialized NodeStore at {storage_path}")
 
     def __repr__(self):
@@ -112,8 +113,8 @@ class NodeStore(ParquetDB):
 
     @property
     def node_type(self):
-        return self.get_metadata()["node_type"]
-
+        return self._node_type
+    
     @node_type.setter
     def node_type(self, value):
         self._node_type = value
