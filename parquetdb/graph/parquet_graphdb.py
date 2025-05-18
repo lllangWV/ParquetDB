@@ -42,9 +42,7 @@ class ParquetGraphDB:
         set_verbose_level(verbose)
 
         logger.info(f"Initializing GraphDB at root path: {storage_path}")
-        self.storage_path = (
-            Path(storage_path) if isinstance(storage_path, str) else storage_path
-        )
+        self.storage_path = Path(os.path.abspath(storage_path))
 
         self.nodes_path = self.storage_path / "nodes"
         self.edges_path = self.storage_path / "edges"
@@ -72,23 +70,25 @@ class ParquetGraphDB:
         node_store_types = {} if node_store_types is None else node_store_types
         edge_store_types = {} if edge_store_types is None else edge_store_types
 
-        for store_type in list(self.nodes_path.iterdir()):
-            if store_type.is_dir():
+        for store_path in list(self.nodes_path.iterdir()):
+            if store_path.is_dir():
+                store_type = store_path.name
                 if store_type in node_store_types:
-                    self.node_stores[store_type.name] = node_store_types[
-                        store_type.name
-                    ](store_type)
+                    self.node_stores[store_type] = node_store_types[store_type](
+                        store_path
+                    )
                 else:
-                    self.node_stores[store_type.name] = NodeStore(store_type)
+                    self.node_stores[store_type] = NodeStore(store_path)
 
-        for store_type in list(self.edges_path.iterdir()):
-            if store_type.is_dir():
+        for store_path in list(self.edges_path.iterdir()):
+            if store_path.is_dir():
+                store_type = store_path.name
                 if store_type in edge_store_types:
-                    self.edge_stores[store_type.name] = edge_store_types[
-                        store_type.name
-                    ](store_type)
+                    self.edge_stores[store_type] = edge_store_types[store_type](
+                        store_path
+                    )
                 else:
-                    self.edge_stores[store_type.name] = EdgeStore(store_type)
+                    self.edge_stores[store_type] = EdgeStore(store_path)
 
         self.edge_generator_store = GeneratorStore(
             storage_path=self.edge_generators_path, verbose=self.verbose
@@ -207,7 +207,7 @@ class ParquetGraphDB:
         else:
             self.generator_dependency_graph = {"nodes": {}, "edges": {}}
 
-    def summary(self, show_column_names: bool = False):
+    def summary(self, show_column_names: bool = False, verbose: int = 1):
         # Header section
         tmp_str = f"{'=' * 60}\n"
         tmp_str += f"GRAPH DATABASE SUMMARY\n"
@@ -215,17 +215,24 @@ class ParquetGraphDB:
         tmp_str += f"Name: {self.graph_name}\n"
         tmp_str += f"Storage path: {os.path.abspath(self.storage_path)}\n"
         tmp_str += "└── Repository structure:\n"
-        tmp_str += (
-            f"    ├── nodes/                 ({os.path.abspath(self.nodes_path)})\n"
-        )
-        tmp_str += (
-            f"    ├── edges/                 ({os.path.abspath(self.edges_path)})\n"
-        )
-        tmp_str += f"    ├── edge_generators/       ({os.path.abspath(self.edge_generators_path)})\n"
-        tmp_str += f"    ├── node_generators/       ({os.path.abspath(self.node_generators_path)})\n"
-        tmp_str += (
-            f"    └── graph/                 ({os.path.abspath(self.graph_path)})\n\n"
-        )
+        tmp_str += f"    ├── nodes/\n"
+        if verbose > 1:
+            for i, (node_type, node_store) in enumerate(self.node_stores.items()):
+                if i == len(self.node_stores) - 1:
+                    tmp_str += f"        └── {node_type}/\n"
+                else:
+                    tmp_str += f"        ├── {node_type}/\n"
+        tmp_str += f"    ├── edges/\n"
+        if verbose > 1:
+            for i, (edge_type, edge_store) in enumerate(self.edge_stores.items()):
+                tmp_str += f"        ├── {edge_type}/\n"
+                if i == len(self.edge_stores) - 1:
+                    tmp_str += f"        └── {edge_type}/\n"
+                else:
+                    tmp_str += f"        ├── {edge_type}/\n"
+        tmp_str += f"    ├── edge_generators/\n"
+        tmp_str += f"    ├── node_generators/\n"
+        tmp_str += f"    └── graph/\n\n"
 
         # Node section header
         tmp_str += f"{'#' * 60}\n"
@@ -243,7 +250,6 @@ class ParquetGraphDB:
                 tmp_str += f"  - Columns:\n"
                 for col in node_store.columns:
                     tmp_str += f"       - {col}\n"
-            tmp_str += f"  - db_path: {os.path.abspath(node_store.storage_path)}\n"
             tmp_str += f"{'-' * 60}\n"
 
         # Edge section header
@@ -262,7 +268,6 @@ class ParquetGraphDB:
                 tmp_str += f"  - Columns:\n"
                 for col in edge_store.columns:
                     tmp_str += f"       - {col}\n"
-            tmp_str += f"  - db_path: {os.path.abspath(edge_store.storage_path)}\n"
             tmp_str += f"{'-' * 60}\n"
 
         # Node generator header
@@ -908,3 +913,87 @@ class ParquetGraphDB:
                 logger.error(
                     f"Failed to run dependent generator {generator_name}: {str(e)}"
                 )
+
+    def reinitialize_node_store(
+        self, node_type: str, custom_store_class: Type[NodeStore], **kwargs
+    ):
+        """
+        Reinitialize an existing node store with a custom store class.
+
+        Parameters
+        ----------
+        node_type : str
+            The type of node store to reinitialize
+        custom_store_class : Type[NodeStore]
+            The custom NodeStore class to use for reinitialization
+        **kwargs :
+            Additional arguments to pass to the custom store class constructor
+
+        Returns
+        -------
+        NodeStore
+            The reinitialized node store
+
+        Raises
+        ------
+        ValueError
+            If the node store does not exist
+        """
+        logger.info(
+            f"Reinitializing node store of type {node_type} with {custom_store_class.__name__}"
+        )
+
+        if node_type not in self.node_stores:
+            raise ValueError(f"Node store of type {node_type} does not exist")
+
+        storage_path = self.nodes_path / node_type
+        self.node_stores[node_type] = custom_store_class(
+            storage_path=storage_path, **kwargs
+        )
+
+        # Run dependent generators if any
+        # self._run_dependent_generators(node_type)
+
+        return self.node_stores[node_type]
+
+    def reinitialize_edge_store(
+        self, edge_type: str, custom_store_class: Type[EdgeStore], **kwargs
+    ):
+        """
+        Reinitialize an existing edge store with a custom store class.
+
+        Parameters
+        ----------
+        edge_type : str
+            The type of edge store to reinitialize
+        custom_store_class : Type[EdgeStore]
+            The custom EdgeStore class to use for reinitialization
+        **kwargs :
+            Additional arguments to pass to the custom store class constructor
+
+        Returns
+        -------
+        EdgeStore
+            The reinitialized edge store
+
+        Raises
+        ------
+        ValueError
+            If the edge store does not exist
+        """
+        logger.info(
+            f"Reinitializing edge store of type {edge_type} with {custom_store_class.__name__}"
+        )
+
+        if edge_type not in self.edge_stores:
+            raise ValueError(f"Edge store of type {edge_type} does not exist")
+
+        storage_path = self.edges_path / edge_type
+        self.edge_stores[edge_type] = custom_store_class(
+            storage_path=storage_path, **kwargs
+        )
+
+        # Run dependent generators if any
+        # self._run_dependent_generators(edge_type)
+
+        return self.edge_stores[edge_type]
