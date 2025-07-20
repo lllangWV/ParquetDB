@@ -5,6 +5,7 @@ import shutil
 import tempfile
 import time
 import unittest
+from pathlib import Path
 
 import numpy as np
 import pandas as pd
@@ -15,12 +16,12 @@ import pytest
 
 from parquetdb import ParquetDB, config
 from parquetdb.core import types
-from parquetdb.core.parquetdb import LoadConfig, NormalizeConfig
+from parquetdb.core.parquetdb import LoadConfig, NormalizeConfig, ParquetDBConfig
 from parquetdb.utils import pyarrow_utils
 
 logger = logging.getLogger("tests")
 
-VERBOSE = 1
+VERBOSE = 0
 with open(os.path.join(config.tests_dir, "data", "alexandria_test.json"), "r") as f:
     alexandria_data = json.load(f)
 
@@ -1379,6 +1380,60 @@ class TestParquetDB(unittest.TestCase):
         self.db.copy_dataset(os.path.join(self.db.db_path, "test_copy"))
         assert os.path.exists(os.path.join(self.db.db_path, "test_copy"))
 
+    def test_initalize_db(self):
+        schema = pa.schema([pa.field("name", pa.string())],
+        metadata={"name": "schema_db","description": "This is a schema db"})
+        db_schema_path = Path(self.temp_dir) / "schema_db" 
+        db = ParquetDB(db_schema_path, schema=schema)
+        assert db.is_empty()
+        
+        expected_schema = pa.schema(
+        [
+            pa.field("id", pa.int64()),
+            pa.field("name", pa.string()),
+        ],
+        metadata={"name": "schema_db","description": "This is a schema db"}
+        )
+        assert db.schema == expected_schema
+        assert db.n_rows == 0
+        assert db.n_files == 1
+        
+    def test_global_config_settings(self):
+        config = ParquetDBConfig(serialize_python_objects=True, convert_to_fixed_shape=False)
+        
+        test_dir = Path(self.temp_dir) / "test_dir" 
+        db = ParquetDB(test_dir, config=config)
+        
+        assert db.config.serialize_python_objects == True
+        assert db.config.convert_to_fixed_shape == False
+        
+        
+        db.create(data=[{"array": [1, 2, 3]}, {"array": [4, 5, 6]}])
+        table = db.read()
+        assert table.column_names == ["array", "id"]
+        assert table.shape == (2, 2)
+        assert table["array"].to_pylist() == [[1, 2, 3], [4, 5, 6]]
+        
+        
+        config = ParquetDBConfig(serialize_python_objects=True, convert_to_fixed_shape=True)
+        
+        test_dir = Path(self.temp_dir) / "test_2_dir" 
+        db = ParquetDB(test_dir, config=config)
+        
+        assert db.config.serialize_python_objects == True
+        assert db.config.convert_to_fixed_shape == True
+        
+        
+        db.create(data=[{"array": [1, 2, 3]}, {"array": [4, 5, 6]}])
+        table = db.read()
+        assert table.column_names == ["array", "id"]
+        assert table.shape == (2, 2)
+        assert np.allclose(table["array"].combine_chunks().to_numpy_ndarray(), np.array([[1, 2, 3], [4, 5, 6]]))
+        
+        
+        
+        
+        
 
 if __name__ == "__main__":
     unittest.main()

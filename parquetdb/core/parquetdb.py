@@ -5,6 +5,7 @@ import shutil
 import types
 from collections.abc import Iterable
 from dataclasses import dataclass
+from enum import Enum
 from glob import glob
 from pathlib import Path
 from typing import Any, Callable, Dict, Iterable, List, Optional, Tuple, Union
@@ -156,17 +157,41 @@ class LoadConfig:
     use_threads: bool = True
     memory_pool: Optional[pa.MemoryPool] = None
 
+@dataclass
+class ParquetDBConfig:
+    serialize_python_objects:bool = False
+    convert_to_fixed_shape:bool | None = None
+    normalize_config: NormalizeConfig = NormalizeConfig()
+    load_config: LoadConfig = LoadConfig()
+    
+class LoadFormat(Enum):
+    BATCHES = "batches"
+    TABLE = "table"
+    DATASET = "dataset"
+    
+    def from_str(self, load_format: str) -> "LoadFormat":
+        if load_format == "batches":
+            return LoadFormat.BATCHES
+        elif load_format == "table":
+            return LoadFormat.TABLE
+        elif load_format == "dataset":
+            return LoadFormat.DATASET
+        else:
+            raise ValueError(f"Invalid load format: {load_format}")
+    
+    @classmethod
+    def to_list(cls) -> List[str]:
+        return [format.value for format in cls]
 
 class ParquetDB:
     def __init__(
         self,
         db_path: Union[str, Path],
+        schema: pa.Schema = None,
         initial_fields: List[pa.Field] = None,
-        serialize_python_objects: bool = False,
-        use_multiprocessing: bool = False,
-        normalize_config: NormalizeConfig = NormalizeConfig(),
-        load_config: LoadConfig = LoadConfig(),
-        verbose: int = 1,
+        metadata: Dict[str, str] = None,
+        config: ParquetDBConfig = ParquetDBConfig(),
+        verbose: int = 0,
     ):
         """
         Initializes the ParquetDB object.
@@ -175,19 +200,22 @@ class ParquetDB:
         ----------
         db_path : str
             The path of the database.
+        schema : pa.Schema, optional
+            PyArrow schema defining the structure and types of the data.
+            If not provided, schema will be inferred from the data.
         initial_fields : List[pa.Field], optional
             List of PyArrow fields to initialize the database schema with.
             An 'id' field of type int64 will automatically be added.
             Default is None (empty list).
-        serialize_python_objects : bool, optional
-            Whether to serialize Python objects when storing them.
-            Default is True.
-        use_multiprocessing : bool, optional
-            Whether to enable multiprocessing for operations.
-            Default is False.
+        metadata : Dict[str, str], optional
+            Dictionary of key-value pairs to attach as metadata to the table.
+            This metadata applies to the entire table.
+        config : ParquetDBConfig, optional
+            Configuration for the ParquetDB object.
+            Default is ParquetDBConfig().
         verbose: int, optional
             Verbosity level for logging.
-            Default is 1.
+            Default is 2.
 
 
         Examples
@@ -202,36 +230,48 @@ class ParquetDB:
 
         logger.info(f"verbose: {verbose}")
         set_verbose_level(verbose=verbose)
-
-        self.normalize_config = normalize_config
-        self.load_config = load_config
-
+        
+        self.config = config
         self._db_path = Path(db_path)
         self._db_path.mkdir(parents=True, exist_ok=True)
-        self._serialize_python_objects = serialize_python_objects
-
-        if initial_fields is None:
-            initial_fields = []
-        initial_fields = [pa.field("id", pa.int64())] + initial_fields
-
-        self.load_formats = ["batches", "table", "dataset"]
-
-        logger.info(f"db_path: {self.db_path}")
-        logger.info(f"load_formats: {self.load_formats}")
-
+  
         if self.is_empty() and len(os.listdir(self.db_path)) == 0:
-            logger.debug(
-                f"Dataset {self.dataset_name} is empty. Creating empty dataset."
-            )
-            table = pyarrow_utils.create_empty_table(schema=pa.schema(initial_fields))
-            pq.write_table(table, self._get_save_path())
+            self.initialize_empty_db(schema=schema, initial_fields=initial_fields, metadata=metadata)
 
-        # Applying config
-        # config.use_multiprocessing = use_multiprocessing
-        # config.serialize_python_objects = serialize_python_objects
-
+        
+    def initialize_empty_db(self, schema: pa.Schema = None, 
+                            initial_fields: List[pa.Field] = None, 
+                            metadata: Dict[str, str] = None):
+        primary_key_field = pa.field("id", pa.int64())
+        if initial_fields is not None and schema is not None:
+            raise ValueError("Cannot provide both initial_fields and schema")
+        elif initial_fields is not None:
+            initial_fields = [primary_key_field] + initial_fields
+            metadata = metadata if metadata is not None else {}
+        elif schema is not None:
+            initial_fields=[primary_key_field]
+            for field in schema:
+                if field.name == "id":
+                    raise ValueError("id field is not allowed in the schema")
+                initial_fields.append(pa.field(field.name, field.type))
+            metadata = schema.metadata
+        else:
+            initial_fields = [primary_key_field]
+            metadata = {}
+        schema = pa.schema(initial_fields, metadata=metadata)
+        table = pyarrow_utils.create_empty_table(schema=schema)
+        pq.write_table(table, self._get_save_path())
+        return None
+        
     def __repr__(self):
         return self.summary(show_column_names=False)
+    
+    @property
+    def schema(self) -> pa.Schema:
+        """
+        Get the schema of the database.
+        """
+        return self.get_schema()
 
     @property
     def db_path(self) -> Path:
@@ -532,7 +572,7 @@ class ParquetDB:
         - Normalization is recommended for optimal performance
         """
         if normalize_config is None:
-            normalize_config = self.normalize_config
+            normalize_config = self.config.normalize_config
 
         logger.info("Creating data")
         self._db_path.mkdir(parents=True, exist_ok=True)
@@ -543,7 +583,7 @@ class ParquetDB:
             schema=schema,
             metadata=metadata,
             fields_metadata=fields_metadata,
-            serialize_python_objects=self._serialize_python_objects,
+            serialize_python_objects=self.config.serialize_python_objects,
         )
 
         if "id" in incoming_table.column_names:
@@ -554,6 +594,9 @@ class ParquetDB:
         incoming_table = incoming_table.append_column(
             pa.field("id", pa.int64()), [new_ids]
         )
+        
+        if self.config.convert_to_fixed_shape is not None:
+            convert_to_fixed_shape = self.config.convert_to_fixed_shape
 
         incoming_table = ParquetDB.preprocess_table(
             incoming_table,
@@ -695,9 +738,9 @@ class ParquetDB:
           queries on nested data structures
         """
         if load_config is None:
-            load_config = self.load_config
+            load_config = self.config.load_config
         if normalize_config is None:
-            normalize_config = self.normalize_config
+            normalize_config = self.config.normalize_config
 
         if batch_size:
             load_config.batch_size = batch_size
@@ -805,7 +848,7 @@ class ParquetDB:
         - Schema and data types are automatically aligned
         """
         if normalize_config is None:
-            normalize_config = self.normalize_config
+            normalize_config = self.config.normalize_config
 
         if self.is_empty():
             logger.info(f"Dataset {self.dataset_name} is empty. No data to update.")
@@ -819,8 +862,10 @@ class ParquetDB:
             schema=schema,
             metadata=metadata,
             fields_metadata=fields_metadata,
-            serialize_python_objects=self._serialize_python_objects,
+            serialize_python_objects=self.config.serialize_python_objects,
         )
+        if self.config.convert_to_fixed_shape is not None:
+            convert_to_fixed_shape = self.config.convert_to_fixed_shape
 
         incoming_table = ParquetDB.preprocess_table(
             incoming_table,
@@ -895,7 +940,7 @@ class ParquetDB:
         - Automatically normalizes dataset after deletion
         """
         if normalize_config is None:
-            normalize_config = self.normalize_config
+            normalize_config = self.config.normalize_config
 
         if ids is not None and columns is not None and filters is not None:
             raise ValueError("Cannot provide both ids, columns and filters to delete.")
@@ -993,7 +1038,7 @@ class ParquetDB:
         >>> new_db = db.transform(add_column, new_db_path='path/to/new/db')
         """
         if normalize_config is None:
-            normalize_config = self.normalize_config
+            normalize_config = self.config.normalize_config
 
         if new_db_path:
             logger.info(f"Writing transformation to new dir: {new_db_path}")
@@ -1054,7 +1099,7 @@ class ParquetDB:
         - Safe to run at any time to optimize storage
         """
         if normalize_config is None:
-            normalize_config = self.normalize_config
+            normalize_config = self.config.normalize_config
 
         if self.is_empty():
             logger.info(f"Dataset {self.dataset_name} is empty. No data to normalize.")
@@ -1117,7 +1162,7 @@ class ParquetDB:
         - Preserves data consistency during restructuring
         """
         if normalize_config is None:
-            normalize_config = self.normalize_config
+            normalize_config = self.config.normalize_config
 
         if new_db_path:
             dataset_dir = Path(new_db_path)
@@ -1356,7 +1401,7 @@ class ParquetDB:
         - Invalid type conversions will raise errors
         """
         if normalize_config is None:
-            normalize_config = self.normalize_config
+            normalize_config = self.config.normalize_config
 
         logger.info("Updating schema")
         current_schema = self.get_schema()
@@ -2722,7 +2767,7 @@ class ParquetDB:
         else:
             logger.error(f"Invalid load format: {load_format}")
             raise ValueError(
-                f"load_format must be one of the following: {self.load_formats}"
+                f"load_format must be one of the following: {LoadFormat.to_list()}"
             )
 
     def _load_batches(
@@ -3077,10 +3122,10 @@ class ParquetDB:
             The format to validate. Must be one of the supported load formats.
 
         """
-        if load_format not in self.load_formats:
+        if load_format not in LoadFormat.to_list():
             logger.error(f"Invalid load format: {load_format}")
             raise ValueError(
-                f"load_format must be one of the following: {self.load_formats}"
+                f"load_format must be one of the following: {LoadFormat.to_list()}"
             )
 
     @staticmethod
