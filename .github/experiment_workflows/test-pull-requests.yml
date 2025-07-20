@@ -1,0 +1,99 @@
+name: Run Tests
+
+on:
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  run-tests:
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false  # This allows all test environments to complete even if one fails
+      matrix:
+        os: [ubuntu-latest, macos-latest, windows-latest]
+        python-version: ['3.8', '3.13']
+
+    steps:
+    - uses: actions/checkout@v3
+      with:
+        fetch-depth: 0  # Fetches all history for proper pytest coverage
+    
+    - name: Set up Python ${{ matrix.python-version }}
+      uses: actions/setup-python@v4
+      with:
+        python-version: ${{ matrix.python-version }}
+        
+    - name: Cache pip dependencies
+      uses: actions/cache@v3
+      with:
+        path: ~/.cache/pip
+        key: ${{ runner.os }}-pip-${{ hashFiles('**/requirements.txt') }}-${{ hashFiles('**/setup.py') }}
+        restore-keys: |
+          ${{ runner.os }}-pip-
+          
+    - name: Install dependencies
+      run: |
+        python -m pip install --upgrade pip
+        if [ -f setup.py ]; then pip install -e .[tests]; fi
+  
+      shell: bash
+        
+    - name: Test with pytest
+      run: |
+        pytest tests/ -v
+
+  run-test-build-docs:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+        with:
+          fetch-depth: 0  # Fetch all history
+
+      - name: Set up Python
+        uses: actions/setup-python@v3
+        with:
+          python-version: '3.10'
+
+      - name: Install pandoc
+        uses: pandoc/actions/setup@v1
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install requests build python-dotenv
+          pip install setuptools  # Add setuptools which provides distutils
+          pip install .[docs]  # Install package with docs dependencies
+
+      - name: Build documentation
+        id: build_docs
+        continue-on-error: false
+        run: |
+          cd docs  # Assuming Sphinx docs are in this directory
+          make clean && make html
+          echo "build_successful=true" >> $GITHUB_OUTPUT
+
+
+  test-build-package:
+
+    runs-on: ubuntu-latest
+
+    steps:
+    - uses: actions/checkout@v3
+      with:
+        fetch-depth: 0  # Fetch all history so we can access all commit logs
+
+    - name: Set up Python
+      uses: actions/setup-python@v3
+      with:
+        python-version: '3.10'
+
+    - name: Install dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install build
+
+
+    - name: Test Build 
+      run: |
+        python -m build
+

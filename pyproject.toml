@@ -51,6 +51,11 @@ tests = [
     "pytest-cov",
 ]
 
+build = [
+    "setuptools-scm",
+    "build"
+]
+
 docs= [
     "ipython",
     "imageio-ffmpeg",
