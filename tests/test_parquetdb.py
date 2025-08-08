@@ -66,6 +66,13 @@ class TestParquetDB(unittest.TestCase):
         # deleting the directory and performaing another test
         # time.sleep(0.1)
 
+    def test_drop_empty(self):
+        logger.info("Test dropping emptied table")
+        self.db.create(self.test_data)
+        ids = self.db.read()["id"]
+        self.db.delete(ids)
+        self.assertTrue(self.db.is_empty())
+
     def test_create_and_read(self):
         logger.info("Testing create and read")
         # Test creating data and reading it back
