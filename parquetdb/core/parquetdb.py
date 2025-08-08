@@ -1142,7 +1142,7 @@ class ParquetDB:
         columns : List[str], optional
             Column names to remove during normalization.
         drop_empty : bool
-            Whether to delete the dataset, if it has no records after normalization
+            Whether to delete the dataset, if it has no records after normalization.
         transform_callable : Callable, optional
             Custom transformation function to apply during normalization.
         new_db_path : str | Path, optional
