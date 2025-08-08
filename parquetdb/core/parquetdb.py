@@ -160,7 +160,7 @@ class LoadConfig:
 @dataclass
 class ParquetDBConfig:
     serialize_python_objects:bool = False
-    convert_to_fixed_shape:bool | None = None
+    convert_to_fixed_shape: Optional[bool] = None
     normalize_config: NormalizeConfig = NormalizeConfig()
     load_config: LoadConfig = LoadConfig()
     
