@@ -1,7 +1,6 @@
 import itertools
 import logging
 import os
-import pathlib
 import shutil
 import types
 from collections.abc import Iterable
@@ -1296,7 +1295,7 @@ class ParquetDB:
                 logger.error("id is not in schema")
                 raise ValueError("id is not in schema")
 
-            def unlink_many(files: Iterable[pathlib.Path]):
+            def unlink_many(files: Iterable[Path]):
                 for file_path in files:
                     if file_path.is_file():
                         file_path.unlink()
