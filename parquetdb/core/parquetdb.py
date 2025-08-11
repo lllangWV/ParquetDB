@@ -1341,7 +1341,7 @@ class ParquetDB:
             if new_db_path:
                 dataset_dir.rmdir()
 
-            raise Exception(f"Exception normalizing table. Error Message: {e}")
+            raise
 
     def update_schema(
         self,
