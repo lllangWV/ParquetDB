@@ -160,7 +160,7 @@ class LoadConfig:
 @dataclass
 class ParquetDBConfig:
     serialize_python_objects:bool = False
-    convert_to_fixed_shape:bool | None = None
+    convert_to_fixed_shape: Optional[bool] = None
     normalize_config: NormalizeConfig = NormalizeConfig()
     load_config: LoadConfig = LoadConfig()
     
@@ -987,7 +987,7 @@ class ParquetDB:
                 return None
 
         # Apply delete normalization
-        self._normalize(ids=ids, columns=columns, normalize_config=normalize_config)
+        self._normalize(ids=ids, columns=columns, normalize_config=normalize_config, drop_empty=True)
 
         logger.info(f"Deleted data from {self.dataset_name} dataset.")
         return None
@@ -1113,6 +1113,7 @@ class ParquetDB:
         schema: pa.Schema = None,
         ids: List[int] = None,
         columns: List[str] = None,
+        drop_empty: bool = False,
         transform_callable: Callable = None,
         new_db_path: Union[str, Path] = None,
         update_keys: Union[List[str], str] = ["id"],
@@ -1139,6 +1140,8 @@ class ParquetDB:
             Record IDs to remove during normalization.
         columns : List[str], optional
             Column names to remove during normalization.
+        drop_empty : bool
+            Whether to delete the dataset, if it has no records after normalization.
         transform_callable : Callable, optional
             Custom transformation function to apply during normalization.
         new_db_path : str | Path, optional
@@ -1292,20 +1295,28 @@ class ParquetDB:
                 logger.error("id is not in schema")
                 raise ValueError("id is not in schema")
 
+            def unlink_many(files: Iterable[Path]):
+                for file_path in files:
+                    if file_path.is_file():
+                        file_path.unlink()
+
             # Remove main files to replace with tmp files
             logger.debug(f"Files before renaming: {os.listdir(dataset_dir)}")
             tmp_files = [
                 file for file in dataset_dir.glob(f"tmp-{dataset_name}_*.parquet")
             ]
-            if len(tmp_files) != 0:
-                main_files = dataset_dir.glob(f"{dataset_name}_*.parquet")
-                for file_path in main_files:
-                    if file_path.is_file():
-                        file_path.unlink()
+            main_files = dataset_dir.glob(f"{dataset_name}_*.parquet")
+            if len(tmp_files) == 0:
+                if drop_empty:
+                    logger.info(f"Dropping dataset: {dataset_name}")
+                    unlink_many(main_files)
+                else:
+                    logger.debug(f"Not dropping dataset: {dataset_name}")
+            else:
+                unlink_many(main_files)
 
             logger.debug(f"Files after removing main files: {os.listdir(dataset_dir)}")
 
-            tmp_files = dataset_dir.glob(f"tmp-{dataset_name}_*.parquet")
             for file_path in tmp_files:
                 file_name = file_path.name.replace("tmp-", "")
                 new_file_path = dataset_dir / file_name
@@ -1330,7 +1341,7 @@ class ParquetDB:
             if new_db_path:
                 dataset_dir.rmdir()
 
-            raise Exception(f"Exception normalizing table. Error Message: {e}")
+            raise
 
     def update_schema(
         self,
