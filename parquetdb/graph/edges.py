@@ -57,7 +57,7 @@ class EdgeStore(ParquetDB):
         self,
         storage_path: Union[str, Path],
         setup_kwargs: dict = None,
-        verbose: int = 1,
+        **kwargs,
     ):
         """
         Parameters
@@ -78,7 +78,7 @@ class EdgeStore(ParquetDB):
                 pa.field("target_type", pa.string()),
                 pa.field("edge_type", pa.string()),
             ],
-            verbose=verbose,
+            **kwargs,
         )
 
         self._initialize_metadata()

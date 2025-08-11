@@ -56,7 +56,7 @@ class NodeStore(ParquetDB):
         self,
         storage_path: Union[str, Path],
         initialize_kwargs: dict = None,
-        verbose: int = 1,
+        **kwargs,
     ):
         """
         Parameters
@@ -67,9 +67,7 @@ class NodeStore(ParquetDB):
         storage_path = Path(storage_path)
         self._node_type = storage_path.name
 
-        initialize_kwargs = {} if initialize_kwargs is None else initialize_kwargs
-
-        super().__init__(db_path=storage_path, verbose=verbose)
+        super().__init__(db_path=storage_path, **kwargs)
 
         metadata = self.get_metadata()
 
@@ -86,6 +84,7 @@ class NodeStore(ParquetDB):
             )
 
         if self.is_empty():
+            initialize_kwargs = {} if initialize_kwargs is None else initialize_kwargs
             self._initialize(**initialize_kwargs)
 
         logger.debug(f"Initialized NodeStore at {storage_path}")

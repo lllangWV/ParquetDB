@@ -10,6 +10,7 @@ import pyarrow.compute as pc
 
 from parquetdb import ParquetDB
 from parquetdb.core import types
+from parquetdb.core.parquetdb import ParquetDBConfig
 from parquetdb.utils.log_utils import set_verbose_level
 
 logger = logging.getLogger(__name__)
@@ -41,7 +42,7 @@ class GeneratorStore(ParquetDB):
         self,
         storage_path: str,
         initial_fields: List[pa.Field] = None,
-        verbose: int = 1,
+        **kwargs,
     ):
         """
         Initialize the EdgeGeneratorStore.
@@ -65,8 +66,10 @@ class GeneratorStore(ParquetDB):
         super().__init__(
             db_path=storage_path,
             initial_fields=initial_fields,
-            serialize_python_objects=True,
-            verbose=verbose,
+            config = ParquetDBConfig(
+                serialize_python_objects=True,
+            ),
+            **kwargs,
         )
 
         self._initialize_metadata()

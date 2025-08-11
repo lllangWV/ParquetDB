@@ -39,7 +39,7 @@ def graphdb(tmp_dir):
 def element_store(tmp_dir):
     """Fixture to create an ElementNodes instance."""
     element_store = NodeStore(
-        storage_path=os.path.join(tmp_dir, "elements"), verbose=VERBOSE
+        storage_path=os.path.join(tmp_dir, "elements")
     )
     element_store.create_nodes(element())
     return element_store
@@ -192,7 +192,7 @@ def test_add_node_store(tmp_dir):
 
     # Test overwrite=False behavior
     new_store = NodeStore(
-        storage_path=os.path.join(tmp_dir, "new_store"), verbose=VERBOSE
+        storage_path=os.path.join(tmp_dir, "new_store")
     )
     new_store.node_type = temp_store.node_type
 
@@ -217,7 +217,7 @@ def test_add_node_store_with_remove_original(tmp_dir):
     # Create a temporary node store
     node_type = "test_node"
     temp_store_path = os.path.join(tmp_dir, node_type)
-    temp_store = NodeStore(storage_path=temp_store_path, verbose=VERBOSE)
+    temp_store = NodeStore(storage_path=temp_store_path)
 
     # Add test data and ensure it's written to disk
     test_data = [{"name": "Node1"}]
@@ -225,7 +225,7 @@ def test_add_node_store_with_remove_original(tmp_dir):
 
     # Create a graph database
     graphdb = ParquetGraphDB(
-        storage_path=os.path.join(tmp_dir, "graph"), verbose=VERBOSE
+        storage_path=os.path.join(tmp_dir, "graph")
     )
 
     # Add the node store with remove_original=True
